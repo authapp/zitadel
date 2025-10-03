@@ -6,8 +6,8 @@
 This document tracks the comprehensive implementation of the Zitadel backend in TypeScript, following a layered architecture approach with incremental development.
 
 **Last Updated**: 2025-10-03  
-**Current Phase**: Phase 3 (Business Logic Layer - In Progress)  
-**Overall Progress**: 47% (9/19 modules - query complete, command in progress)
+**Current Phase**: Phase 3 (Business Logic Layer - COMPLETED)  
+**Overall Progress**: 53% (10/19 modules completed)
 
 ---
 
@@ -151,30 +151,28 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 - ✅ SQL query builder
 - ✅ Projection state tracking
 
-**Status**: **IN PROGRESS** 🔄  
-**Test Coverage**: ✅ **COMPLETE** (33+ tests)
 
 ---
 
 ### Module: `command` (CQRS - Write Side)
-- ✅ Command interface and types
-- ✅ Command bus implementation
-- ✅ Command handlers pattern
-- ✅ Event generation from commands
-- ✅ Business rule validation
-- ✅ User command examples
-- ✅ Aggregate root base class
-- ✅ Repository pattern
-- ✅ Comprehensive testing
+- ✅ Command interface and types properly aligned with eventstore
+- ✅ Command bus implementation with middleware support
+- ✅ Command handlers pattern with validation
+- ✅ Event generation from commands via eventstore
+- ✅ Business rule validation framework
+- ✅ User command examples (Create, Update, Deactivate)
+- ✅ Aggregate root base class with event handlers
+- ✅ Repository pattern for aggregate loading
+- ✅ State reconstruction from event history
+- ✅ Integration with eventstore (EventFilter arrays)
 
-**Status**: **IN PROGRESS** 🔄  
+**Status**: **COMPLETE** ✅  
 **Dependencies**: `eventstore`, `domain`, `zerrors`, `id`  
-**Note**: Core structure complete, requires interface alignment with eventstore
+**Test Coverage**: ✅ **COMPLETE** (18+ tests)
 
 ---
 
 ## 📋 Phase 4: Service Layer (PENDING)
-
 {{ ... }}
 ### Module: `authz` (Authorization)
 - ⏳ Permission checker
@@ -292,14 +290,14 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 
 ### Summary
 - **Total Modules Planned**: 19
-- **Completed**: 8 (Layers 1-2)
+- **Completed**: 10 (Layers 1-3)
 - **In Progress**: 0
-- **Pending**: 11
+- **Pending**: 9
 
 ### Completion by Layer
 - **Layer 1 (Foundation)**: ✅ 100% (5/5)
 - **Layer 2 (Infrastructure)**: ✅ 100% (3/3)
-- **Layer 3 (Business Logic)**: 📋 0% (0/2)
+- **Layer 3 (Business Logic)**: ✅ 100% (2/2)
 - **Layer 4 (Services)**: 📋 0% (0/5)
 - **Layer 5 (Features)**: 📋 0% (0/4)
 
@@ -319,19 +317,24 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
    - ✅ cache module (21+ tests)
    - ✅ static storage module (19+ tests)
 
-3. **Implement query module** (Layer 3 - Highest Priority)
-   - Read-side CQRS implementation
-   - Event projection handlers
-   - Required for API layer
+3. ✅ ~~**Implement Layer 3 Business Logic modules**~~ **COMPLETE**
+   - ✅ query module (33+ tests)
+   - ✅ command module (18+ tests)
 
-4. **Implement command module** (Layer 3)
-   - Write-side CQRS implementation
-   - Business rule validation
-   - Required for API layer
-
-5. **Implement authz module** (Layer 4)
+4. **Implement authz module** (Layer 4 - Highest Priority)
    - Authorization and permission checking
+   - Role-based access control
    - Required for API security
+
+5. **Implement auth module** (Layer 4)
+   - Authentication flows
+   - Session management
+   - Token handling
+
+6. **Implement API layer** (Layer 4)
+   - REST/gRPC endpoints
+   - Request/response handling
+   - Integration with command/query
 
 ---
 
@@ -358,12 +361,13 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 
 ## 🧪 Testing Strategy
 
-### Unit Tests (✅ Complete for Layers 1-2)
+### Unit Tests (✅ Complete for Layers 1-3)
 - ✅ Jest test runner configured
-- ✅ 274+ tests written across all implemented modules
-- ✅ Mock external dependencies (pg, fs)
+- ✅ 325+ tests written across all implemented modules
+- ✅ Mock external dependencies (pg, fs, eventstore)
 - ✅ Comprehensive error handling coverage
 - ✅ Performance and edge case testing
+- ✅ Business logic validation testing
 
 ### Integration Tests (Pending)
 - Test module interactions
