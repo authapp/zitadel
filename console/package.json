@@ -43,7 +43,7 @@
     "angular-oauth2-oidc": "^15.0.1",
     "angularx-qrcode": "^16.0.2",
     "buffer": "^6.0.3",
-    "codemirror": "^5.65.19",
+    "codemirror": "^6.0.2",
     "file-saver": "^2.0.5",
     "flag-icons": "^7.3.2",
     "google-protobuf": "~3.21.4",
