@@ -136,9 +136,6 @@ npm run build
 npm start
 ```
 
-## Testing
-
-See [`RUN_TESTS.md`](./RUN_TESTS.md) for a quick start and [`TEST_GUIDE.md`](./TEST_GUIDE.md) for detailed guidance.
 
 ### Running Tests
 - Run all tests: `npm test`
