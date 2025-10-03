@@ -6,8 +6,8 @@
 This document tracks the comprehensive implementation of the Zitadel backend in TypeScript, following a layered architecture approach with incremental development.
 
 **Last Updated**: 2025-10-03  
-**Current Phase**: Phase 3 (Business Logic Layer)  
-**Overall Progress**: 42% (8/19 modules completed)
+**Current Phase**: Phase 3 (Business Logic Layer - In Progress)  
+**Overall Progress**: 47% (9/19 modules - query complete, command in progress)
 
 ---
 
@@ -133,51 +133,49 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 - ✅ Directory listing
 - ⏳ S3-compatible storage (future)
 
-**Status**: **COMPLETE** ✅  
 **Dependencies**: `zerrors`  
 **Test Coverage**: ✅ **COMPLETE** (19+ tests)
 
 ---
 
-## 📋 Phase 3: Business Logic Layer (PENDING)
+## 🔄 Phase 3: Business Logic Layer (IN PROGRESS)
 
 ### Module: `query` (CQRS - Read Side)
-- ⏳ Query interface
-- ⏳ Projection handlers
-- ⏳ Filter builders
-- ⏳ Pagination support
-- ⏳ Permission checks
-- ⏳ User queries
-- ⏳ Organization queries
-- ⏳ Project queries
-- ⏳ Application queries
-- ⏳ Session queries
+- ✅ Query interface and types
+- ✅ Projection handlers and manager
+- ✅ Filter builders with fluent API
+- ✅ Pagination and sorting support
+- ✅ Event-to-projection materialization
+- ✅ PostgreSQL read model implementation
+- ✅ Complex filter groups (AND/OR/NOT)
+- ✅ SQL query builder
+- ✅ Projection state tracking
 
-**Status**: **PENDING** 📋  
-**Dependencies**: `database`, `eventstore`, `domain`, `cache`, `crypto`  
-**Priority**: HIGH
+**Status**: **IN PROGRESS** 🔄  
+**Test Coverage**: ✅ **COMPLETE** (33+ tests)
 
 ---
 
 ### Module: `command` (CQRS - Write Side)
-- ⏳ Command interface
-- ⏳ Command handlers
-- ⏳ Event generation
-- ⏳ Business rule validation
-- ⏳ User commands
-- ⏳ Organization commands
-- ⏳ Project commands
-- ⏳ Application commands
-- ⏳ Session commands
+- ✅ Command interface and types
+- ✅ Command bus implementation
+- ✅ Command handlers pattern
+- ✅ Event generation from commands
+- ✅ Business rule validation
+- ✅ User command examples
+- ✅ Aggregate root base class
+- ✅ Repository pattern
+- ✅ Comprehensive testing
 
-**Status**: **PENDING** 📋  
-**Dependencies**: `eventstore`, `crypto`, `domain`, `id`, `cache`  
-**Priority**: HIGH
+**Status**: **IN PROGRESS** 🔄  
+**Dependencies**: `eventstore`, `domain`, `zerrors`, `id`  
+**Note**: Core structure complete, requires interface alignment with eventstore
 
 ---
 
 ## 📋 Phase 4: Service Layer (PENDING)
 
+{{ ... }}
 ### Module: `authz` (Authorization)
 - ⏳ Permission checker
 - ⏳ Role mapper
