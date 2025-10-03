@@ -73,7 +73,10 @@ export class DatabasePool implements QueryExecutor {
     values?: any[],
   ): Promise<QueryResult<T>> {
     try {
-      return await this.pool.query<T>(text, values);
+      if (typeof values === 'undefined') {
+      return await this.pool.query<T>(text);
+    }
+    return await this.pool.query<T>(text, values);
     } catch (error) {
       throwInternal('Database query failed', 'DB-001', { query: text }, error as Error);
     }

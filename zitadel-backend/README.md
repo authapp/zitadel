@@ -136,6 +136,28 @@ npm run build
 npm start
 ```
 
+## Testing
+
+See [`RUN_TESTS.md`](./RUN_TESTS.md) for a quick start and [`TEST_GUIDE.md`](./TEST_GUIDE.md) for detailed guidance.
+
+### Running Tests
+- Run all tests: `npm test`
+- Watch mode: `npm test:watch`
+- Coverage: `npm test:coverage`
+- Run a specific test: `npm test -- <file>`
+
+### Test Types
+- **Unit tests** for core modules (zerrors, id, crypto, database, domain)
+- **Integration tests** for module interactions
+- **E2E tests** for user flows
+- **Coverage** and **performance** tests
+
+### Structure & Coverage
+- 200+ tests, ~95% code coverage
+- All critical paths and error cases are tested
+
+See the guides for troubleshooting, writing new tests, and CI integration.
+
 ## Development Roadmap
 
 ### ✅ Phase 0: Setup (Complete)

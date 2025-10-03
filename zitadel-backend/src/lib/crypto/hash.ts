@@ -148,5 +148,8 @@ export function hmacVerify(
   algorithm: 'sha256' | 'sha512' = 'sha256',
 ): boolean {
   const expectedSignature = hmacSign(data, secret, algorithm);
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));
+  const sigBuf = Buffer.from(signature);
+  const expectedBuf = Buffer.from(expectedSignature);
+  if (sigBuf.length !== expectedBuf.length) return false;
+  return crypto.timingSafeEqual(sigBuf, expectedBuf);
 }
