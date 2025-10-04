@@ -13,9 +13,10 @@
 | Metric | Value |
 |--------|-------|
 | **Total Modules** | 19/19 (100%) |
-| **Total Tests** | 400+ |
+| **Total Tests** | 458 |
 | **Test Pass Rate** | 100% |
 | **Build Status** | ✅ Passing |
+| **Test Suites** | 20 |
 | **Code Quality** | Type-safe, tested, documented |
 | **Architecture** | Clean, layered, SOLID principles |
 

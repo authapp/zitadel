@@ -49,10 +49,9 @@ export {
 } from './permission-checker';
 
 export {
-  QueryRoleManager,
   InMemoryRoleManager,
+  QueryRoleManager,
   createRoleManager,
-  createInMemoryRoleManager,
 } from './role-manager';
 
 export {
