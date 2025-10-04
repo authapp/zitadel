@@ -4,9 +4,10 @@
  * Provides common database operations for all repositories
  */
 
+import { QueryResultRow } from 'pg';
 import { DatabasePool } from '../database';
 
-export abstract class BaseRepository<T> {
+export abstract class BaseRepository<T extends QueryResultRow> {
   constructor(
     protected pool: DatabasePool,
     protected tableName: string
