@@ -5,7 +5,7 @@
  */
 
 import { DatabasePool } from './pool';
-import { migrations } from './migrations';
+import { Migration, migrations } from './migrations';
 import { join } from 'path';
 import { readFileSync } from 'fs';
 
@@ -38,7 +38,7 @@ export class DatabaseMigrator {
   /**
    * Get pending migrations
    */
-  private getPendingMigrations(appliedVersions: number[]): typeof migrations {
+  private getPendingMigrations(appliedVersions: number[]): Migration[] {
     return migrations.filter(m => !appliedVersions.includes(m.version));
   }
 
@@ -71,7 +71,7 @@ export class DatabaseMigrator {
   /**
    * Apply a single migration
    */
-  private async applyMigration(migration: typeof migrations[0]): Promise<void> {
+  private async applyMigration(migration: Migration): Promise<void> {
     console.log(`Applying migration ${migration.version}: ${migration.name}`);
     
     await this.executeMigrationFile(migration.filename);

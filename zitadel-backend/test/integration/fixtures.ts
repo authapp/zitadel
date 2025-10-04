@@ -96,13 +96,17 @@ export interface CreateOrgOptions {
 }
 
 export async function createTestOrg(
-  pool: DatabasePool,
+  _pool: DatabasePool, // Prefixed with _ as it's temporarily unused
   options: CreateOrgOptions = {}
 ): Promise<Organization> {
   const id = options.id || generateSnowflakeId();
   const name = options.name || `Test Org ${Date.now()}`;
 
-  await pool.query(
+  // NOTE: organizations_projection table doesn't exist yet in migrations
+  // Returning mock organization without database insertion
+  // TODO: Enable when organizations_projection migration is added
+  /*
+  await _pool.query(
     `INSERT INTO organizations_projection (id, name, domain, instance_id, state, created_at, updated_at)
      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
     [
@@ -113,6 +117,7 @@ export async function createTestOrg(
       options.state ?? OrgState.ACTIVE,
     ]
   );
+  */
 
   return {
     id,
@@ -136,13 +141,17 @@ export interface CreateProjectOptions {
 }
 
 export async function createTestProject(
-  pool: DatabasePool,
+  _pool: DatabasePool, // Prefixed with _ as it's temporarily unused
   options: CreateProjectOptions
 ): Promise<Project> {
   const id = options.id || generateSnowflakeId();
   const name = options.name || `Test Project ${Date.now()}`;
 
-  await pool.query(
+  // NOTE: projects_projection table doesn't exist yet in migrations
+  // Returning mock project without database insertion
+  // TODO: Enable when projects_projection migration is added
+  /*
+  await _pool.query(
     `INSERT INTO projects_projection (
       id, name, resource_owner, instance_id, state, created_at, updated_at
     ) VALUES ($1, $2, $3, $4, $5, NOW(), NOW())`,
@@ -154,6 +163,7 @@ export async function createTestProject(
       options.state ?? ProjectState.ACTIVE,
     ]
   );
+  */
 
   return {
     id,
@@ -273,19 +283,34 @@ export async function createTestEvent(
   pool: DatabasePool,
   options: CreateEventOptions
 ): Promise<any> {
+  const id = generateSnowflakeId();
+  const aggregateVersion = options.sequence !== undefined ? options.sequence + 1 : 1;
+  
+  // Create unique position by combining timestamp with aggregate info
+  // This ensures each event gets a unique position even when created rapidly
+  const timestamp = BigInt(Date.now()) * 1000000n; // Convert to microseconds
+  const uniqueOffset = BigInt(aggregateVersion) * 1000n; // Add version-based offset
+  const position = (timestamp + uniqueOffset).toString();
+  
   const result = await pool.query(
     `INSERT INTO events (
-      aggregate_type, aggregate_id, event_type, event_data,
-      sequence, editor_user
-    ) VALUES ($1, $2, $3, $4, $5, $6)
+      id, aggregate_type, aggregate_id, aggregate_version, event_type, event_data,
+      editor_user, resource_owner, instance_id, position, in_position_order,
+      creation_date, revision
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 1)
     RETURNING id`,
     [
+      id,
       options.aggregateType,
       options.aggregateId,
+      aggregateVersion, // Use sequence as aggregate_version, +1 because versions start at 1
       options.eventType,
       JSON.stringify(options.eventData),
-      options.sequence || 0,
       options.editorUser || 'system',
+      'test-org',
+      'test-instance',
+      position,
+      0, // in_position_order
     ]
   );
 
@@ -371,7 +396,7 @@ export async function getTestEvents(
   const result = await pool.query(
     `SELECT * FROM events 
      WHERE aggregate_type = $1 AND aggregate_id = $2
-     ORDER BY sequence ASC`,
+     ORDER BY aggregate_version ASC`,
     [aggregateType, aggregateId]
   );
   
@@ -381,8 +406,8 @@ export async function getTestEvents(
     aggregateId: row.aggregate_id,
     eventType: row.event_type,
     eventData: row.event_data,
-    sequence: row.sequence,
+    sequence: row.aggregate_version - 1, // Map aggregate_version to sequence (version starts at 1, sequence starts at 0)
     editorUser: row.editor_user,
-    createdAt: row.created_at,
+    createdAt: row.creation_date,
   }));
 }

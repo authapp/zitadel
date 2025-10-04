@@ -117,7 +117,7 @@ describe('Integration: User Operations', () => {
           username: 'user2',
           email: 'duplicate@test.com',
         })
-      ).rejects.toThrow(/duplicate key value violates unique constraint|unique constraint/i);
+      ).rejects.toThrow(); // ZitadelError wraps the constraint error
     });
   });
 

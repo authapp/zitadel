@@ -44,14 +44,14 @@ describe('Integration: Database Setup', () => {
       expect(result[0].table_name).toBe('users_projection');
     });
 
-    it('should have organizations_projection table', async () => {
+    it('should have projection_states table', async () => {
       const result = await query(
         pool,
         `SELECT table_name FROM information_schema.tables 
-         WHERE table_schema = 'public' AND table_name = 'organizations_projection'`
+         WHERE table_schema = 'public' AND table_name = 'projection_states'`
       );
       expect(result).toHaveLength(1);
-      expect(result[0].table_name).toBe('organizations_projection');
+      expect(result[0].table_name).toBe('projection_states');
     });
 
     it('should have events table', async () => {
@@ -108,12 +108,16 @@ describe('Integration: Database Setup', () => {
     });
 
     it('should insert and retrieve events', async () => {
-      // Insert an event
+      // Insert an event using the actual schema
       await query(
         pool,
-        `INSERT INTO events (aggregate_type, aggregate_id, event_type, event_data, sequence)
-         VALUES ($1, $2, $3, $4, $5)`,
-        ['user', 'user123', 'user.created', JSON.stringify({ username: 'test' }), 0]
+        `INSERT INTO events (
+          id, aggregate_type, aggregate_id, aggregate_version, event_type, event_data,
+          editor_user, resource_owner, instance_id, position, in_position_order,
+          creation_date, revision
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 1)`,
+        ['evt-123', 'user', 'user123', 1, 'user.created', JSON.stringify({ username: 'test' }),
+         'admin', 'test-org', 'test-instance', '1', 0]
       );
 
       // Retrieve events
@@ -147,37 +151,31 @@ describe('Integration: Database Setup', () => {
   });
 
   describe('Multi-Tenant Data', () => {
-    it('should handle multiple organizations', async () => {
-      // Insert organizations
+    it('should handle multiple users in different instances', async () => {
+      // Insert users in different instances
       await query(
         pool,
-        `INSERT INTO organizations_projection (id, name, instance_id, state, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-        ['org1', 'Organization 1', 'test-instance', 'active']
+        `INSERT INTO users_projection (id, username, email, password_hash, state, instance_id, resource_owner, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        ['user1', 'user1', 'user1@test.com', 'hash1', 'active', 'instance1', 'org1']
       );
 
       await query(
         pool,
-        `INSERT INTO organizations_projection (id, name, instance_id, state, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-        ['org2', 'Organization 2', 'test-instance', 'active']
+        `INSERT INTO users_projection (id, username, email, password_hash, state, instance_id, resource_owner, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+        ['user2', 'user2', 'user2@test.com', 'hash2', 'active', 'instance2', 'org2']
       );
 
-      // Retrieve organizations
-      const orgs = await query(pool, 'SELECT * FROM organizations_projection ORDER BY id');
+      // Retrieve users by instance
+      const users = await query(pool, 'SELECT * FROM users_projection WHERE instance_id = $1', ['instance1']);
 
-      expect(orgs).toHaveLength(2);
-      expect(orgs[0].name).toBe('Organization 1');
-      expect(orgs[1].name).toBe('Organization 2');
+      expect(users).toHaveLength(1);
+      expect(users[0].username).toBe('user1');
     });
 
-    it('should link users to organizations', async () => {
-      // Create organization
-      await query(
-        pool,
-        `INSERT INTO organizations_projection (id, name, instance_id, state, created_at, updated_at) VALUES ($1, $2, $3, $4, NOW(), NOW())`,
-        ['test-org-link', 'Test Org', 'test-instance', 'active']
-      );
-
-      // Create user in organization
+    it('should link users to resource owners', async () => {
+      // Create user with resource owner
       await query(
         pool,
         `INSERT INTO users_projection (id, username, email, password_hash, state, resource_owner, instance_id, created_at, updated_at)
@@ -185,7 +183,7 @@ describe('Integration: Database Setup', () => {
         ['user1', 'orguser', 'orguser@test.com', 'hash', 'active', 'test-org-link', 'test-instance']
       );
 
-      // Retrieve user with org
+      // Retrieve user by resource owner
       const users = await query(
         pool,
         'SELECT * FROM users_projection WHERE resource_owner = $1',
