@@ -4,7 +4,6 @@
     "module": "commonjs",
     "lib": ["ES2022"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -22,6 +21,7 @@
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "removeComments": false,
+    "types": ["jest", "node"],
     "baseUrl": "./src",
     "paths": {
       "@/zerrors/*": ["lib/zerrors/*"],
@@ -44,7 +44,6 @@
       "@/telemetry/*": ["lib/telemetry/*"]
     }
   },
-  "include": ["src/**/*"],
-  "types": ["jest"],
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }
