@@ -22,11 +22,8 @@ export class PostgresProjectionManager implements ProjectionManager {
 
   constructor(
     private pool: Pool,
-    _eventStore: Eventstore // TODO: Will be used for event querying once interface is aligned
-  ) {
-    // eventStore will be used for querying events in processEvents
-    void _eventStore; // Suppress unused warning
-  }
+    private eventStore: Eventstore
+  ) {}
 
   /**
    * Register a projection
@@ -284,12 +281,14 @@ export class PostgresProjectionManager implements ProjectionManager {
         return;
       }
 
-      // TODO: Use position for querying events
-      // const position = BigInt(state.position);
+      const position = state.position;
 
       // Query events from eventstore
-      // TODO: Need to implement proper event querying based on eventTypes and position
-      const events: any[] = []; // Temporarily disabled until eventstore interface is aligned
+      const events = await this.eventStore.query({
+        eventTypes: config.eventTypes,
+        position: { position: BigInt(position), inPositionOrder: 0 },
+        limit: config.batchSize || 100,
+      });
 
       if (events.length === 0) {
         return; // No new events
@@ -320,7 +319,7 @@ export class PostgresProjectionManager implements ProjectionManager {
       // Update position to last processed event
       const lastEvent = events[events.length - 1];
       await this.updateState(name, {
-        position: lastEvent.position,
+        position: lastEvent.position.position,
         errorCount: 0,
         lastError: undefined,
       });

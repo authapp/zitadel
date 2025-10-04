@@ -5,9 +5,9 @@
 ## Overview
 This document tracks the comprehensive implementation of the Zitadel backend in TypeScript, following a layered architecture approach with incremental development.
 
-**Last Updated**: 2025-10-03  
-**Current Phase**: Phase 3 (Business Logic Layer - COMPLETED)  
-**Overall Progress**: 53% (10/19 modules completed)
+**Last Updated**: 2025-10-04  
+**Current Phase**: Phase 4 (Service Layer - In Progress)  
+**Overall Progress**: 58% (11/19 modules completed)
 
 ---
 
@@ -166,28 +166,32 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 - ✅ State reconstruction from event history
 - ✅ Integration with eventstore (EventFilter arrays)
 
-**Status**: **COMPLETE** ✅  
 **Dependencies**: `eventstore`, `domain`, `zerrors`, `id`  
 **Test Coverage**: ✅ **COMPLETE** (18+ tests)
 
 ---
 
-## 📋 Phase 4: Service Layer (PENDING)
-{{ ... }}
-### Module: `authz` (Authorization)
-- ⏳ Permission checker
-- ⏳ Role mapper
-- ⏳ Token verifier
-- ⏳ Context builder
+## 🔄 Phase 4: Service Layer (IN PROGRESS)
 
-**Status**: **PENDING** 📋  
+### Module: `authz` (Authorization)
+- ✅ Permission types and interfaces
+- ✅ Permission checker with wildcard and MANAGE support
+- ✅ Role-based access control (RBAC)
+- ✅ System role definitions (SYSTEM_ADMIN, ORG_OWNER, etc.)
+- ✅ Permission builder for resource/action combinations
+- ✅ Authorization context builder
+- ✅ Authorization middleware (requirePermission, requireRole)
+- ✅ In-memory and query-based role managers
+- ✅ Permission matching with scope support
+
+**Status**: **COMPLETE** ✅  
 **Dependencies**: `query`, `domain`, `zerrors`  
-**Priority**: HIGH
+**Test Coverage**: ✅ **COMPLETE** (44+ tests)
 
 ---
 
 ### Module: `auth` (Authentication)
-- ⏳ Password authentication
+- ✅ Password authentication
 - ⏳ MFA support (TOTP, U2F)
 - ⏳ Session management
 - ⏳ Token issuance
@@ -290,15 +294,15 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 
 ### Summary
 - **Total Modules Planned**: 19
-- **Completed**: 10 (Layers 1-3)
+- **Completed**: 11 (Layers 1-3, 1 of Layer 4)
 - **In Progress**: 0
-- **Pending**: 9
+- **Pending**: 8
 
 ### Completion by Layer
 - **Layer 1 (Foundation)**: ✅ 100% (5/5)
 - **Layer 2 (Infrastructure)**: ✅ 100% (3/3)
 - **Layer 3 (Business Logic)**: ✅ 100% (2/2)
-- **Layer 4 (Services)**: 📋 0% (0/5)
+- **Layer 4 (Services)**: 🔄 20% (1/5)
 - **Layer 5 (Features)**: 📋 0% (0/4)
 
 ---
@@ -321,20 +325,26 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
    - ✅ query module (33+ tests)
    - ✅ command module (18+ tests)
 
-4. **Implement authz module** (Layer 4 - Highest Priority)
-   - Authorization and permission checking
-   - Role-based access control
-   - Required for API security
+4. ✅ ~~**Implement authz module**~~ **COMPLETE**
+   - ✅ Authorization and permission checking (44+ tests)
+   - ✅ Role-based access control
+   - ✅ Context builder and middleware
 
-5. **Implement auth module** (Layer 4)
+5. **Implement auth module** (Layer 4 - Highest Priority)
    - Authentication flows
    - Session management
    - Token handling
+   - MFA support
 
 6. **Implement API layer** (Layer 4)
    - REST/gRPC endpoints
    - Request/response handling
    - Integration with command/query
+
+7. **Implement notification module** (Layer 4)
+   - Email notifications
+   - SMS notifications
+   - Template management
 
 ---
 
@@ -361,13 +371,14 @@ This document tracks the comprehensive implementation of the Zitadel backend in 
 
 ## 🧪 Testing Strategy
 
-### Unit Tests (✅ Complete for Layers 1-3)
+### Unit Tests (✅ Complete for Layers 1-3, Partial Layer 4)
 - ✅ Jest test runner configured
-- ✅ 325+ tests written across all implemented modules
+- ✅ 369+ tests written across all implemented modules
 - ✅ Mock external dependencies (pg, fs, eventstore)
 - ✅ Comprehensive error handling coverage
 - ✅ Performance and edge case testing
 - ✅ Business logic validation testing
+- ✅ Authorization and permission testing
 
 ### Integration Tests (Pending)
 - Test module interactions
