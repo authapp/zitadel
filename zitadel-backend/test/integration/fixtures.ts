@@ -1,24 +1,27 @@
 /**
  * Test Fixtures and Data Factories
  * 
- * Provides two approaches for test data:
+ * Provides three approaches for test data:
  * 1. **Repository-based** (createTestUser) - Fast, direct DB access for test setup
- * 2. **Command-based** (createUserViaCommand) - Full CQRS flow for testing commands
+ * 2. **Command-based** (createUserViaCommand) - CQRS flow for testing command layer
+ * 3. **Service-based** (createUserViaService) - Full E2E flow with business logic
  * 
- * Use repository-based fixtures for general test data setup.
- * Use command-based fixtures when specifically testing the command layer.
+ * Use repository-based for fast test setup.
+ * Use command-based when testing the command layer specifically.
+ * Use service-based for true end-to-end integration tests.
  */
 
 import { DatabasePool } from '../../src/lib/database';
 import { PostgresEventstore } from '../../src/lib/eventstore';
 import { InMemoryCommandBus } from '../../src/lib/command';
-import { CreateUserCommand, createUserHandler, createUserValidator } from '../../src/lib/command/commands/user';
+import { CreateUserCommand, createUserHandler, createUserValidator, updateUserHandler, updateUserValidator, deactivateUserHandler, changePasswordHandler } from '../../src/lib/command/commands/user';
 import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
 import { PasswordHasher } from '../../src/lib/crypto/hash';
 import { UserState } from '../../src/lib/domain/user';
 import { Organization, OrgState } from '../../src/lib/domain/organization';
 import { Project, ProjectState } from '../../src/lib/domain/project';
 import { UserRepository } from '../../src/lib/repositories/user-repository';
+import { createUserService } from '../../src/lib/services/user/user-service';
 
 const hasher = new PasswordHasher();
 
@@ -133,6 +136,11 @@ export async function createUserViaCommand(
     options.firstName || 'Test',
     options.lastName || 'User',
     options.phone,
+    undefined, // nickname
+    undefined, // preferredLanguage
+    undefined, // gender
+    undefined, // passwordChangeRequired
+    undefined, // passwordHash
     {
       instanceId: 'test-instance',
       resourceOwner: options.orgId || 'test-org',
@@ -149,6 +157,247 @@ export async function createUserViaCommand(
   const result = await commandBus.execute(command);
   
   return result;
+}
+
+/**
+ * Create test user via UserService (Full E2E flow)
+ * 
+ * NOTE: This fixture is a helper for creating service dependencies.
+ * See user-service.integration.test.ts for full service testing examples.
+ * 
+ * For most tests, use createTestUser (repository-based) for speed.
+ */
+export function setupUserServiceForTest(pool: DatabasePool) {
+  const eventstore = new PostgresEventstore(pool, {
+    instanceID: 'test-instance',
+    maxPushBatchSize: 100,
+  });
+  const commandBus = new InMemoryCommandBus(eventstore);
+  
+  // Create user repository for projection updates
+  const userRepo = new UserRepository(pool);
+  
+  // Register all user command handlers
+  commandBus.registerHandler('CreateUserCommand', createUserHandler, createUserValidator);
+  commandBus.registerHandler('UpdateUserCommand', updateUserHandler, updateUserValidator);
+  commandBus.registerHandler('DeactivateUserCommand', deactivateUserHandler);
+  commandBus.registerHandler('ChangePasswordCommand', changePasswordHandler);
+  
+  // Add simple projection handler (updates projection after command execution)
+  commandBus.use(async (_command, next) => {
+    const result = await next();
+    
+    // Update projection based on event type
+    if (result.event) {
+      const event = result.event as any;
+      
+      if (event.eventType === 'user.created') {
+        await userRepo.create({
+          id: event.aggregateID,
+          instanceId: event.instanceID,
+          resourceOwner: event.resourceOwner,
+          username: event.eventData.username,
+          email: event.eventData.email,
+          firstName: event.eventData.firstName,
+          lastName: event.eventData.lastName,
+          displayName: event.eventData.displayName,
+          phone: event.eventData.phone,
+          passwordHash: event.eventData.passwordHash,
+          state: 'active',
+        });
+      } else if (event.eventType === 'user.password.changed') {
+        const existing = await userRepo.findById(event.aggregateID);
+        if (existing) {
+          await userRepo.update(event.aggregateID, {
+            passwordHash: event.eventData.passwordHash,
+          });
+        }
+      } else if (event.eventType === 'user.updated') {
+        const existing = await userRepo.findById(event.aggregateID);
+        if (existing) {
+          await userRepo.update(event.aggregateID, {
+            email: event.eventData.email || existing.email,
+            firstName: event.eventData.firstName || existing.first_name,
+            lastName: event.eventData.lastName || existing.last_name,
+          });
+        }
+      } else if (event.eventType === 'user.deactivated') {
+        await userRepo.update(event.aggregateID, { state: 'inactive' });
+      }
+    }
+    
+    return result;
+  });
+  
+  // Mock permission checker (always allows for tests)
+  const mockPermissionChecker: any = {
+    async check() {
+      return { allowed: true };
+    },
+    async checkAny() {
+      return { allowed: true };
+    },
+    async checkAll() {
+      return { allowed: true };
+    },
+    async hasRole() {
+      return true;
+    }
+  };
+  
+  // Mock notification service
+  const sentNotifications: any[] = [];
+  const mockNotificationService: any = {
+    async send(recipient: string, subject: string, body: string) {
+      sentNotifications.push({ recipient, subject, body });
+      return 'notification-id';
+    },
+    async sendFromTemplate(templateId: string, recipient: string, data: any) {
+      sentNotifications.push({ templateId, recipient, data });
+      return 'notification-id';
+    }
+  };
+  
+  // Create mock query (wraps repository)
+  const mockQuery: any = {
+    async execute(sql: string, params: any[]) {
+      // Handle list query
+      if (sql.includes('SELECT * FROM users WHERE 1=1')) {
+        const users = await userRepo.findAll();
+        let filtered = users;
+        
+        // Apply filters
+        if (sql.includes('username LIKE')) {
+          const usernamePattern = params.find(p => typeof p === 'string' && p.includes('%'));
+          if (usernamePattern) {
+            const username = usernamePattern.replace(/%/g, '');
+            filtered = filtered.filter(u => u.username.includes(username));
+          }
+        }
+        
+        if (sql.includes('email LIKE')) {
+          const emailPattern = params.find(p => typeof p === 'string' && p.includes('%') && p.includes('@'));
+          if (emailPattern) {
+            const email = emailPattern.replace(/%/g, '');
+            filtered = filtered.filter(u => u.email && u.email.includes(email));
+          }
+        }
+        
+        // Apply limit and offset (they're the last two parameters)
+        const limit = sql.includes('LIMIT') && params.length >= 2 ? parseInt(params[params.length - 2]) : filtered.length;
+        const offset = sql.includes('OFFSET') && params.length >= 2 ? parseInt(params[params.length - 1]) : 0;
+        
+        return filtered.slice(offset, offset + limit).map(user => ({
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          state: user.state,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        }));
+      }
+      
+      // Handle email-based queries (various types)
+      // Note: queries use "users" but actual table is "users_projection"
+      // Check this BEFORE username lookup since username might appear in SELECT clause
+      if (sql.includes('WHERE email') && params[0] && !params[0].includes('%')) {
+        const email = params[0];
+        const user = await userRepo.findByEmail(email);
+        if (!user) return [];
+        
+        // Return fields based on what's requested in SELECT
+        if (sql.includes('SELECT id, username FROM')) {
+          return [{
+            id: user.id,
+            username: user.username,
+          }];
+        }
+        
+        if (sql.includes('SELECT password_hash FROM')) {
+          return [{
+            password_hash: user.password_hash,
+          }];
+        }
+        
+        return [{
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          state: user.state,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        }];
+      }
+      
+      // Handle single username lookup (check after email to avoid conflicts)
+      if (sql.includes('SELECT') && sql.includes('username') && sql.includes('WHERE') && !sql.includes('WHERE email') && params[0] && !params[0].includes('%')) {
+        const username = params[0];
+        const user = await userRepo.findByUsername(username);
+        if (!user) return [];
+        return [{
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          state: user.state,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        }];
+      }
+      
+      // Handle password hash lookup
+      if (sql.includes('SELECT') && sql.includes('password_hash')) {
+        const userId = params[0];
+        const user = await userRepo.findById(userId);
+        return user ? [user] : [];
+      }
+      
+      return [];
+    },
+    async findById(table: string, id: string) {
+      if (table === 'users') {
+        const user = await userRepo.findById(id);
+        // Map database row to User domain object
+        if (!user) return null;
+        return {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          phone: user.phone,
+          state: user.state,
+          createdAt: user.created_at,
+          updatedAt: user.updated_at,
+        };
+      }
+      return null;
+    }
+  };
+  
+  // Create user service
+  const userService = createUserService(
+    commandBus,
+    mockQuery,
+    mockPermissionChecker,
+    hasher,
+    mockNotificationService
+  );
+  
+  return {
+    userService,
+    commandBus,
+    sentNotifications,
+    userRepo,
+  };
 }
 
 /**
@@ -440,8 +689,9 @@ export async function getTestUser(pool: DatabasePool, userId: string): Promise<a
     lastName: userRow.last_name,
     phone: userRow.phone,
     state: userRow.state,
+    resource_owner: userRow.resource_owner,  // Add snake_case DB field
     orgId: userRow.resource_owner,
-    org_id: userRow.resource_owner,  // Also include snake_case version
+    org_id: userRow.resource_owner,  // Also include alternate snake_case version
     createdAt: userRow.created_at,
     updatedAt: userRow.updated_at,
     metadata: undefined, // Not stored in current schema
@@ -474,3 +724,53 @@ export async function getTestEvents(
     createdAt: row.creation_date,
   }));
 }
+
+/**
+ * ARCHITECTURE NOTE: Repository Usage in Production vs Testing
+ * ===========================================================
+ * 
+ * Q: Is UserRepository only for testing?
+ * A: NO - It has legitimate production uses!
+ * 
+ * PRODUCTION USES:
+ * ----------------
+ * 1. Projections: Update read models when events occur
+ *    - EventHandler receives event → UserRepository.update()
+ * 
+ * 2. Cross-Aggregate Validation: Check constraints in commands
+ *    - CreateUserCommand → Check username uniqueness via UserRepository.findByUsername()
+ * 
+ * 3. Query Layer: Read operations
+ *    - Query.findUser() → UserRepository.findById()
+ * 
+ * 4. Admin Operations: Direct DB access when appropriate
+ *    - Bulk operations, migrations, reporting
+ * 
+ * TESTING STRATEGY:
+ * -----------------
+ * Use different approaches based on what you're testing:
+ * 
+ * 1. REPOSITORY-BASED (createTestUser)
+ *    - Speed: ~300ms
+ *    - Tests: Repository, Query, Database layer
+ *    - Use: 90% of tests for fast setup
+ * 
+ * 2. COMMAND-BASED (createUserViaCommand)
+ *    - Speed: ~400ms
+ *    - Tests: Command layer, Event sourcing
+ *    - Use: Command-specific tests
+ * 
+ * 3. SERVICE-BASED (TODO: createUserViaService)
+ *    - Speed: ~500ms
+ *    - Tests: Full stack (Service → Commands → Events → Projections)
+ *    - Use: E2E integration tests, API tests
+ * 
+ * ZITADEL'S APPROACH:
+ * -------------------
+ * Zitadel uses both patterns:
+ * - Commands use "WriteModel" (aggregate reconstruction from events)
+ * - Projections use direct DB writes (similar to our UserRepository)
+ * - Services orchestrate the full flow
+ * 
+ * Our architecture follows the same principles with clearer naming.
+ */

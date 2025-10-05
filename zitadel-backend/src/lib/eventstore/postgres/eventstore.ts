@@ -491,7 +491,7 @@ export class PostgresEventstore implements Eventstore {
       aggregateType: row.aggregate_type,
       aggregateID: row.aggregate_id,
       aggregateVersion: row.aggregate_version,
-      eventData: JSON.parse(row.event_data),
+      eventData: typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data,
       editorUser: row.editor_user,
       editorService: row.editor_service,
       resourceOwner: row.resource_owner,

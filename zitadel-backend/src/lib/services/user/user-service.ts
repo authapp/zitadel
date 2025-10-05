@@ -64,9 +64,8 @@ export class DefaultUserService implements UserService {
       throw new UserAlreadyExistsError(request.email);
     }
 
-    // Hash password (would be stored with user in production)
-    // TODO: Handle password hashing in projection or separate process
-    // const hashedPassword = await this.passwordHasher.hash(request.password);
+    // Hash password
+    const hashedPassword = await this.passwordHasher.hash(request.password);
 
     // Create user command
     const userId = generateId();
@@ -76,6 +75,11 @@ export class DefaultUserService implements UserService {
       request.firstName,
       request.lastName,
       request.phone,
+      undefined, // nickname
+      undefined, // preferredLanguage
+      undefined, // gender
+      undefined, // passwordChangeRequired
+      hashedPassword, // passwordHash
       {
         userId: context.subject.userId,
         instanceId: context.instanceId,
@@ -202,6 +206,9 @@ export class DefaultUserService implements UserService {
       request.email,
       request.firstName,
       request.lastName,
+      undefined, // nickname
+      undefined, // preferredLanguage
+      undefined, // gender
       {
         userId: context.subject.userId,
         instanceId: context.instanceId,
@@ -289,11 +296,19 @@ export class DefaultUserService implements UserService {
     // Hash new password
     const newHash = await this.passwordHasher.hash(request.newPassword);
 
-    // Update password (would dispatch command in production)
-    await this.query.execute(
-      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
-      [newHash, userId]
+    // Create change password command
+    const { ChangePasswordCommand } = await import('../../command/commands/user');
+    const command = new ChangePasswordCommand(
+      userId,
+      newHash,
+      {
+        userId: context.subject.userId,
+        instanceId: context.instanceId,
+      }
     );
+
+    // Execute command
+    await this.commandBus.execute(command);
   }
 
   /**

@@ -4,6 +4,7 @@
 
 import { Pool } from 'pg';
 import { Eventstore } from '../../eventstore/types';
+import { DatabasePool } from '../../database';
 import {
   ProjectionManager,
   ProjectionConfig,
@@ -19,11 +20,15 @@ export class PostgresProjectionManager implements ProjectionManager {
   private projections = new Map<string, ProjectionConfig>();
   private running = new Map<string, boolean>();
   private intervals = new Map<string, NodeJS.Timeout>();
+  private pool: Pool;
 
   constructor(
-    private pool: Pool,
+    poolOrDb: Pool | DatabasePool,
     private eventStore: Eventstore
-  ) {}
+  ) {
+    // Support both Pool and DatabasePool
+    this.pool = poolOrDb instanceof DatabasePool ? (poolOrDb as any).pool : poolOrDb;
+  }
 
   /**
    * Register a projection
@@ -127,8 +132,8 @@ export class PostgresProjectionManager implements ProjectionManager {
         position: 0n,
       });
 
-      // Clear projection table
-      await this.pool.query(`TRUNCATE TABLE ${config.table}`);
+      // Clear projection table with CASCADE to handle foreign keys
+      await this.pool.query(`TRUNCATE TABLE ${config.table} CASCADE`);
 
       // Reset position to beginning
       await this.updateState(name, { position: 0n });
@@ -166,7 +171,15 @@ export class PostgresProjectionManager implements ProjectionManager {
         return null;
       }
 
-      return result.rows[0] as ProjectionState;
+      const row = result.rows[0];
+      return {
+        name: row.name,
+        position: BigInt(row.position),
+        status: row.status,
+        errorCount: row.error_count,
+        lastError: row.last_error,
+        lastProcessedAt: row.last_processed_at,
+      };
     } catch (error) {
       throw new ProjectionError(`Failed to get status: ${error}`, name);
     }
@@ -178,7 +191,14 @@ export class PostgresProjectionManager implements ProjectionManager {
   async list(): Promise<ProjectionState[]> {
     try {
       const result = await this.pool.query('SELECT * FROM projection_states ORDER BY name');
-      return result.rows as ProjectionState[];
+      return result.rows.map(row => ({
+        name: row.name,
+        position: BigInt(row.position),
+        status: row.status,
+        errorCount: row.error_count,
+        lastError: row.last_error,
+        lastProcessedAt: row.last_processed_at,
+      }));
     } catch (error) {
       throw new ProjectionError(`Failed to list projections: ${error}`, 'list');
     }
@@ -231,9 +251,10 @@ export class PostgresProjectionManager implements ProjectionManager {
       const values: any[] = [];
       let paramIndex = 1;
 
-      if (updates.position !== undefined) {
+      if (updates.position !== undefined && updates.position !== null) {
         setParts.push(`position = $${paramIndex++}`);
-        values.push(updates.position.toString());
+        const posValue = typeof updates.position === 'bigint' ? updates.position.toString() : String(updates.position);
+        values.push(posValue);
       }
 
       if (updates.status !== undefined) {
@@ -246,9 +267,9 @@ export class PostgresProjectionManager implements ProjectionManager {
         values.push(updates.lastError);
       }
 
-      if (updates.errorCount !== undefined) {
+      if (updates.errorCount !== undefined && updates.errorCount !== null) {
         setParts.push(`error_count = $${paramIndex++}`);
-        values.push(updates.errorCount);
+        values.push(Number(updates.errorCount) || 0);
       }
 
       setParts.push(`last_processed_at = $${paramIndex++}`);
@@ -333,17 +354,19 @@ export class PostgresProjectionManager implements ProjectionManager {
    */
   private async processEvent(config: ProjectionConfig, event: any): Promise<void> {
     // Get current state from projection table
-    const currentState = await this.getCurrentProjectionState(config.table, event.aggregateId);
+    const currentState = await this.getCurrentProjectionState(config.table, event.aggregateID);
 
     // Apply event handler
+    // Handler can return:
+    // - null: indicates handler managed the database write (or delete)
+    // - object: state to be upserted by projection manager
     const newState = await config.handler(event, currentState);
 
-    if (newState === null) {
-      // Handler returned null, delete the projection
-      await this.deleteProjection(config.table, event.aggregateId);
-    } else {
+    // If handler returns a state object, use generic upsert
+    // If handler returns null, it has already handled the database operation
+    if (newState !== null && newState !== undefined) {
       // Upsert the new state
-      await this.upsertProjection(config.table, event.aggregateId, newState);
+      await this.upsertProjection(config.table, event.aggregateID, newState);
     }
   }
 
@@ -386,7 +409,10 @@ export class PostgresProjectionManager implements ProjectionManager {
 
   /**
    * Delete projection
+   * Note: Currently unused as handlers manage deletes themselves,
+   * but kept for generic projection support in the future
    */
+  // @ts-ignore - kept for future use
   private async deleteProjection(table: string, id: string): Promise<void> {
     await this.pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
   }

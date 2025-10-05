@@ -54,6 +54,11 @@ export class CreateUserCommand implements AppCommand {
     public firstName?: string,
     public lastName?: string,
     public phone?: string,
+    public nickname?: string,
+    public preferredLanguage?: string,
+    public gender?: string,
+    public passwordChangeRequired?: boolean,
+    public passwordHash?: string,
     context?: Partial<CommandContext>
   ) {
     this.aggregateId = generateSnowflakeId();
@@ -79,6 +84,9 @@ export class UpdateUserCommand implements AppCommand {
     public email?: string,
     public firstName?: string,
     public lastName?: string,
+    public nickname?: string,
+    public preferredLanguage?: string,
+    public gender?: string,
     context?: Partial<CommandContext>
   ) {
     this.context = {
@@ -100,6 +108,28 @@ export class DeactivateUserCommand implements AppCommand {
   
   constructor(
     public aggregateId: string,
+    context?: Partial<CommandContext>
+  ) {
+    this.context = {
+      instanceId: context?.instanceId || 'default',
+      resourceOwner: context?.resourceOwner || 'system',
+      userId: context?.userId,
+      timestamp: context?.timestamp || new Date(),
+      requestId: context?.requestId || generateSnowflakeId(),
+    };
+  }
+}
+
+/**
+ * Change password command
+ */
+export class ChangePasswordCommand implements AppCommand {
+  aggregateType = 'user';
+  context: CommandContext;
+  
+  constructor(
+    public aggregateId: string,
+    public passwordHash: string,
     context?: Partial<CommandContext>
   ) {
     this.context = {
@@ -170,6 +200,11 @@ export const createUserHandler: CommandHandler<CreateUserCommand> = async (
       lastName,
       displayName,
       ...(normalizedPhone && { phone: normalizedPhone }),
+      ...(command.nickname && { nickname: command.nickname.trim() }),
+      ...(command.preferredLanguage && { preferredLanguage: command.preferredLanguage }),
+      ...(command.gender && { gender: command.gender }),
+      ...(command.passwordChangeRequired !== undefined && { passwordChangeRequired: command.passwordChangeRequired }),
+      ...(command.passwordHash && { passwordHash: command.passwordHash }),
     },
     editorUser: command.context.userId || 'system',
     resourceOwner: command.context.resourceOwner,
@@ -213,6 +248,15 @@ export const updateUserHandler: CommandHandler<UpdateUserCommand> = async (
   }
   if (command.lastName && command.lastName !== currentState.lastName) {
     changes.lastName = command.lastName;
+  }
+  if (command.nickname && command.nickname !== currentState.nickname) {
+    changes.nickname = command.nickname.trim();
+  }
+  if (command.preferredLanguage && command.preferredLanguage !== currentState.preferredLanguage) {
+    changes.preferredLanguage = command.preferredLanguage;
+  }
+  if (command.gender && command.gender !== currentState.gender) {
+    changes.gender = command.gender;
   }
 
   if (Object.keys(changes).length === 0) {
@@ -258,6 +302,40 @@ export const deactivateUserHandler: CommandHandler<DeactivateUserCommand> = asyn
     aggregateID: command.aggregateId,
     eventData: {
       deactivatedBy: command.context.userId,
+    },
+    editorUser: command.context.userId || 'system',
+    resourceOwner: command.context.resourceOwner,
+    instanceID: command.context.instanceId,
+    revision: currentState.version,
+  };
+
+  return eventstoreCommand;
+};
+
+/**
+ * Change password command handler
+ */
+export const changePasswordHandler: CommandHandler<ChangePasswordCommand> = async (
+  command: ChangePasswordCommand,
+  currentState?: any
+): Promise<EventstoreCommand> => {
+  // Business rule: User must exist
+  if (!currentState) {
+    throw new Error('User not found');
+  }
+
+  // Business rule: User must be active
+  if (currentState.state !== 'active') {
+    throw new Error('User is not active');
+  }
+
+  // Create eventstore command
+  const eventstoreCommand: EventstoreCommand = {
+    eventType: 'user.password.changed',
+    aggregateType: 'user',
+    aggregateID: command.aggregateId,
+    eventData: {
+      passwordHash: command.passwordHash,
     },
     editorUser: command.context.userId || 'system',
     resourceOwner: command.context.resourceOwner,
@@ -393,7 +471,8 @@ export const updateUserValidator: CommandValidator<UpdateUserCommand> = (
   }
 
   // At least one field must be provided
-  if (!command.email && !command.firstName && !command.lastName) {
+  if (!command.email && !command.firstName && !command.lastName && 
+      !command.nickname && !command.preferredLanguage && !command.gender) {
     errors.push({
       field: 'general',
       message: 'At least one field must be updated',

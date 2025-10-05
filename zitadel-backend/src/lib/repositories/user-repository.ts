@@ -77,6 +77,7 @@ export interface UpdateUserInput {
   preferredLoginName?: string;
   loginNames?: string[];
   state?: string;
+  passwordHash?: string;
   passwordChangeRequired?: boolean;
 }
 
@@ -132,6 +133,16 @@ export class UserRepository extends BaseRepository<UserRow> {
   }
 
   /**
+   * Find user by ID
+   */
+  async findById(id: string, instanceId: string = 'test-instance'): Promise<UserRow | null> {
+    return this.pool.queryOne<UserRow>(
+      `SELECT * FROM users_projection WHERE id = $1 AND instance_id = $2`,
+      [id, instanceId]
+    );
+  }
+
+  /**
    * Find user by username
    */
   async findByUsername(username: string, instanceId: string = 'test-instance'): Promise<UserRow | null> {
@@ -148,6 +159,16 @@ export class UserRepository extends BaseRepository<UserRow> {
     return this.pool.queryOne<UserRow>(
       `SELECT * FROM users_projection WHERE email = $1 AND instance_id = $2`,
       [email, instanceId]
+    );
+  }
+
+  /**
+   * Find all users
+   */
+  async findAll(instanceId: string = 'test-instance'): Promise<UserRow[]> {
+    return this.pool.queryMany<UserRow>(
+      `SELECT * FROM users_projection WHERE instance_id = $1 ORDER BY created_at DESC`,
+      [instanceId]
     );
   }
 
@@ -214,6 +235,10 @@ export class UserRepository extends BaseRepository<UserRow> {
     if (input.state !== undefined) {
       setClauses.push(`state = $${paramIndex++}`);
       values.push(input.state);
+    }
+    if (input.passwordHash !== undefined) {
+      setClauses.push(`password_hash = $${paramIndex++}`);
+      values.push(input.passwordHash);
     }
     if (input.passwordChangeRequired !== undefined) {
       setClauses.push(`password_change_required = $${paramIndex++}`);
