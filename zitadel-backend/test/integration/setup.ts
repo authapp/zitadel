@@ -1,14 +1,39 @@
 /**
  * Integration Test Setup (Production Ready)
  * 
- * Uses actual source code modules:
- * - DatabasePool from src/lib/database
- * - DatabaseMigrator for schema management
- * - Repositories for data access
+ * ARCHITECTURE OVERVIEW:
+ * ----------------------
+ * This test suite uses actual production code:
+ * - DatabasePool: Connection management
+ * - DatabaseMigrator: Schema management (24 migrations)
+ * - Repositories: Data access layer (read-side)
+ * - Commands: Business logic (write-side) [available via createUserViaCommand]
+ * 
+ * CQRS + EVENT SOURCING PATTERN:
+ * ------------------------------
+ * Write Side (Commands):
+ *   User Action → Command → Event Store → Projection Manager → Read Model
+ * 
+ * Read Side (Queries):
+ *   User Query → Repository → Database → Result
+ * 
+ * TEST DATA APPROACHES:
+ * --------------------
+ * 1. Repository-based (fixtures.ts - createTestUser):
+ *    - Fast, direct DB writes for test setup
+ *    - Bypasses events and business rules
+ *    - Use for: General test data setup
+ * 
+ * 2. Command-based (fixtures.ts - createUserViaCommand):
+ *    - Full CQRS flow with events
+ *    - Enforces business rules and validation
+ *    - Use for: Testing the command layer itself
  */
 
-import { DatabasePool, DatabaseMigrator, DatabaseConfig } from '../../src/lib/database';
-import { QueryResultRow } from 'pg';
+import { DatabasePool, DatabaseConfig } from '../../src/lib/database';
+import { DatabaseMigrator } from '../../src/lib/database/migrator';
+import { UserRepository } from '../../src/lib/repositories/user-repository';
+import type { QueryResultRow } from 'pg';
 
 /**
  * Test database configuration
@@ -99,6 +124,27 @@ export async function closeTestDatabase(): Promise<void> {
     testPool = null;
     console.log('✅ Test database connection closed');
   }
+}
+
+/**
+ * Get UserRepository instance for testing
+ * Provides type-safe repository access in tests
+ */
+export function getUserRepository(pool: DatabasePool): UserRepository {
+  return new UserRepository(pool);
+}
+
+/**
+ * Get all repositories for testing
+ * Extend this as more repositories are added
+ */
+export function getRepositories(pool: DatabasePool) {
+  return {
+    users: new UserRepository(pool),
+    // Add more repositories here as they're implemented
+    // orgs: new OrgRepository(pool),
+    // projects: new ProjectRepository(pool),
+  };
 }
 
 /**

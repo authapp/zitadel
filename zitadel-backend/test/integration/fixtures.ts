@@ -1,15 +1,24 @@
 /**
  * Test Fixtures and Data Factories
  * 
- * Provides utilities for creating test data
+ * Provides two approaches for test data:
+ * 1. **Repository-based** (createTestUser) - Fast, direct DB access for test setup
+ * 2. **Command-based** (createUserViaCommand) - Full CQRS flow for testing commands
+ * 
+ * Use repository-based fixtures for general test data setup.
+ * Use command-based fixtures when specifically testing the command layer.
  */
 
 import { DatabasePool } from '../../src/lib/database';
+import { PostgresEventstore } from '../../src/lib/eventstore';
+import { InMemoryCommandBus } from '../../src/lib/command';
+import { CreateUserCommand, createUserHandler, createUserValidator } from '../../src/lib/command/commands/user';
 import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
 import { PasswordHasher } from '../../src/lib/crypto/hash';
 import { UserState } from '../../src/lib/domain/user';
 import { Organization, OrgState } from '../../src/lib/domain/organization';
 import { Project, ProjectState } from '../../src/lib/domain/project';
+import { UserRepository } from '../../src/lib/repositories/user-repository';
 
 const hasher = new PasswordHasher();
 
@@ -30,10 +39,20 @@ export interface CreateUserOptions {
   metadata?: Record<string, any>;
 }
 
+/**
+ * Create test user via Repository (Fast path for test data setup)
+ * 
+ * This bypasses the command layer and writes directly to the projection.
+ * Use this for setting up test data quickly.
+ * 
+ * NOTE: This does NOT generate events or go through business rules.
+ */
 export async function createTestUser(
   pool: DatabasePool,
   options: CreateUserOptions = {}
 ): Promise<any> {
+  const userRepo = new UserRepository(pool);
+  
   const id = options.id || generateSnowflakeId();
   const username = options.username || `testuser_${Date.now()}`;
   const email = options.email || `${username}@test.com`;
@@ -50,39 +69,85 @@ export async function createTestUser(
     stateString = 'locked';
   }
 
-  // Insert into database
-  await pool.query(
-    `INSERT INTO users_projection (
-      id, username, email, password_hash, first_name, last_name,
-      phone, state, mfa_enabled, instance_id, resource_owner, created_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())`,
-    [
-      id,
-      username,
-      email,
-      passwordHash,
-      options.firstName || 'Test',
-      options.lastName || 'User',
-      options.phone || null,
-      stateString,
-      options.mfaEnabled ?? false,
-      'test-instance',
-      options.orgId || 'test-org',
-    ]
-  );
-
-  return {
+  // Use UserRepository to create user in projection
+  const userRow = await userRepo.create({
     id,
+    instanceId: 'test-instance',
+    resourceOwner: options.orgId || 'test-org',
     username,
     email,
+    phone: options.phone,
     firstName: options.firstName || 'Test',
     lastName: options.lastName || 'User',
-    phone: options.phone,
+    state: stateString,
+    passwordHash,
+    mfaEnabled: options.mfaEnabled ?? false,
+  });
+
+  return {
+    id: userRow.id,
+    username: userRow.username,
+    email: userRow.email,
+    firstName: userRow.first_name,
+    lastName: userRow.last_name,
+    phone: userRow.phone,
     state: options.state ?? UserState.ACTIVE,
-    createdAt: new Date(),
-    updatedAt: new Date(),
+    createdAt: userRow.created_at,
+    updatedAt: userRow.updated_at,
     metadata: options.metadata,
   };
+}
+
+/**
+ * Create user via Command layer (Full CQRS flow)
+ * 
+ * This uses the command bus and generates events.
+ * Use this when specifically testing the command layer.
+ * 
+ * NOTE: Projections must be manually updated or you need to wait for projection manager.
+ */
+export async function createUserViaCommand(
+  pool: DatabasePool,
+  options: CreateUserOptions = {}
+): Promise<{ aggregateId: string; event: any }> {
+  const eventstore = new PostgresEventstore(pool, {
+    instanceID: 'test-instance',
+    maxPushBatchSize: 100,
+  });
+  const commandBus = new InMemoryCommandBus(eventstore);
+  
+  // Register user command handler
+  commandBus.registerHandler(
+    'CreateUserCommand',
+    createUserHandler,
+    createUserValidator
+  );
+  
+  const username = options.username || `testuser_${Date.now()}`;
+  const email = options.email || `${username}@test.com`;
+
+  // Create command with context
+  const command = new CreateUserCommand(
+    username,
+    email,
+    options.firstName || 'Test',
+    options.lastName || 'User',
+    {
+      instanceId: 'test-instance',
+      resourceOwner: options.orgId || 'test-org',
+      userId: 'system',
+    }
+  );
+  
+  // Override ID if provided (for test predictability)
+  if (options.id) {
+    command.aggregateId = options.id;
+  }
+
+  // Execute command through command bus - this creates events
+  const result = await commandBus.execute(command);
+  
+  return result;
 }
 
 /**
@@ -356,32 +421,29 @@ export async function addTestOrgMember(
 }
 
 /**
- * Get user from database
+ * Get user from database using repository
  */
 export async function getTestUser(pool: DatabasePool, userId: string): Promise<any | null> {
-  const result = await pool.query(
-    'SELECT * FROM users_projection WHERE id = $1',
-    [userId]
-  );
+  const userRepo = new UserRepository(pool);
+  const userRow = await userRepo.findById(userId);
   
-  if (result.rows.length === 0) {
+  if (!userRow) {
     return null;
   }
 
-  const row = result.rows[0];
   return {
-    id: row.id,
-    username: row.username,
-    email: row.email,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    phone: row.phone,
-    state: row.state,
-    orgId: row.resource_owner,
-    org_id: row.resource_owner,  // Also include snake_case version
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    metadata: row.metadata,
+    id: userRow.id,
+    username: userRow.username,
+    email: userRow.email,
+    firstName: userRow.first_name,
+    lastName: userRow.last_name,
+    phone: userRow.phone,
+    state: userRow.state,
+    orgId: userRow.resource_owner,
+    org_id: userRow.resource_owner,  // Also include snake_case version
+    createdAt: userRow.created_at,
+    updatedAt: userRow.updated_at,
+    metadata: undefined, // Not stored in current schema
   };
 }
 
