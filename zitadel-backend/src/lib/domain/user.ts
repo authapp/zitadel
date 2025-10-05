@@ -107,6 +107,8 @@ export interface User {
   state: UserState;
   type: UserType;
   userName: string;
+  preferredLoginName?: string; // User's preferred login identifier
+  loginNames?: string[]; // Array of login names for multi-org scenarios
   resourceOwner: string; // Organization ID
   createdAt: Date;
   changedAt: Date;
