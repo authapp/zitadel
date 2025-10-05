@@ -156,8 +156,8 @@ describe('CommandBus', () => {
     });
 
     it('should execute update user command', async () => {
-      // First create user
-      const createCommand = new CreateUserCommand('john_doe', 'john@example.com');
+      // First create user (firstName and lastName now required)
+      const createCommand = new CreateUserCommand('john_doe', 'john@example.com', 'John', 'Doe');
       await commandBus.execute(createCommand);
       
       // Then update

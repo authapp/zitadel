@@ -132,6 +132,7 @@ export async function createUserViaCommand(
     email,
     options.firstName || 'Test',
     options.lastName || 'User',
+    options.phone,
     {
       instanceId: 'test-instance',
       resourceOwner: options.orgId || 'test-org',

@@ -14,6 +14,31 @@
 import { Command as EventstoreCommand } from '../../eventstore/types';
 import { AppCommand, CommandContext, CommandHandler, CommandValidator, ValidationResult } from '../types';
 import { generateId as generateSnowflakeId } from '../../id/snowflake';
+import { normalizePhoneNumber, isValidPhoneNumber, PHONE_ERROR_CODES } from '../../domain/phone';
+
+/**
+ * Auto-generate display name (matching Zitadel's ensureDisplayName logic)
+ * Priority: firstName + lastName → email → username
+ */
+function ensureDisplayName(
+  firstName: string,
+  lastName: string,
+  email: string,
+  username: string
+): string {
+  // If both firstName and lastName exist, combine them
+  if (firstName && lastName) {
+    return `${firstName} ${lastName}`;
+  }
+  
+  // Fall back to email if available
+  if (email && email.trim()) {
+    return email;
+  }
+  
+  // Last resort: use username
+  return username;
+}
 
 /**
  * Create user command
@@ -28,6 +53,7 @@ export class CreateUserCommand implements AppCommand {
     public email: string,
     public firstName?: string,
     public lastName?: string,
+    public phone?: string,
     context?: Partial<CommandContext>
   ) {
     this.aggregateId = generateSnowflakeId();
@@ -93,6 +119,10 @@ export class DeactivateUserCommand implements AppCommand {
  * - currentState is reconstructed from events (NOT projections)
  * - If you need to check email uniqueness, use UserRepository in the service layer
  *   before calling this command
+ * 
+ * DATA NORMALIZATION (matching Zitadel):
+ * - Trims all text fields
+ * - Auto-generates displayName if not provided
  */
 export const createUserHandler: CommandHandler<CreateUserCommand> = async (
   command: CreateUserCommand,
@@ -107,16 +137,39 @@ export const createUserHandler: CommandHandler<CreateUserCommand> = async (
   // NOTE: Email uniqueness check should happen BEFORE this handler is called
   // See AdminService.createUser() for proper cross-aggregate validation
 
+  // Normalize data (trim whitespace) - matching Zitadel's Normalize()
+  const username = command.username.trim();
+  const email = command.email.trim();
+  const firstName = command.firstName?.trim() || '';
+  const lastName = command.lastName?.trim() || '';
+
+  // Normalize phone to E.164 format (matching Zitadel's PhoneNumber.Normalize)
+  let normalizedPhone: string | undefined;
+  if (command.phone && command.phone.trim().length > 0) {
+    try {
+      normalizedPhone = normalizePhoneNumber(command.phone);
+    } catch (error) {
+      // If normalization fails, it should have been caught by validator
+      // But include this as a safety check
+      throw new Error(`Phone normalization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // Auto-generate displayName (matching Zitadel's ensureDisplayName)
+  const displayName = ensureDisplayName(firstName, lastName, email, username);
+
   // Create eventstore command
   const eventstoreCommand: EventstoreCommand = {
     eventType: 'user.created',
     aggregateType: 'user',
     aggregateID: command.aggregateId,
     eventData: {
-      username: command.username,
-      email: command.email,
-      firstName: command.firstName,
-      lastName: command.lastName,
+      username,
+      email,
+      firstName,
+      lastName,
+      displayName,
+      ...(normalizedPhone && { phone: normalizedPhone }),
     },
     editorUser: command.context.userId || 'system',
     resourceOwner: command.context.resourceOwner,
@@ -217,40 +270,94 @@ export const deactivateUserHandler: CommandHandler<DeactivateUserCommand> = asyn
 
 /**
  * Create user command validator
+ * 
+ * MATCHES ZITADEL VALIDATION RULES:
+ * - Username: Required, trimmed, 3-255 chars
+ * - Email: Required, valid format (Zitadel regex)
+ * - FirstName: Required, trimmed, not empty
+ * - LastName: Required, trimmed, not empty
  */
 export const createUserValidator: CommandValidator<CreateUserCommand> = (
   command: CreateUserCommand
 ): ValidationResult => {
   const errors: any[] = [];
 
-  // Validate username
+  // Validate username (matching Zitadel: V2-zzad3)
   if (!command.username || command.username.trim().length === 0) {
     errors.push({
       field: 'username',
       message: 'Username is required',
-      code: 'REQUIRED',
+      code: 'V2-zzad3',
     });
-  } else if (command.username.length < 3) {
+  } else if (command.username.trim().length < 3) {
     errors.push({
       field: 'username',
       message: 'Username must be at least 3 characters',
       code: 'MIN_LENGTH',
     });
+  } else if (command.username.length > 255) {
+    errors.push({
+      field: 'username',
+      message: 'Username must not exceed 255 characters',
+      code: 'MAX_LENGTH',
+    });
   }
 
-  // Validate email
+  // Validate email (matching Zitadel regex: EMAIL-599BI)
+  const emailRegex = /^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
   if (!command.email || command.email.trim().length === 0) {
     errors.push({
       field: 'email',
       message: 'Email is required',
-      code: 'REQUIRED',
+      code: 'EMAIL-spblu',
     });
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(command.email)) {
+  } else if (!emailRegex.test(command.email.trim())) {
     errors.push({
       field: 'email',
       message: 'Invalid email format',
-      code: 'INVALID_FORMAT',
+      code: 'EMAIL-599BI',
     });
+  }
+
+  // Validate firstName (matching Zitadel: USER-UCej2)
+  if (!command.firstName || command.firstName.trim().length === 0) {
+    errors.push({
+      field: 'firstName',
+      message: 'First name is required',
+      code: 'USER-UCej2',
+    });
+  } else if (command.firstName.length > 255) {
+    errors.push({
+      field: 'firstName',
+      message: 'First name must not exceed 255 characters',
+      code: 'MAX_LENGTH',
+    });
+  }
+
+  // Validate lastName (matching Zitadel: USER-4hB7d)
+  if (!command.lastName || command.lastName.trim().length === 0) {
+    errors.push({
+      field: 'lastName',
+      message: 'Last name is required',
+      code: 'USER-4hB7d',
+    });
+  } else if (command.lastName.length > 255) {
+    errors.push({
+      field: 'lastName',
+      message: 'Last name must not exceed 255 characters',
+      code: 'MAX_LENGTH',
+    });
+  }
+
+  // Validate phone (optional, but must be valid if provided)
+  if (command.phone && command.phone.trim().length > 0) {
+    if (!isValidPhoneNumber(command.phone)) {
+      errors.push({
+        field: 'phone',
+        message: 'Invalid phone number format',
+        code: PHONE_ERROR_CODES.INVALID,
+      });
+    }
   }
 
   return {

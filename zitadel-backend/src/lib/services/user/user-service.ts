@@ -65,7 +65,8 @@ export class DefaultUserService implements UserService {
     }
 
     // Hash password (would be stored with user in production)
-    await this.passwordHasher.hash(request.password);
+    // TODO: Handle password hashing in projection or separate process
+    // const hashedPassword = await this.passwordHasher.hash(request.password);
 
     // Create user command
     const userId = generateId();
@@ -74,6 +75,7 @@ export class DefaultUserService implements UserService {
       request.email,
       request.firstName,
       request.lastName,
+      request.phone,
       {
         userId: context.subject.userId,
         instanceId: context.instanceId,
