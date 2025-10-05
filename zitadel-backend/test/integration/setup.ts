@@ -106,6 +106,7 @@ async function initializeSchemaWithMigrator(pool: DatabasePool): Promise<void> {
 export async function cleanDatabase(pool: DatabasePool): Promise<void> {
   try {
     // Clean tables created by migrations (in reverse dependency order)
+    // Cascade will handle user_addresses and user_metadata
     await pool.query('TRUNCATE TABLE users_projection CASCADE');
     await pool.query('TRUNCATE TABLE projection_states CASCADE');
     await pool.query('TRUNCATE TABLE events CASCADE');

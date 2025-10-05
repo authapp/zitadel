@@ -25,6 +25,8 @@ export interface UserRow {
   preferred_language?: string;
   gender?: string;
   avatar_url?: string;
+  preferred_login_name?: string;
+  login_names?: string[];
   state: string;
   password_hash?: string;
   password_changed_at?: Date;
@@ -51,6 +53,8 @@ export interface CreateUserInput {
   preferredLanguage?: string;
   gender?: string;
   avatarUrl?: string;
+  preferredLoginName?: string;
+  loginNames?: string[];
   state?: string;
   passwordHash?: string;
   passwordChangedAt?: Date;
@@ -70,6 +74,8 @@ export interface UpdateUserInput {
   preferredLanguage?: string;
   gender?: string;
   avatarUrl?: string;
+  preferredLoginName?: string;
+  loginNames?: string[];
   state?: string;
   passwordChangeRequired?: boolean;
 }
@@ -87,10 +93,10 @@ export class UserRepository extends BaseRepository<UserRow> {
       `INSERT INTO users_projection (
         id, instance_id, resource_owner, username, email, email_verified_at,
         phone, phone_verified_at, first_name, last_name, display_name, nickname,
-        preferred_language, gender, avatar_url, state, password_hash,
-        password_changed_at, password_change_required, mfa_enabled,
+        preferred_language, gender, avatar_url, preferred_login_name, login_names,
+        state, password_hash, password_changed_at, password_change_required, mfa_enabled,
         created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, NOW(), NOW())
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW())
       RETURNING *`,
       [
         input.id,
@@ -108,6 +114,8 @@ export class UserRepository extends BaseRepository<UserRow> {
         input.preferredLanguage || null,
         input.gender || null,
         input.avatarUrl || null,
+        input.preferredLoginName || null,
+        input.loginNames || null,
         input.state || 'active',
         input.passwordHash || null,
         input.passwordChangedAt || null,
@@ -194,6 +202,14 @@ export class UserRepository extends BaseRepository<UserRow> {
     if (input.avatarUrl !== undefined) {
       setClauses.push(`avatar_url = $${paramIndex++}`);
       values.push(input.avatarUrl);
+    }
+    if (input.preferredLoginName !== undefined) {
+      setClauses.push(`preferred_login_name = $${paramIndex++}`);
+      values.push(input.preferredLoginName);
+    }
+    if (input.loginNames !== undefined) {
+      setClauses.push(`login_names = $${paramIndex++}`);
+      values.push(input.loginNames);
     }
     if (input.state !== undefined) {
       setClauses.push(`state = $${paramIndex++}`);

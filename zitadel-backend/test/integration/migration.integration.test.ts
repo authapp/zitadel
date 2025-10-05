@@ -86,7 +86,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(25); // We have 25 migration steps (added Priority 2 fields)
+      expect(version).toBe(28); // We have 28 migration steps (Priority 2 + Priority 3)
     });
   });
 
@@ -112,8 +112,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 25 records (one per migration step)
-      expect(migrations.length).toBe(25);
+      // Should still only have 28 records (one per migration step)
+      expect(migrations.length).toBe(28);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(25);
+      expect(migrations1.length).toBe(28);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +159,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(25);
+      expect(applied.length).toBe(28);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(25);
+      expect(applied[applied.length - 1].version).toBe(28);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
@@ -210,6 +210,10 @@ describe('Migration System Integration', () => {
       expect(columnNames).toContain('phone_verified_at');
       expect(columnNames).toContain('password_changed_at');
       expect(columnNames).toContain('password_change_required');
+      
+      // Priority 3 fields
+      expect(columnNames).toContain('preferred_login_name');
+      expect(columnNames).toContain('login_names');
     });
 
     it('should create required indexes', async () => {
@@ -236,6 +240,46 @@ describe('Migration System Integration', () => {
       );
 
       expect(constraints.length).toBeGreaterThan(0);
+    });
+
+    it('should create user_addresses table (Priority 3)', async () => {
+      await migrator.migrate();
+
+      const columns = await pool.queryMany<{ column_name: string }>(
+        `SELECT column_name 
+         FROM information_schema.columns 
+         WHERE table_name = 'user_addresses'`
+      );
+
+      const columnNames = columns.map(c => c.column_name);
+      expect(columnNames).toContain('id');
+      expect(columnNames).toContain('user_id');
+      expect(columnNames).toContain('country');
+      expect(columnNames).toContain('locality');
+      expect(columnNames).toContain('postal_code');
+      expect(columnNames).toContain('region');
+      expect(columnNames).toContain('street_address');
+      expect(columnNames).toContain('formatted_address');
+      expect(columnNames).toContain('address_type');
+      expect(columnNames).toContain('is_primary');
+    });
+
+    it('should create user_metadata table (Priority 3)', async () => {
+      await migrator.migrate();
+
+      const columns = await pool.queryMany<{ column_name: string }>(
+        `SELECT column_name 
+         FROM information_schema.columns 
+         WHERE table_name = 'user_metadata'`
+      );
+
+      const columnNames = columns.map(c => c.column_name);
+      expect(columnNames).toContain('id');
+      expect(columnNames).toContain('user_id');
+      expect(columnNames).toContain('metadata_key');
+      expect(columnNames).toContain('metadata_value');
+      expect(columnNames).toContain('metadata_type');
+      expect(columnNames).toContain('scope');
     });
   });
 
