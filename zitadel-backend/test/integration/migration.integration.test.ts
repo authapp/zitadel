@@ -86,7 +86,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(24); // We have 24 migration steps
+      expect(version).toBe(25); // We have 25 migration steps (added Priority 2 fields)
     });
   });
 
@@ -112,8 +112,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 24 records (one per migration step)
-      expect(migrations.length).toBe(24);
+      // Should still only have 25 records (one per migration step)
+      expect(migrations.length).toBe(25);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(24);
+      expect(migrations1.length).toBe(25);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +159,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(24);
+      expect(applied.length).toBe(25);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(24);
+      expect(applied[applied.length - 1].version).toBe(25);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
@@ -203,6 +203,13 @@ describe('Migration System Integration', () => {
       expect(columnNames).toContain('instance_id');
       expect(columnNames).toContain('resource_owner');
       expect(columnNames).toContain('state');
+      
+      // Priority 2 fields
+      expect(columnNames).toContain('nickname');
+      expect(columnNames).toContain('email_verified_at');
+      expect(columnNames).toContain('phone_verified_at');
+      expect(columnNames).toContain('password_changed_at');
+      expect(columnNames).toContain('password_change_required');
     });
 
     it('should create required indexes', async () => {

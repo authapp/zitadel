@@ -45,4 +45,5 @@ export const migrations = [
   { version: 22, name: 'Create users projection deleted index', filename: '002_09_create_users_projection_deleted_index.sql' },
   { version: 23, name: 'Create update_updated_at function', filename: '002_10_create_update_updated_at_function.sql' },
   { version: 24, name: 'Create users projection trigger', filename: '002_11_create_users_projection_trigger.sql' },
+  { version: 25, name: 'Add missing user fields (Priority 2)', filename: '002_12_add_missing_user_fields.sql' },
 ];

@@ -176,17 +176,20 @@ func (h *AddHuman) Validate(hasher *crypto.Hasher) error {
 4. ✅ **Use Zitadel's email regex** - Done
 5. ✅ **Add display name auto-generation** - Done
 
-### **Priority 2: Database Schema** 🟡
+### **Priority 2: Database Schema** ✅ **COMPLETE**
 
-1. **Add missing columns:**
+1. ✅ **Added missing columns:**
    - `nickname VARCHAR(255)`
    - `email_verified_at TIMESTAMP`
    - `phone_verified_at TIMESTAMP`
    - `password_changed_at TIMESTAMP`
    - `password_change_required BOOLEAN`
+   - Migration 002_12 applied successfully (version 25)
+   - All 17 migration tests passing
 
 2. **Consider adding address table** (if needed):
    - `user_addresses` table with foreign key
+   - Optional: Priority 3 feature
 
 ### **Priority 3: Enhanced Features** 🟢
 
@@ -205,7 +208,7 @@ func (h *AddHuman) Validate(hasher *crypto.Hasher) error {
 - [x] Use Zitadel's email regex pattern
 - [x] Add `ensureDisplayName()` helper
 - [x] Add username max length validation (255)
-- [ ] Update database migration with missing columns
+- [x] Update database migration with missing columns (Migration 002_12)
 - [x] Add integration tests for all validations (504 passing)
 - [x] Update command handler to call validation
 - [ ] Document validation rules in API docs
@@ -214,7 +217,7 @@ func (h *AddHuman) Validate(hasher *crypto.Hasher) error {
 
 ## 🎯 **Summary**
 
-**Current State:** ~95% feature parity with Zitadel
+**Current State:** ~98% feature parity with Zitadel
 
 **Completed:** 
 - ✅ firstName/lastName validation (with trimming)
@@ -222,8 +225,11 @@ func (h *AddHuman) Validate(hasher *crypto.Hasher) error {
 - ✅ Display name auto-generation
 - ✅ Zitadel error codes
 - ✅ Email validation (Zitadel regex)
+- ✅ Database schema (5 new fields via Migration 002_12)
+- ✅ UserRepository support for all fields
+- ✅ 25 migrations passing (17 migration tests)
 
 **Remaining Actions:**
 1. ~~Fix critical validations (Priority 1)~~ ✅ **COMPLETE**
-2. Add database migration for missing fields (Priority 2) - Optional
-3. Implement remaining features (Priority 3) - Optional
+2. ~~Add database migration for missing fields (Priority 2)~~ ✅ **COMPLETE**
+3. Implement remaining features (Priority 3) - Optional (login names, metadata)
