@@ -1,5 +1,18 @@
 /**
  * Command bus implementation
+ * 
+ * VALIDATION & STATE MANAGEMENT:
+ * ------------------------------
+ * The CommandBus follows event sourcing principles:
+ * 
+ * 1. Loads events for the aggregate from eventstore
+ * 2. Reconstructs current state from events (NOT projections)
+ * 3. Passes reconstructed state to command handler
+ * 4. Handler validates business rules against this state
+ * 5. Handler generates new events
+ * 6. Events are pushed to eventstore
+ * 
+ * KEY PRINCIPLE: Commands query events, not projections
  */
 
 import { Eventstore } from '../eventstore/types';

@@ -1,5 +1,14 @@
 /**
  * User-related commands and handlers
+ * 
+ * VALIDATION PATTERN:
+ * ------------------
+ * 1. Same-aggregate validation: Uses currentState (from events)
+ * 2. Cross-aggregate validation: Query other aggregates' events
+ * 3. Uniqueness constraints: Can use projections (pragmatic approach)
+ * 
+ * IMPORTANT: Commands NEVER query projections for business rules on their own aggregate.
+ * The CommandBus reconstructs state from events before calling handlers.
  */
 
 import { Command as EventstoreCommand } from '../../eventstore/types';
@@ -79,15 +88,24 @@ export class DeactivateUserCommand implements AppCommand {
 
 /**
  * Create user command handler
+ * 
+ * VALIDATION APPROACH:
+ * - currentState is reconstructed from events (NOT projections)
+ * - If you need to check email uniqueness, use UserRepository in the service layer
+ *   before calling this command
  */
 export const createUserHandler: CommandHandler<CreateUserCommand> = async (
   command: CreateUserCommand,
   currentState?: any
 ): Promise<EventstoreCommand> => {
   // Business rule: User must not already exist
+  // currentState is reconstructed from events for THIS aggregate
   if (currentState) {
     throw new Error('User already exists');
   }
+
+  // NOTE: Email uniqueness check should happen BEFORE this handler is called
+  // See AdminService.createUser() for proper cross-aggregate validation
 
   // Create eventstore command
   const eventstoreCommand: EventstoreCommand = {
@@ -110,17 +128,24 @@ export const createUserHandler: CommandHandler<CreateUserCommand> = async (
 
 /**
  * Update user command handler
+ * 
+ * SAME-AGGREGATE VALIDATION:
+ * - Uses currentState which is reconstructed from events
+ * - Validates business rules like "must exist", "must be active"
+ * - This is the correct pattern for aggregate-level validation
  */
 export const updateUserHandler: CommandHandler<UpdateUserCommand> = async (
   command: UpdateUserCommand,
   currentState?: any
 ): Promise<EventstoreCommand> => {
   // Business rule: User must exist
+  // currentState = null means no events found for this aggregate
   if (!currentState) {
     throw new Error('User not found');
   }
 
   // Business rule: User must be active
+  // This state comes from event sourcing, not projection
   if (currentState.state !== 'active') {
     throw new Error('User is not active');
   }
@@ -141,7 +166,7 @@ export const updateUserHandler: CommandHandler<UpdateUserCommand> = async (
     throw new Error('No changes to apply');
   }
 
-  // Create eventstore command
+  // Create eventstore command with optimistic concurrency control
   const eventstoreCommand: EventstoreCommand = {
     eventType: 'user.updated',
     aggregateType: 'user',
@@ -150,7 +175,7 @@ export const updateUserHandler: CommandHandler<UpdateUserCommand> = async (
     editorUser: command.context.userId || 'system',
     resourceOwner: command.context.resourceOwner,
     instanceID: command.context.instanceId,
-    revision: currentState.version,
+    revision: currentState.version,  // ← Ensures we're updating the right version
   };
 
   return eventstoreCommand;
