@@ -50,4 +50,5 @@ export const migrations = [
   { version: 27, name: 'Create user addresses table (Priority 3)', filename: '002_14_create_user_addresses_table.sql' },
   { version: 28, name: 'Create user metadata table (Priority 3)', filename: '002_15_create_user_metadata_table.sql' },
   { version: 29, name: 'Fix multi-tenant username constraint', filename: '002_16_fix_multitenant_username_constraint.sql' },
+  { version: 30, name: 'Alter projection states position type', filename: '002_17_alter_projection_states_position_type.sql' },
 ];

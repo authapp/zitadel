@@ -16,22 +16,19 @@ import { AppCommand } from './types';
 // Mock Eventstore
 class MockEventstore implements Eventstore {
   private events: Event[] = [];
-  private eventCounter = 0;
 
   async push(command: EventstoreCommand): Promise<Event> {
     const event: Event = {
-      id: String(++this.eventCounter),
       eventType: command.eventType,
       aggregateType: command.aggregateType,
       aggregateID: command.aggregateID,
-      aggregateVersion: command.revision || this.events.filter(e => e.aggregateID === command.aggregateID).length + 1,
-      eventData: command.eventData,
-      editorUser: command.editorUser,
-      editorService: command.editorService,
-      resourceOwner: command.resourceOwner,
+      aggregateVersion: BigInt(command.revision || this.events.filter(e => e.aggregateID === command.aggregateID).length + 1),
+      payload: command.payload,
+      creator: command.creator,
+      owner: command.owner,
       instanceID: command.instanceID,
-      position: { position: BigInt(this.events.length), inPositionOrder: 0 },
-      creationDate: new Date(),
+      position: { position: this.events.length, inTxOrder: 0 },
+      createdAt: new Date(),
       revision: 1,
     };
     this.events.push(event);
@@ -87,7 +84,6 @@ class MockEventstore implements Eventstore {
   // Helper to clear events
   clear() {
     this.events = [];
-    this.eventCounter = 0;
   }
 }
 
@@ -146,7 +142,7 @@ describe('CommandBus', () => {
       expect(result.aggregateId).toBe(command.aggregateId);
       expect(result.event).toBeDefined();
       expect(result.event.eventType).toBe('user.created');
-      expect(result.event.eventData.username).toBe('john_doe');
+      expect(result.event.payload?.username).toBe('john_doe');
     });
 
     it('should validate command before execution', async () => {
@@ -170,7 +166,7 @@ describe('CommandBus', () => {
       const result = await commandBus.execute(updateCommand);
       
       expect(result.event.eventType).toBe('user.updated');
-      expect(result.event.eventData.email).toBe('newemail@example.com');
+      expect(result.event.payload?.email).toBe('newemail@example.com');
     });
 
     it('should throw error for unregistered command', async () => {
@@ -251,11 +247,11 @@ describe('BaseAggregate', () => {
     }
 
     protected onTestCreated(event: Event): void {
-      this.value = event.eventData.value;
+      this.value = event.payload?.value;
     }
 
     protected onTestUpdated(event: Event): void {
-      this.value = event.eventData.value;
+      this.value = event.payload?.value;
     }
   }
 
@@ -271,17 +267,16 @@ describe('BaseAggregate', () => {
     const aggregate = new TestAggregate('123');
     
     const event: Event = {
-      id: '1',
       eventType: 'test.created',
       aggregateID: '123',
       aggregateType: 'test',
-      aggregateVersion: 1,
-      eventData: { value: 'hello' },
-      editorUser: 'system',
-      resourceOwner: 'test',
+      aggregateVersion: 1n,
+      payload: { value: 'hello' },
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
-      position: { position: 0n, inPositionOrder: 0 },
-      creationDate: new Date(),
+      position: { position: 0, inTxOrder: 0 },
+      createdAt: new Date(),
       revision: 1,
     };
     
@@ -296,31 +291,29 @@ describe('BaseAggregate', () => {
     
     const events: Event[] = [
       {
-        id: '1',
         eventType: 'test.created',
         aggregateID: '123',
         aggregateType: 'test',
-        aggregateVersion: 1,
-        eventData: { value: 'first' },
-        editorUser: 'system',
-        resourceOwner: 'test',
+        aggregateVersion: 1n,
+        payload: { value: 'first' },
+        creator: 'system',
+        owner: 'test',
         instanceID: 'test',
-        position: { position: 0n, inPositionOrder: 0 },
-        creationDate: new Date(),
+        position: { position: 0, inTxOrder: 0 },
+        createdAt: new Date(),
         revision: 1,
       },
       {
-        id: '2',
         eventType: 'test.updated',
         aggregateID: '123',
         aggregateType: 'test',
-        aggregateVersion: 2,
-        eventData: { value: 'second' },
-        editorUser: 'system',
-        resourceOwner: 'test',
+        aggregateVersion: 2n,
+        payload: { value: 'second' },
+        creator: 'system',
+        owner: 'test',
         instanceID: 'test',
-        position: { position: 1n, inPositionOrder: 0 },
-        creationDate: new Date(),
+        position: { position: 1, inTxOrder: 0 },
+        createdAt: new Date(),
         revision: 1,
       },
     ];
@@ -337,22 +330,21 @@ describe('UserAggregate', () => {
     const aggregate = new UserAggregate('123');
     
     const event: Event = {
-      id: '1',
       eventType: 'user.created',
       aggregateID: '123',
       aggregateType: 'user',
-      aggregateVersion: 1,
-      eventData: {
+      aggregateVersion: 1n,
+      payload: {
         username: 'john_doe',
         email: 'john@example.com',
         firstName: 'John',
         lastName: 'Doe',
       },
-      editorUser: 'system',
-      resourceOwner: 'test',
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
-      position: { position: 0n, inPositionOrder: 0 },
-      creationDate: new Date(),
+      position: { position: 0, inTxOrder: 0 },
+      createdAt: new Date(),
       revision: 1,
     };
     
@@ -370,20 +362,19 @@ describe('UserAggregate', () => {
     aggregate.email = 'old@example.com';
     
     const event: Event = {
-      id: '2',
       eventType: 'user.updated',
       aggregateID: '123',
       aggregateType: 'user',
-      aggregateVersion: 2,
-      eventData: {
+      aggregateVersion: 2n,
+      payload: {
         email: 'new@example.com',
         firstName: 'Johnny',
       },
-      editorUser: 'system',
-      resourceOwner: 'test',
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
-      position: { position: 1n, inPositionOrder: 0 },
-      creationDate: new Date(),
+      position: { position: 1, inTxOrder: 0 },
+      createdAt: new Date(),
       revision: 1,
     };
     
@@ -398,17 +389,16 @@ describe('UserAggregate', () => {
     aggregate.state = 'active';
     
     const event: Event = {
-      id: '3',
       eventType: 'user.deactivated',
       aggregateID: '123',
       aggregateType: 'user',
-      aggregateVersion: 3,
-      eventData: {},
-      editorUser: 'system',
-      resourceOwner: 'test',
+      aggregateVersion: 3n,
+      payload: {},
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
-      position: { position: 2n, inPositionOrder: 0 },
-      creationDate: new Date(),
+      position: { position: 2, inTxOrder: 0 },
+      createdAt: new Date(),
       revision: 1,
     };
     
@@ -436,9 +426,9 @@ describe('AggregateRepository', () => {
       eventType: 'user.created',
       aggregateID: '123',
       aggregateType: 'user',
-      eventData: { username: 'test', email: 'test@example.com' },
-      editorUser: 'system',
-      resourceOwner: 'test',
+      payload: { username: 'test', email: 'test@example.com' },
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
     });
     
@@ -459,9 +449,9 @@ describe('AggregateRepository', () => {
       eventType: 'user.created',
       aggregateID: '123',
       aggregateType: 'user',
-      eventData: {},
-      editorUser: 'system',
-      resourceOwner: 'test',
+      payload: {},
+      creator: 'system',
+      owner: 'test',
       instanceID: 'test',
     });
     

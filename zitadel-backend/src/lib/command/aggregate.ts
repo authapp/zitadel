@@ -30,7 +30,7 @@ export abstract class BaseAggregate implements AggregateRoot {
       handler.call(this, event);
     }
 
-    this.version = event.aggregateVersion;
+    this.version = Number(event.aggregateVersion);
   }
 
   /**
@@ -82,10 +82,11 @@ export class UserAggregate extends BaseAggregate {
    * Handle user created event
    */
   protected onUserCreated(event: Event): void {
-    this.username = event.eventData.username;
-    this.email = event.eventData.email;
-    this.firstName = event.eventData.firstName;
-    this.lastName = event.eventData.lastName;
+    if (!event.payload) return;
+    this.username = event.payload.username;
+    this.email = event.payload.email;
+    this.firstName = event.payload.firstName;
+    this.lastName = event.payload.lastName;
     this.state = 'active';
   }
 
@@ -93,9 +94,10 @@ export class UserAggregate extends BaseAggregate {
    * Handle user updated event
    */
   protected onUserUpdated(event: Event): void {
-    if (event.eventData.email) this.email = event.eventData.email;
-    if (event.eventData.firstName) this.firstName = event.eventData.firstName;
-    if (event.eventData.lastName) this.lastName = event.eventData.lastName;
+    if (!event.payload) return;
+    if (event.payload.email) this.email = event.payload.email;
+    if (event.payload.firstName) this.firstName = event.payload.firstName;
+    if (event.payload.lastName) this.lastName = event.payload.lastName;
   }
 
   /**
@@ -122,8 +124,9 @@ export class OrganizationAggregate extends BaseAggregate {
    * Handle organization created event
    */
   protected onOrganizationCreated(event: Event): void {
-    this.name = event.eventData.name;
-    this.domain = event.eventData.domain;
+    if (!event.payload) return;
+    this.name = event.payload.name;
+    this.domain = event.payload.domain;
     this.state = 'active';
   }
 
@@ -131,7 +134,8 @@ export class OrganizationAggregate extends BaseAggregate {
    * Handle organization updated event
    */
   protected onOrganizationUpdated(event: Event): void {
-    if (event.eventData.name) this.name = event.eventData.name;
+    if (!event.payload) return;
+    if (event.payload.name) this.name = event.payload.name;
   }
 
   /**
@@ -158,8 +162,9 @@ export class ProjectAggregate extends BaseAggregate {
    * Handle project created event
    */
   protected onProjectCreated(event: Event): void {
-    this.name = event.eventData.name;
-    this.resourceOwner = event.eventData.resourceOwner;
+    if (!event.payload) return;
+    this.name = event.payload.name;
+    this.resourceOwner = event.payload.resourceOwner;
     this.state = 'active';
   }
 
@@ -167,7 +172,8 @@ export class ProjectAggregate extends BaseAggregate {
    * Handle project updated event
    */
   protected onProjectUpdated(event: Event): void {
-    if (event.eventData.name) this.name = event.eventData.name;
+    if (!event.payload) return;
+    if (event.payload.name) this.name = event.payload.name;
   }
 
   /**

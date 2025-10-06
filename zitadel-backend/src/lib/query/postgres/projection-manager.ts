@@ -129,14 +129,14 @@ export class PostgresProjectionManager implements ProjectionManager {
       // Update state to rebuilding
       await this.updateState(name, {
         status: ProjectionStatus.REBUILDING,
-        position: 0n,
+        position: 0,
       });
 
       // Clear projection table with CASCADE to handle foreign keys
       await this.pool.query(`TRUNCATE TABLE ${config.table} CASCADE`);
 
       // Reset position to beginning
-      await this.updateState(name, { position: 0n });
+      await this.updateState(name, { position: 0 });
 
       // Process all events
       await this.processEvents(name);
@@ -174,7 +174,7 @@ export class PostgresProjectionManager implements ProjectionManager {
       const row = result.rows[0];
       return {
         name: row.name,
-        position: BigInt(row.position),
+        position: Number(row.position),
         status: row.status,
         errorCount: row.error_count,
         lastError: row.last_error,
@@ -193,7 +193,7 @@ export class PostgresProjectionManager implements ProjectionManager {
       const result = await this.pool.query('SELECT * FROM projection_states ORDER BY name');
       return result.rows.map(row => ({
         name: row.name,
-        position: BigInt(row.position),
+        position: Number(row.position),
         status: row.status,
         errorCount: row.error_count,
         lastError: row.last_error,
@@ -253,8 +253,7 @@ export class PostgresProjectionManager implements ProjectionManager {
 
       if (updates.position !== undefined && updates.position !== null) {
         setParts.push(`position = $${paramIndex++}`);
-        const posValue = typeof updates.position === 'bigint' ? updates.position.toString() : String(updates.position);
-        values.push(posValue);
+        values.push(updates.position);
       }
 
       if (updates.status !== undefined) {
@@ -307,7 +306,7 @@ export class PostgresProjectionManager implements ProjectionManager {
       // Query events from eventstore
       const events = await this.eventStore.query({
         eventTypes: config.eventTypes,
-        position: { position: BigInt(position), inPositionOrder: 0 },
+        position: { position: Number(position), inTxOrder: 0 },
         limit: config.batchSize || 100,
       });
 

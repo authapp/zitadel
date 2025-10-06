@@ -108,16 +108,16 @@ describe('Integration: Database Setup', () => {
     });
 
     it('should insert and retrieve events', async () => {
-      // Insert an event using the actual schema
+      // Insert an event using the new Zitadel v2 schema
       await query(
         pool,
         `INSERT INTO events (
-          id, aggregate_type, aggregate_id, aggregate_version, event_type, event_data,
-          editor_user, resource_owner, instance_id, position, in_position_order,
-          creation_date, revision
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 1)`,
-        ['evt-123', 'user', 'user123', 1, 'user.created', JSON.stringify({ username: 'test' }),
-         'admin', 'test-org', 'test-instance', '1', 0]
+          aggregate_type, aggregate_id, aggregate_version, event_type, payload,
+          creator, owner, instance_id, position, in_tx_order,
+          created_at, revision
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, EXTRACT(EPOCH FROM clock_timestamp()), $9, NOW(), 1)`,
+        ['user', 'user123', 1, 'user.created', JSON.stringify({ username: 'test' }),
+         'admin', 'test-org', 'test-instance', 0]
       );
 
       // Retrieve events
@@ -129,7 +129,7 @@ describe('Integration: Database Setup', () => {
 
       expect(events).toHaveLength(1);
       expect(events[0].event_type).toBe('user.created');
-      expect(events[0].event_data.username).toBe('test');
+      expect(events[0].payload.username).toBe('test');
     });
 
     it('should clean database between tests', async () => {

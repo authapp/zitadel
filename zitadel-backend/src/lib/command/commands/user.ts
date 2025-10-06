@@ -193,7 +193,7 @@ export const createUserHandler: CommandHandler<CreateUserCommand> = async (
     eventType: 'user.created',
     aggregateType: 'user',
     aggregateID: command.aggregateId,
-    eventData: {
+    payload: {
       username,
       email,
       firstName,
@@ -206,14 +206,13 @@ export const createUserHandler: CommandHandler<CreateUserCommand> = async (
       ...(command.passwordChangeRequired !== undefined && { passwordChangeRequired: command.passwordChangeRequired }),
       ...(command.passwordHash && { passwordHash: command.passwordHash }),
     },
-    editorUser: command.context.userId || 'system',
-    resourceOwner: command.context.resourceOwner,
+    creator: command.context.userId || 'system',
+    owner: command.context.resourceOwner,
     instanceID: command.context.instanceId,
   };
 
   return eventstoreCommand;
 };
-
 /**
  * Update user command handler
  * 
@@ -268,9 +267,9 @@ export const updateUserHandler: CommandHandler<UpdateUserCommand> = async (
     eventType: 'user.updated',
     aggregateType: 'user',
     aggregateID: command.aggregateId,
-    eventData: changes,
-    editorUser: command.context.userId || 'system',
-    resourceOwner: command.context.resourceOwner,
+    payload: changes,
+    creator: command.context.userId || 'system',
+    owner: command.context.resourceOwner,
     instanceID: command.context.instanceId,
     revision: currentState.version,  // ← Ensures we're updating the right version
   };
@@ -300,11 +299,11 @@ export const deactivateUserHandler: CommandHandler<DeactivateUserCommand> = asyn
     eventType: 'user.deactivated',
     aggregateType: 'user',
     aggregateID: command.aggregateId,
-    eventData: {
+    payload: {
       deactivatedBy: command.context.userId,
     },
-    editorUser: command.context.userId || 'system',
-    resourceOwner: command.context.resourceOwner,
+    creator: command.context.userId || 'system',
+    owner: command.context.resourceOwner,
     instanceID: command.context.instanceId,
     revision: currentState.version,
   };
@@ -334,11 +333,11 @@ export const changePasswordHandler: CommandHandler<ChangePasswordCommand> = asyn
     eventType: 'user.password.changed',
     aggregateType: 'user',
     aggregateID: command.aggregateId,
-    eventData: {
+    payload: {
       passwordHash: command.passwordHash,
     },
-    editorUser: command.context.userId || 'system',
-    resourceOwner: command.context.resourceOwner,
+    creator: command.context.userId || 'system',
+    owner: command.context.resourceOwner,
     instanceID: command.context.instanceId,
     revision: currentState.version,
   };

@@ -4,72 +4,70 @@
 
 /**
  * Position represents a position in the event stream
+ * Position is a timestamp-based decimal value
+ * inTxOrder handles ordering within the same position
  */
 export interface Position {
-  position: bigint;
-  inPositionOrder: number;
+  position: number; // DECIMAL - timestamp from EXTRACT(EPOCH FROM clock_timestamp())
+  inTxOrder: number; // Order within transaction
 }
 
 /**
- * Event represents a single event in the event stream
+ * Event represents a single event in the event stream (matching Go v2 schema)
  */
 export interface Event {
-  id: string;
-  eventType: string;
+  instanceID: string;
   aggregateType: string;
   aggregateID: string;
-  aggregateVersion: number;
-  eventData: Record<string, any>;
-  editorUser: string;
-  editorService?: string;
-  resourceOwner: string;
-  instanceID: string;
+  eventType: string;
+  aggregateVersion: bigint; // Sequence number of event in aggregate
+  revision: number; // Schema revision (SMALLINT)
+  createdAt: Date;
+  payload: Record<string, any> | null;
+  creator: string; // User or service that created the event
+  owner: string; // Resource owner
   position: Position;
-  creationDate: Date;
-  revision: number;
 }
 
 /**
- * Command represents a command to be executed
+ * Command represents a command to be executed (matching Go v2 schema)
  */
 export interface Command {
+  instanceID: string;
   aggregateType: string;
   aggregateID: string;
   eventType: string;
-  eventData: Record<string, any>;
-  editorUser: string;
-  editorService?: string;
-  resourceOwner: string;
-  instanceID: string;
-  revision?: number;
+  payload: Record<string, any> | null;
+  creator: string; // User or service creating the event
+  owner: string; // Resource owner
+  revision?: number; // Default to 1 if not specified
 }
 
 /**
- * Aggregate represents the current state of an aggregate
+ * Aggregate represents the current state of an aggregate (matching Go v2 schema)
  */
 export interface Aggregate {
   id: string;
   type: string;
-  resourceOwner: string;
+  owner: string; // Resource owner
   instanceID: string;
-  version: number;
+  version: bigint; // Current aggregate_version
   events: Event[];
   position: Position;
 }
 
 /**
- * Event filter for querying events
+ * Event filter for querying events (matching Go v2 schema)
  */
 export interface EventFilter {
+  instanceID?: string;
   aggregateTypes?: string[];
   aggregateIDs?: string[];
   eventTypes?: string[];
-  resourceOwner?: string;
-  instanceID?: string;
-  editorUser?: string;
-  editorService?: string;
-  creationDateFrom?: Date;
-  creationDateTo?: Date;
+  owner?: string; // Resource owner
+  creator?: string; // Event creator
+  createdAtFrom?: Date;
+  createdAtTo?: Date;
   position?: Position;
   limit?: number;
   desc?: boolean;

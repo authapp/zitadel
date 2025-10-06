@@ -49,16 +49,16 @@ export class UserProjection {
         return this.reduceUserCreated(event, currentState);
       
       case 'user.updated':
-        return this.reduceUserUpdated(event, currentState);
+        return currentState ? this.reduceUserUpdated(event, currentState) : null;
       
       case 'user.password.changed':
-        return this.reducePasswordChanged(event, currentState);
+        return currentState ? this.reducePasswordChanged(event, currentState) : null;
       
       case 'user.deactivated':
-        return this.reduceUserDeactivated(event, currentState);
+        return currentState ? this.reduceUserDeactivated(event, currentState) : null;
       
       case 'user.reactivated':
-        return this.reduceUserReactivated(event, currentState);
+        return currentState ? this.reduceUserReactivated(event, currentState) : null;
       
       case 'user.deleted':
         return null; // Returning null deletes the projection
@@ -73,12 +73,12 @@ export class UserProjection {
    * Reducer: user.created
    */
   private reduceUserCreated(event: Event, _currentState: UserProjectionState | null): UserProjectionState {
-    const data = event.eventData as any;
+    const data = event.payload as any;
     
     return {
       id: event.aggregateID,
       instanceId: event.instanceID,
-      resourceOwner: event.resourceOwner,
+      resourceOwner: event.owner,
       username: data.username,
       email: data.email,
       firstName: data.firstName,
@@ -87,85 +87,64 @@ export class UserProjection {
       phone: data.phone,
       passwordHash: data.passwordHash, // Store hashed password
       state: 'active',
-      createdAt: event.creationDate,
-      updatedAt: event.creationDate,
+      createdAt: event.createdAt,
+      updatedAt: event.createdAt,
     };
   }
 
   /**
    * Reducer: user.updated
    */
-  private reduceUserUpdated(event: Event, currentState: UserProjectionState | null): UserProjectionState | null {
-    if (!currentState) {
-      // Can't update what doesn't exist
-      console.warn(`Cannot update non-existent user: ${event.aggregateID}`);
-      return null;
-    }
-
-    const data = event.eventData as any;
+  private reduceUserUpdated(event: Event, currentState: UserProjectionState): UserProjectionState {
+    const data = event.payload as any;
     
     return {
       ...currentState,
-      email: data.email ?? currentState.email,
-      firstName: data.firstName ?? currentState.firstName,
-      lastName: data.lastName ?? currentState.lastName,
-      displayName: data.displayName ?? currentState.displayName,
-      phone: data.phone ?? currentState.phone,
-      updatedAt: event.creationDate,
+      // Update only provided fields
+      ...(data.username && { username: data.username }),
+      ...(data.email && { email: data.email }),
+      ...(data.firstName && { firstName: data.firstName }),
+      ...(data.lastName && { lastName: data.lastName }),
+      ...(data.displayName && { displayName: data.displayName }),
+      ...(data.phone && { phone: data.phone }),
+      updatedAt: event.createdAt,
     };
   }
 
   /**
    * Reducer: user.password.changed
    */
-  private reducePasswordChanged(event: Event, currentState: UserProjectionState | null): UserProjectionState | null {
-    if (!currentState) {
-      console.warn(`Cannot change password for non-existent user: ${event.aggregateID}`);
-      return null;
-    }
-
-    const data = event.eventData as any;
-    
+  private reducePasswordChanged(event: Event, currentState: UserProjectionState): UserProjectionState {
     return {
       ...currentState,
-      passwordHash: data.passwordHash, // Update password hash
-      updatedAt: event.creationDate,
+      updatedAt: event.createdAt,
     };
   }
 
   /**
    * Reducer: user.deactivated
    */
-  private reduceUserDeactivated(event: Event, currentState: UserProjectionState | null): UserProjectionState | null {
-    if (!currentState) {
-      return null;
-    }
-
+  private reduceUserDeactivated(event: Event, currentState: UserProjectionState): UserProjectionState {
     return {
       ...currentState,
       state: 'inactive',
-      updatedAt: event.creationDate,
+      updatedAt: event.createdAt,
     };
   }
 
   /**
    * Reducer: user.reactivated
    */
-  private reduceUserReactivated(event: Event, currentState: UserProjectionState | null): UserProjectionState | null {
-    if (!currentState) {
-      return null;
-    }
-
+  private reduceUserReactivated(event: Event, currentState: UserProjectionState): UserProjectionState {
     return {
       ...currentState,
       state: 'active',
-      updatedAt: event.creationDate,
+      updatedAt: event.createdAt,
     };
   }
 
   /**
    * Apply projection state to database
-   * 
    * This is called by the ProjectionManager after reduce()
    */
   async apply(state: UserProjectionState): Promise<void> {

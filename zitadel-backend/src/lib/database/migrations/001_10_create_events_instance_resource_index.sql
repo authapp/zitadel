@@ -1,2 +1,2 @@
--- Migration: 001_10 - Create events instance resource composite index
-CREATE INDEX IF NOT EXISTS idx_events_instance_resource ON events (instance_id, resource_owner);
+-- Migration: 001_10 - No-op (removed in Go v2 simplification)
+-- Covered by idx_events_projection and other composite indexes

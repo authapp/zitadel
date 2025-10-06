@@ -86,7 +86,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(29); // We have 29 migration steps (Priority 2 + Priority 3 + multi-tenant fix)
+      expect(version).toBe(30); // We have 30 migration steps (Priority 2 + Priority 3 + multi-tenant fix + position type fix)
     });
   });
 
@@ -112,8 +112,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 29 records (one per migration step)
-      expect(migrations.length).toBe(29);
+      // Should still only have 30 records (one per migration step)
+      expect(migrations.length).toBe(30);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(29);
+      expect(migrations1.length).toBe(30);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +159,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(29);
+      expect(applied.length).toBe(30);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(29);
+      expect(applied[applied.length - 1].version).toBe(30);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
@@ -178,12 +178,14 @@ describe('Migration System Integration', () => {
       );
 
       const columnNames = columns.map(c => c.column_name);
-      expect(columnNames).toContain('id');
+      expect(columnNames).toContain('instance_id');
       expect(columnNames).toContain('event_type');
       expect(columnNames).toContain('aggregate_type');
       expect(columnNames).toContain('aggregate_id');
       expect(columnNames).toContain('aggregate_version');
-      expect(columnNames).toContain('event_data');
+      expect(columnNames).toContain('payload');
+      expect(columnNames).toContain('creator');
+      expect(columnNames).toContain('owner');
       expect(columnNames).toContain('position');
     });
 
@@ -225,8 +227,9 @@ describe('Migration System Integration', () => {
       );
 
       const indexNames = indexes.map(i => i.indexname);
-      expect(indexNames).toContain('idx_events_aggregate');
+      expect(indexNames).toContain('idx_events_wm'); // Write model index
       expect(indexNames).toContain('idx_events_position');
+      expect(indexNames).toContain('idx_events_projection');
     });
 
     it('should enforce unique constraints', async () => {

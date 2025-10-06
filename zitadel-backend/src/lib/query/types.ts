@@ -97,7 +97,7 @@ export interface QueryResult<T> {
  */
 export interface ProjectionState {
   name: string;
-  position: bigint;
+  position: number; // DECIMAL - timestamp from EXTRACT(EPOCH FROM clock_timestamp())
   lastProcessedAt: Date;
   status: ProjectionStatus;
   errorCount: number;

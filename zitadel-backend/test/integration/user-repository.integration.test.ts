@@ -768,7 +768,7 @@ describe('User Repository Integration Tests', () => {
         aggregateType: 'user',
         aggregateId: userId,
         eventType: 'user.created',
-        eventData: {
+        payload: {
           username: 'eventuser',
           email: 'event@test.com',
         },
@@ -787,7 +787,7 @@ describe('User Repository Integration Tests', () => {
         aggregateType: 'user',
         aggregateId: userId,
         eventType: 'user.created',
-        eventData: { username: 'user' },
+        payload: { username: 'user' },
         sequence: 0,
       });
 
@@ -795,7 +795,7 @@ describe('User Repository Integration Tests', () => {
         aggregateType: 'user',
         aggregateId: userId,
         eventType: 'user.updated',
-        eventData: { email: 'new@test.com' },
+        payload: { email: 'new@test.com' },
         sequence: 1,
       });
 

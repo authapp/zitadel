@@ -37,9 +37,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID: 'user-1',
         eventType: 'user.created',
-        eventData: { username: 'user1' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'user1' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       };
 
@@ -47,9 +47,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID: 'user-2',
         eventType: 'user.created',
-        eventData: { username: 'user2' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'user2' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       };
 
@@ -60,9 +60,9 @@ describe('PostgresEventstore Concurrency', () => {
       ]);
 
       expect(events1.aggregateID).toBe('user-1');
-      expect(events1.aggregateVersion).toBe(1);
+      expect(events1.aggregateVersion).toBe(1n);
       expect(events2.aggregateID).toBe('user-2');
-      expect(events2.aggregateVersion).toBe(1);
+      expect(events2.aggregateVersion).toBe(1n);
     });
 
     it('should serialize updates to same aggregate', async () => {
@@ -73,9 +73,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID,
         eventType: 'user.created',
-        eventData: { username: 'user' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'user' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       });
 
@@ -85,9 +85,9 @@ describe('PostgresEventstore Concurrency', () => {
           aggregateType: 'user',
           aggregateID,
           eventType: 'user.updated',
-          eventData: { update: i },
-          editorUser: 'system',
-          resourceOwner: 'org-1',
+          payload: { update: i },
+          creator: 'system',
+          owner: 'org-1',
           instanceID: 'test-instance',
         })
       );
@@ -95,8 +95,8 @@ describe('PostgresEventstore Concurrency', () => {
       const results = await Promise.all(updates);
 
       // Verify versions are sequential (order may vary due to retries)
-      const versions = results.map(e => e.aggregateVersion).sort((a, b) => a - b);
-      expect(versions).toEqual([2, 3, 4]);
+      const versions = results.map(e => e.aggregateVersion).sort((a, b) => Number(a - b));
+      expect(versions).toEqual([2n, 3n, 4n]);
       
       // Verify all updates succeeded
       expect(results.length).toBe(3);
@@ -112,9 +112,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID: 'retry-test',
         eventType: 'user.created',
-        eventData: { username: 'retry' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'retry' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       };
 
@@ -122,7 +122,7 @@ describe('PostgresEventstore Concurrency', () => {
       const event = await eventstore.pushMany([command], 3);
       
       expect(event).toHaveLength(1);
-      expect(event[0].aggregateVersion).toBe(1);
+      expect(event[0].aggregateVersion).toBe(1n);
     });
   });
 
@@ -133,27 +133,27 @@ describe('PostgresEventstore Concurrency', () => {
           aggregateType: 'user',
           aggregateID: 'user-1',
           eventType: 'user.created',
-          eventData: { username: 'user1' },
-          editorUser: 'system',
-          resourceOwner: 'org-1',
+          payload: { username: 'user1' },
+          creator: 'system',
+          owner: 'org-1',
           instanceID: 'test-instance',
         },
         {
           aggregateType: 'org',
           aggregateID: 'org-1',
           eventType: 'org.created',
-          eventData: { name: 'Org 1' },
-          editorUser: 'system',
-          resourceOwner: 'org-1',
+          payload: { name: 'Org 1' },
+          creator: 'system',
+          owner: 'org-1',
           instanceID: 'test-instance',
         },
         {
           aggregateType: 'user',
           aggregateID: 'user-2',
           eventType: 'user.created',
-          eventData: { username: 'user2' },
-          editorUser: 'system',
-          resourceOwner: 'org-1',
+          payload: { username: 'user2' },
+          creator: 'system',
+          owner: 'org-1',
           instanceID: 'test-instance',
         },
       ];
@@ -176,9 +176,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID,
         eventType: 'user.created',
-        eventData: { username: 'user' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'user' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       });
 
@@ -188,15 +188,15 @@ describe('PostgresEventstore Concurrency', () => {
           aggregateType: 'user',
           aggregateID,
           eventType: 'user.updated',
-          eventData: { email: 'new@example.com' },
-          editorUser: 'system',
-          resourceOwner: 'org-1',
+          payload: { email: 'new@example.com' },
+          creator: 'system',
+          owner: 'org-1',
           instanceID: 'test-instance',
         }],
         1  // Expected version
       );
 
-      expect(event[0].aggregateVersion).toBe(2);
+      expect(event[0].aggregateVersion).toBe(2n);
     });
 
     it('should throw ConcurrencyError on version mismatch', async () => {
@@ -207,9 +207,9 @@ describe('PostgresEventstore Concurrency', () => {
         aggregateType: 'user',
         aggregateID,
         eventType: 'user.created',
-        eventData: { username: 'user' },
-        editorUser: 'system',
-        resourceOwner: 'org-1',
+        payload: { username: 'user' },
+        creator: 'system',
+        owner: 'org-1',
         instanceID: 'test-instance',
       });
 
@@ -220,9 +220,9 @@ describe('PostgresEventstore Concurrency', () => {
             aggregateType: 'user',
             aggregateID,
             eventType: 'user.updated',
-            eventData: { email: 'new@example.com' },
-            editorUser: 'system',
-            resourceOwner: 'org-1',
+            payload: { email: 'new@example.com' },
+            creator: 'system',
+            owner: 'org-1',
             instanceID: 'test-instance',
           }],
           999  // Wrong expected version

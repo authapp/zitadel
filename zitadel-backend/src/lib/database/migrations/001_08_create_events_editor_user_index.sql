@@ -1,2 +1,2 @@
--- Migration: 001_08 - Create events editor user index
-CREATE INDEX IF NOT EXISTS idx_events_editor_user ON events (editor_user);
+-- Migration: 001_08 - No-op (removed in Go v2 simplification)
+-- Creator queries are less common and can use table scan if needed

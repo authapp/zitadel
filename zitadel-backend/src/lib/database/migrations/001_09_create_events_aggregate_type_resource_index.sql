@@ -1,2 +1,2 @@
--- Migration: 001_09 - Create events composite index for common queries
-CREATE INDEX IF NOT EXISTS idx_events_aggregate_type_resource ON events (aggregate_type, resource_owner);
+-- Migration: 001_09 - No-op (removed in Go v2 simplification)
+-- Covered by idx_events_wm and idx_events_projection

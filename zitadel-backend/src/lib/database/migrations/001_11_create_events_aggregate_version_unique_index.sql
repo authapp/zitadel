@@ -1,3 +1,2 @@
--- Migration: 001_11 - Unique constraint to prevent duplicate versions for same aggregate
-CREATE UNIQUE INDEX IF NOT EXISTS idx_events_aggregate_version_unique 
-ON events (aggregate_type, aggregate_id, aggregate_version);
+-- Migration: 001_11 - No-op (uniqueness enforced by primary key)
+-- Primary key (instance_id, aggregate_type, aggregate_id, aggregate_version) ensures uniqueness

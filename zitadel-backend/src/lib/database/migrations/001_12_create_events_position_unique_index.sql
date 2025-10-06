@@ -1,3 +1,3 @@
--- Migration: 001_12 - Unique constraint for position ordering
-CREATE UNIQUE INDEX IF NOT EXISTS idx_events_position_unique 
-ON events (position, in_position_order);
+-- Migration: 001_12 - No-op (position uniqueness not enforced in Go v2)
+-- Position is timestamp-based (DECIMAL) and may have duplicates within same transaction
+-- in_tx_order handles ordering within same position

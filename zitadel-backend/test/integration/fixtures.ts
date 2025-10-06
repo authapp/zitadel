@@ -195,30 +195,30 @@ export function setupUserServiceForTest(pool: DatabasePool) {
         await userRepo.create({
           id: event.aggregateID,
           instanceId: event.instanceID,
-          resourceOwner: event.resourceOwner,
-          username: event.eventData.username,
-          email: event.eventData.email,
-          firstName: event.eventData.firstName,
-          lastName: event.eventData.lastName,
-          displayName: event.eventData.displayName,
-          phone: event.eventData.phone,
-          passwordHash: event.eventData.passwordHash,
+          resourceOwner: event.owner,
+          username: event.payload.username,
+          email: event.payload.email,
+          firstName: event.payload.firstName,
+          lastName: event.payload.lastName,
+          displayName: event.payload.displayName,
+          phone: event.payload.phone,
+          passwordHash: event.payload.passwordHash,
           state: 'active',
         });
       } else if (event.eventType === 'user.password.changed') {
         const existing = await userRepo.findById(event.aggregateID);
         if (existing) {
           await userRepo.update(event.aggregateID, {
-            passwordHash: event.eventData.passwordHash,
+            passwordHash: event.payload.passwordHash,
           });
         }
       } else if (event.eventType === 'user.updated') {
         const existing = await userRepo.findById(event.aggregateID);
         if (existing) {
           await userRepo.update(event.aggregateID, {
-            email: event.eventData.email || existing.email,
-            firstName: event.eventData.firstName || existing.first_name,
-            lastName: event.eventData.lastName || existing.last_name,
+            email: event.payload.email || existing.email,
+            firstName: event.payload.firstName || existing.first_name,
+            lastName: event.payload.lastName || existing.last_name,
           });
         }
       } else if (event.eventType === 'user.deactivated') {
@@ -589,7 +589,7 @@ export interface CreateEventOptions {
   aggregateType: string;
   aggregateId: string;
   eventType: string;
-  eventData: any;
+  payload: any;
   sequence?: number;
   editorUser?: string;
 }
@@ -598,34 +598,25 @@ export async function createTestEvent(
   pool: DatabasePool,
   options: CreateEventOptions
 ): Promise<any> {
-  const id = generateSnowflakeId();
   const aggregateVersion = options.sequence !== undefined ? options.sequence + 1 : 1;
-  
-  // Create unique position by combining timestamp with aggregate info
-  // This ensures each event gets a unique position even when created rapidly
-  const timestamp = BigInt(Date.now()) * 1000000n; // Convert to microseconds
-  const uniqueOffset = BigInt(aggregateVersion) * 1000n; // Add version-based offset
-  const position = (timestamp + uniqueOffset).toString();
   
   const result = await pool.query(
     `INSERT INTO events (
-      id, aggregate_type, aggregate_id, aggregate_version, event_type, event_data,
-      editor_user, resource_owner, instance_id, position, in_position_order,
-      creation_date, revision
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), 1)
-    RETURNING id`,
+      aggregate_type, aggregate_id, aggregate_version, event_type, payload,
+      creator, owner, instance_id, position, in_tx_order,
+      created_at, revision
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, EXTRACT(EPOCH FROM clock_timestamp()), $9, NOW(), 1)
+    RETURNING aggregate_id as id`,
     [
-      id,
       options.aggregateType,
       options.aggregateId,
       aggregateVersion, // Use sequence as aggregate_version, +1 because versions start at 1
       options.eventType,
-      JSON.stringify(options.eventData),
+      JSON.stringify(options.payload),
       options.editorUser || 'system',
       'test-org',
       'test-instance',
-      position,
-      0, // in_position_order
+      0, // in_tx_order
     ]
   );
 
@@ -714,14 +705,13 @@ export async function getTestEvents(
   );
   
   return result.rows.map(row => ({
-    id: row.id,
     aggregateType: row.aggregate_type,
     aggregateId: row.aggregate_id,
     eventType: row.event_type,
-    eventData: row.event_data,
-    sequence: row.aggregate_version - 1, // Map aggregate_version to sequence (version starts at 1, sequence starts at 0)
-    editorUser: row.editor_user,
-    createdAt: row.creation_date,
+    payload: row.payload,
+    sequence: Number(row.aggregate_version) - 1, // Map aggregate_version to sequence (version starts at 1, sequence starts at 0)
+    editorUser: row.creator,
+    createdAt: row.created_at,
   }));
 }
 

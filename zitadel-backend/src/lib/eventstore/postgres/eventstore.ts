@@ -1,5 +1,4 @@
 import { DatabasePool, QueryExecutor } from '@/database/pool';
-import { generateId } from '@/id/snowflake';
 import { throwInvalidArgument } from '@/zerrors/errors';
 import {
   Event,
@@ -102,36 +101,35 @@ export class PostgresEventstore implements Eventstore {
       const events: Event[] = [];
 
       for (const command of commands) {
-        // Get next position (with global lock)
-        const position = await this.getNextPosition(tx);
-
         // Get current aggregate version (with per-aggregate lock)
         const currentVersion = await this.getCurrentVersion(
           tx,
+          command.instanceID,
           command.aggregateType,
           command.aggregateID
         );
 
-        // Create event
+        // Create event (position will be set by database)
         const event: Event = {
-          id: generateId(),
-          eventType: command.eventType,
+          instanceID: command.instanceID,
           aggregateType: command.aggregateType,
           aggregateID: command.aggregateID,
-          aggregateVersion: currentVersion + 1,
-          eventData: command.eventData,
-          editorUser: command.editorUser,
-          editorService: command.editorService,
-          resourceOwner: command.resourceOwner,
-          instanceID: command.instanceID,
-          position,
-          creationDate: new Date(),
-          revision: 1,
+          eventType: command.eventType,
+          aggregateVersion: currentVersion + 1n,
+          revision: command.revision ?? 1,
+          createdAt: new Date(), // Will be overwritten by DB
+          payload: command.payload,
+          creator: command.creator,
+          owner: command.owner,
+          position: {
+            position: 0, // Will be set by DB
+            inTxOrder: 0, // Will be set by DB
+          },
         };
 
-        // Insert event
-        await this.insertEvent(tx, event);
-        events.push(event);
+        // Insert event (returns event with DB-generated values)
+        const insertedEvent = await this.insertEvent(tx, event, events.length);
+        events.push(insertedEvent);
       }
 
       return events;
@@ -170,15 +168,16 @@ export class PostgresEventstore implements Eventstore {
       // Check current version
       const currentVersion = await this.getCurrentVersion(
         tx,
+        firstCommand.instanceID,
         aggregateType,
         aggregateID
       );
 
-      if (currentVersion !== expectedVersion) {
+      if (currentVersion !== BigInt(expectedVersion)) {
         throw new ConcurrencyError(
           `Version mismatch for aggregate ${aggregateID}`,
           expectedVersion,
-          currentVersion
+          Number(currentVersion)
         );
       }
 
@@ -186,26 +185,25 @@ export class PostgresEventstore implements Eventstore {
       const events: Event[] = [];
 
       for (const command of commands) {
-        const position = await this.getNextPosition(tx);
-
         const event: Event = {
-          id: generateId(),
-          eventType: command.eventType,
+          instanceID: command.instanceID,
           aggregateType: command.aggregateType,
           aggregateID: command.aggregateID,
-          aggregateVersion: currentVersion + events.length + 1,
-          eventData: command.eventData,
-          editorUser: command.editorUser,
-          editorService: command.editorService,
-          resourceOwner: command.resourceOwner,
-          instanceID: command.instanceID,
-          position,
-          creationDate: new Date(),
-          revision: 1,
+          eventType: command.eventType,
+          aggregateVersion: currentVersion + BigInt(events.length) + 1n,
+          revision: command.revision ?? 1,
+          createdAt: new Date(), // Will be overwritten by DB
+          payload: command.payload,
+          creator: command.creator,
+          owner: command.owner,
+          position: {
+            position: 0, // Will be set by DB
+            inTxOrder: 0, // Will be set by DB
+          },
         };
 
-        await this.insertEvent(tx, event);
-        events.push(event);
+        const insertedEvent = await this.insertEvent(tx, event, events.length);
+        events.push(insertedEvent);
       }
 
       return events;
@@ -272,7 +270,7 @@ export class PostgresEventstore implements Eventstore {
     return {
       id: aggregateID,
       type: aggregateType,
-      resourceOwner: lastEvent.resourceOwner,
+      owner: lastEvent.owner,
       instanceID: lastEvent.instanceID,
       version: lastEvent.aggregateVersion,
       events,
@@ -328,14 +326,14 @@ export class PostgresEventstore implements Eventstore {
   async eventsAfterPosition(position: Position, limit = 1000): Promise<Event[]> {
     const query = `
       SELECT * FROM events 
-      WHERE position > $1 OR (position = $1 AND in_position_order > $2)
-      ORDER BY position ASC, in_position_order ASC
+      WHERE "position" > $1 OR ("position" = $1 AND in_tx_order > $2)
+      ORDER BY "position" ASC, in_tx_order ASC
       LIMIT $3
     `;
 
     const rows = await this.db.queryMany(query, [
       position.position.toString(),
-      position.inPositionOrder,
+      position.inTxOrder,
       limit,
     ]);
 
@@ -364,6 +362,9 @@ export class PostgresEventstore implements Eventstore {
   // Private helper methods
 
   private validateCommand(command: Command): void {
+    if (!command.instanceID) {
+      throw new EventValidationError('instanceID is required', 'instanceID');
+    }
     if (!command.aggregateType) {
       throw new EventValidationError('aggregateType is required', 'aggregateType');
     }
@@ -373,95 +374,75 @@ export class PostgresEventstore implements Eventstore {
     if (!command.eventType) {
       throw new EventValidationError('eventType is required', 'eventType');
     }
-    if (!command.editorUser) {
-      throw new EventValidationError('editorUser is required', 'editorUser');
+    if (!command.creator) {
+      throw new EventValidationError('creator is required', 'creator');
     }
-    if (!command.resourceOwner) {
-      throw new EventValidationError('resourceOwner is required', 'resourceOwner');
-    }
-    if (!command.instanceID) {
-      throw new EventValidationError('instanceID is required', 'instanceID');
+    if (!command.owner) {
+      throw new EventValidationError('owner is required', 'owner');
     }
   }
 
-  private async getNextPosition(tx: QueryExecutor): Promise<Position> {
-    // Lock the latest position row to prevent concurrent position generation
-    // We first find the max position, then lock those rows
-    // Note: We can't use FOR UPDATE with MAX() directly in PostgreSQL
-    
-    // Get current max position
-    const maxResult = await tx.query<{ position: string }>(
-      'SELECT COALESCE(MAX(position), 0) as position FROM events'
-    );
-    
-    const currentMaxPosition = BigInt(maxResult.rows[0]?.position ?? '0');
-    
-    // Lock rows at max position to prevent concurrent inserts at same position
-    // This is a lightweight advisory approach
-    if (currentMaxPosition > 0n) {
-      await tx.query(
-        'SELECT position FROM events WHERE position = $1 FOR UPDATE',
-        [currentMaxPosition.toString()]
-      );
-    }
-
-    return {
-      position: currentMaxPosition + 1n,
-      inPositionOrder: 0,
-    };
-  }
 
   private async getCurrentVersion(
     tx: QueryExecutor,
+    instanceID: string,
     aggregateType: string,
     aggregateID: string
-  ): Promise<number> {
+  ): Promise<bigint> {
     // Use FOR UPDATE to lock only this aggregate's rows
     // This prevents concurrent transactions from updating the same aggregate
     // Similar to Zitadel's approach: locks per-aggregate, not globally
+    // Go v2 includes instance_id in the lock query
     
-    // We need to lock the latest event row for this aggregate
-    // Using a subquery approach since FOR UPDATE doesn't work with MAX()
-    const result = await tx.query<{ version: number }>(
+    const result = await tx.query<{ version: string }>(
       `SELECT aggregate_version as version
        FROM events 
-       WHERE aggregate_type = $1 AND aggregate_id = $2
+       WHERE instance_id = $1 AND aggregate_type = $2 AND aggregate_id = $3
        ORDER BY aggregate_version DESC
        LIMIT 1
        FOR UPDATE`,
-      [aggregateType, aggregateID]
+      [instanceID, aggregateType, aggregateID]
     );
 
-    return result.rows[0]?.version ?? 0;
+    return result.rows[0]?.version ? BigInt(result.rows[0].version) : 0n;
   }
 
-  private async insertEvent(tx: QueryExecutor, event: Event): Promise<void> {
+  private async insertEvent(tx: QueryExecutor, event: Event, txOrder: number): Promise<Event> {
+    // Matching Go v2: uses statement_timestamp() for created_at and clock_timestamp() for position
     const query = `
       INSERT INTO events (
-        id, event_type, aggregate_type, aggregate_id, aggregate_version,
-        event_data, editor_user, editor_service, resource_owner, instance_id,
-        position, in_position_order, creation_date, revision
+        instance_id, "owner", aggregate_type, aggregate_id, revision,
+        creator, event_type, payload, aggregate_version, in_tx_order,
+        created_at, "position"
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+        statement_timestamp(), EXTRACT(EPOCH FROM clock_timestamp())
       )
+      RETURNING created_at, "position"
     `;
 
-    await tx.query(query, [
-      event.id,
-      event.eventType,
+    const result = await tx.query<{ created_at: Date; position: string }>(query, [
+      event.instanceID,
+      event.owner,
       event.aggregateType,
       event.aggregateID,
-      event.aggregateVersion,
-      JSON.stringify(event.eventData),
-      event.editorUser,
-      event.editorService,
-      event.resourceOwner,
-      event.instanceID,
-      event.position.position.toString(),
-      event.position.inPositionOrder,
-      event.creationDate,
       event.revision,
+      event.creator,
+      event.eventType,
+      event.payload ? JSON.stringify(event.payload) : null,
+      event.aggregateVersion.toString(),
+      txOrder,
     ]);
+
+    // Return event with DB-generated values
+    return {
+      ...event,
+      createdAt: result.rows[0].created_at,
+      position: {
+        position: parseFloat(result.rows[0].position),
+        inTxOrder: txOrder,
+      },
+    };
   }
 
   private buildEventQuery(
@@ -494,47 +475,41 @@ export class PostgresEventstore implements Eventstore {
       paramIndex++;
     }
 
-    if (filter.resourceOwner) {
-      conditions.push(`resource_owner = $${paramIndex}`);
-      values.push(filter.resourceOwner);
-      paramIndex++;
-    }
-
     if (filter.instanceID) {
       conditions.push(`instance_id = $${paramIndex}`);
       values.push(filter.instanceID);
       paramIndex++;
     }
 
-    if (filter.editorUser) {
-      conditions.push(`editor_user = $${paramIndex}`);
-      values.push(filter.editorUser);
+    if (filter.owner) {
+      conditions.push(`"owner" = $${paramIndex}`);
+      values.push(filter.owner);
       paramIndex++;
     }
 
-    if (filter.editorService) {
-      conditions.push(`editor_service = $${paramIndex}`);
-      values.push(filter.editorService);
+    if (filter.creator) {
+      conditions.push(`creator = $${paramIndex}`);
+      values.push(filter.creator);
       paramIndex++;
     }
 
-    if (filter.creationDateFrom) {
-      conditions.push(`creation_date >= $${paramIndex}`);
-      values.push(filter.creationDateFrom);
+    if (filter.createdAtFrom) {
+      conditions.push(`created_at >= $${paramIndex}`);
+      values.push(filter.createdAtFrom);
       paramIndex++;
     }
 
-    if (filter.creationDateTo) {
-      conditions.push(`creation_date <= $${paramIndex}`);
-      values.push(filter.creationDateTo);
+    if (filter.createdAtTo) {
+      conditions.push(`created_at <= $${paramIndex}`);
+      values.push(filter.createdAtTo);
       paramIndex++;
     }
 
     if (filter.position) {
       conditions.push(
-        `(position > $${paramIndex} OR (position = $${paramIndex} AND in_position_order >= $${paramIndex + 1}))`
+        `("position" > $${paramIndex} OR ("position" = $${paramIndex} AND in_tx_order >= $${paramIndex + 1}))`
       );
-      values.push(filter.position.position.toString(), filter.position.inPositionOrder);
+      values.push(filter.position.position.toString(), filter.position.inTxOrder);
       paramIndex += 2;
     }
 
@@ -543,7 +518,7 @@ export class PostgresEventstore implements Eventstore {
     }
 
     if (!isCount) {
-      query += ` ORDER BY position ${filter.desc ? 'DESC' : 'ASC'}, in_position_order ${filter.desc ? 'DESC' : 'ASC'}`;
+      query += ` ORDER BY "position" ${filter.desc ? 'DESC' : 'ASC'}, in_tx_order ${filter.desc ? 'DESC' : 'ASC'}`;
 
       if (filter.limit) {
         query += ` LIMIT ${filter.limit}`;
@@ -555,22 +530,20 @@ export class PostgresEventstore implements Eventstore {
 
   private mapRowToEvent(row: any): Event {
     return {
-      id: row.id,
-      eventType: row.event_type,
+      instanceID: row.instance_id,
       aggregateType: row.aggregate_type,
       aggregateID: row.aggregate_id,
-      aggregateVersion: row.aggregate_version,
-      eventData: typeof row.event_data === 'string' ? JSON.parse(row.event_data) : row.event_data,
-      editorUser: row.editor_user,
-      editorService: row.editor_service,
-      resourceOwner: row.resource_owner,
-      instanceID: row.instance_id,
-      position: {
-        position: BigInt(row.position),
-        inPositionOrder: row.in_position_order,
-      },
-      creationDate: row.creation_date,
+      eventType: row.event_type,
+      aggregateVersion: BigInt(row.aggregate_version),
       revision: row.revision,
+      createdAt: row.created_at,
+      payload: typeof row.payload === 'string' ? JSON.parse(row.payload) : row.payload,
+      creator: row.creator,
+      owner: row.owner,
+      position: {
+        position: parseFloat(row.position),
+        inTxOrder: row.in_tx_order,
+      },
     };
   }
 }

@@ -49,25 +49,21 @@ describe('PostgresEventstore', () => {
         aggregateType: 'user',
         aggregateID: 'user-123',
         eventType: 'user.created',
-        eventData: { name: 'John Doe' },
-        editorUser: 'admin',
-        resourceOwner: 'org-123',
+        payload: { name: 'John Doe' },
+        creator: 'admin',
+        owner: 'org-123',
         instanceID: 'test-instance',
       };
 
       const mockTx = {
         query: jest.fn()
-          // getNextPosition: SELECT MAX(position)
-          .mockResolvedValueOnce({
-            rows: [{ position: '0' }],
-          })
           // getCurrentVersion: SELECT ... FOR UPDATE (returns empty for new aggregate)
           .mockResolvedValueOnce({
             rows: [],
           })
           // insertEvent: INSERT
           .mockResolvedValueOnce({
-            rows: [],
+            rows: [{ created_at: new Date(), position: '1.0' }],
           }),
       };
 
@@ -78,19 +74,18 @@ describe('PostgresEventstore', () => {
       const result = await eventstore.push(command);
 
       expect(result).toMatchObject({
-        id: 'test-event-id',
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: 'user-123',
-        aggregateVersion: 1,
-        eventData: { name: 'John Doe' },
-        editorUser: 'admin',
-        resourceOwner: 'org-123',
+        aggregateVersion: 1n,
+        payload: { name: 'John Doe' },
+        creator: 'admin',
+        owner: 'org-123',
         instanceID: 'test-instance',
       });
 
       expect(mockWithTransaction).toHaveBeenCalledTimes(1);
-      expect(mockTx.query).toHaveBeenCalledTimes(3);
+      expect(mockTx.query).toHaveBeenCalledTimes(2);
     });
 
     it('should validate command before pushing', async () => {
@@ -109,9 +104,9 @@ describe('PostgresEventstore', () => {
         aggregateType: 'user',
         aggregateID: 'user-123',
         eventType: 'user.created',
-        eventData: {},
-        editorUser: 'admin',
-        resourceOwner: 'org-123',
+        payload: {},
+        creator: 'admin',
+        owner: 'org-123',
         instanceID: 'test-instance',
       });
 
@@ -125,9 +120,9 @@ describe('PostgresEventstore', () => {
         aggregateType: 'user',
         aggregateID: 'user-123',
         eventType: 'user.updated',
-        eventData: { name: 'Jane Doe' },
-        editorUser: 'admin',
-        resourceOwner: 'org-123',
+        payload: { name: 'Jane Doe' },
+        creator: 'admin',
+        owner: 'org-123',
         instanceID: 'test-instance',
       }];
 
@@ -135,12 +130,8 @@ describe('PostgresEventstore', () => {
         query: jest.fn()
           // getCurrentVersion: SELECT ... FOR UPDATE → returns version 1
           .mockResolvedValueOnce({ rows: [{ version: 1 }] })
-          // getNextPosition: SELECT MAX(position)
-          .mockResolvedValueOnce({ rows: [{ position: '1' }] })
-          // getNextPosition: SELECT ... FOR UPDATE (if position > 0)
-          .mockResolvedValueOnce({ rows: [] })
           // insertEvent: INSERT
-          .mockResolvedValueOnce({ rows: [] }),
+          .mockResolvedValueOnce({ rows: [{ created_at: new Date(), position: '2.0' }] }),
       };
 
       mockWithTransaction.mockImplementation(async (fn) => {
@@ -150,7 +141,7 @@ describe('PostgresEventstore', () => {
       const result = await eventstore.pushWithConcurrencyCheck(commands, 1);
 
       expect(result).toHaveLength(1);
-      expect(result[0].aggregateVersion).toBe(2);
+      expect(result[0].aggregateVersion).toBe(2n);
     });
 
     it('should throw ConcurrencyError on version mismatch', async () => {
@@ -158,9 +149,9 @@ describe('PostgresEventstore', () => {
         aggregateType: 'user',
         aggregateID: 'user-123',
         eventType: 'user.updated',
-        eventData: { name: 'Jane Doe' },
-        editorUser: 'admin',
-        resourceOwner: 'org-123',
+        payload: { name: 'Jane Doe' },
+        creator: 'admin',
+        owner: 'org-123',
         instanceID: 'test-instance',
       }];
 
@@ -183,18 +174,18 @@ describe('PostgresEventstore', () => {
           aggregateType: 'user',
           aggregateID: 'user-123',
           eventType: 'user.updated',
-          eventData: {},
-          editorUser: 'admin',
-          resourceOwner: 'org-123',
+          payload: {},
+          creator: 'admin',
+          owner: 'org-123',
           instanceID: 'test-instance',
         },
         {
           aggregateType: 'user',
           aggregateID: 'user-456', // Different aggregate ID
           eventType: 'user.updated',
-          eventData: {},
-          editorUser: 'admin',
-          resourceOwner: 'org-123',
+          payload: {},
+          creator: 'admin',
+          owner: 'org-123',
           instanceID: 'test-instance',
         },
       ];
@@ -209,24 +200,22 @@ describe('PostgresEventstore', () => {
     it('should query events by filter', async () => {
       const filter: EventFilter = {
         aggregateTypes: ['user'],
-        resourceOwner: 'org-123',
+        owner: 'org-123',
       };
 
       const mockRows = [{
-        id: 'event-1',
-        event_type: 'user.created',
+        instance_id: 'test-instance',
         aggregate_type: 'user',
         aggregate_id: 'user-123',
-        aggregate_version: 1,
-        event_data: '{"name":"John Doe"}',
-        editor_user: 'admin',
-        editor_service: null,
-        resource_owner: 'org-123',
-        instance_id: 'test-instance',
-        position: '1',
-        in_position_order: 0,
-        creation_date: new Date(),
+        event_type: 'user.created',
+        aggregate_version: '1',
         revision: 1,
+        created_at: new Date(),
+        payload: '{"name":"John Doe"}',
+        creator: 'admin',
+        owner: 'org-123',
+        position: '1',
+        in_tx_order: 0,
       }];
 
       mockQueryMany.mockResolvedValueOnce(mockRows);
@@ -235,11 +224,10 @@ describe('PostgresEventstore', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({
-        id: 'event-1',
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: 'user-123',
-        eventData: { name: 'John Doe' },
+        payload: { name: 'John Doe' },
       });
     });
 
@@ -247,7 +235,7 @@ describe('PostgresEventstore', () => {
       const filter: EventFilter = {
         aggregateTypes: ['user', 'organization'],
         eventTypes: ['user.created', 'org.created'],
-        resourceOwner: 'org-123',
+        owner: 'org-123',
         instanceID: 'test-instance',
         limit: 10,
       };
@@ -266,20 +254,18 @@ describe('PostgresEventstore', () => {
   describe('latestEvent', () => {
     it('should return latest event for aggregate', async () => {
       const mockRow = {
-        id: 'event-2',
-        event_type: 'user.updated',
+        instance_id: 'test-instance',
         aggregate_type: 'user',
         aggregate_id: 'user-123',
-        aggregate_version: 2,
-        event_data: '{"name":"Jane Doe"}',
-        editor_user: 'admin',
-        editor_service: null,
-        resource_owner: 'org-123',
-        instance_id: 'test-instance',
-        position: '2',
-        in_position_order: 0,
-        creation_date: new Date(),
+        event_type: 'user.updated',
+        aggregate_version: '2',
         revision: 1,
+        created_at: new Date(),
+        payload: '{"name":"Jane Doe"}',
+        creator: 'admin',
+        owner: 'org-123',
+        position: '2',
+        in_tx_order: 0,
       };
 
       mockQueryOne.mockResolvedValueOnce(mockRow);
@@ -287,9 +273,8 @@ describe('PostgresEventstore', () => {
       const result = await eventstore.latestEvent('user', 'user-123');
 
       expect(result).toMatchObject({
-        id: 'event-2',
         eventType: 'user.updated',
-        aggregateVersion: 2,
+        aggregateVersion: 2n,
       });
     });
 
@@ -306,36 +291,32 @@ describe('PostgresEventstore', () => {
     it('should reconstruct aggregate from events', async () => {
       const mockRows = [
         {
-          id: 'event-1',
-          event_type: 'user.created',
+          instance_id: 'test-instance',
           aggregate_type: 'user',
           aggregate_id: 'user-123',
-          aggregate_version: 1,
-          event_data: '{"name":"John Doe"}',
-          editor_user: 'admin',
-          editor_service: null,
-          resource_owner: 'org-123',
-          instance_id: 'test-instance',
-          position: '1',
-          in_position_order: 0,
-          creation_date: new Date(),
+          event_type: 'user.created',
+          aggregate_version: '1',
           revision: 1,
+          created_at: new Date(),
+          payload: '{"name":"John Doe"}',
+          creator: 'admin',
+          owner: 'org-123',
+          position: '1',
+          in_tx_order: 0,
         },
         {
-          id: 'event-2',
-          event_type: 'user.updated',
+          instance_id: 'test-instance',
           aggregate_type: 'user',
           aggregate_id: 'user-123',
-          aggregate_version: 2,
-          event_data: '{"name":"Jane Doe"}',
-          editor_user: 'admin',
-          editor_service: null,
-          resource_owner: 'org-123',
-          instance_id: 'test-instance',
-          position: '2',
-          in_position_order: 0,
-          creation_date: new Date(),
+          event_type: 'user.updated',
+          aggregate_version: '2',
           revision: 1,
+          created_at: new Date(),
+          payload: '{"name":"Jane Doe"}',
+          creator: 'admin',
+          owner: 'org-123',
+          position: '2',
+          in_tx_order: 0,
         },
       ];
 
@@ -346,8 +327,8 @@ describe('PostgresEventstore', () => {
       expect(result).toMatchObject({
         id: 'user-123',
         type: 'user',
-        version: 2,
-        resourceOwner: 'org-123',
+        version: 2n,
+        owner: 'org-123',
         instanceID: 'test-instance',
       });
       expect(result?.events).toHaveLength(2);
@@ -455,22 +436,20 @@ describe('PostgresEventstore', () => {
 
   describe('eventsAfterPosition', () => {
     it('should get events after specific position', async () => {
-      const position = { position: 5n, inPositionOrder: 2 };
+      const position = { position: 5, inTxOrder: 2 };
       const mockRows = [{
-        id: 'event-3',
-        event_type: 'user.updated',
+        instance_id: 'test-instance',
         aggregate_type: 'user',
         aggregate_id: 'user-123',
-        aggregate_version: 3,
-        event_data: '{}',
-        editor_user: 'admin',
-        editor_service: null,
-        resource_owner: 'org-123',
-        instance_id: 'test-instance',
-        position: '6',
-        in_position_order: 0,
-        creation_date: new Date(),
+        event_type: 'user.updated',
+        aggregate_version: '3',
         revision: 1,
+        created_at: new Date(),
+        payload: '{}',
+        creator: 'admin',
+        owner: 'org-123',
+        position: '6',
+        in_tx_order: 0,
       }];
 
       mockQueryMany.mockResolvedValueOnce(mockRows);
@@ -479,7 +458,7 @@ describe('PostgresEventstore', () => {
 
       expect(result).toHaveLength(1);
       expect(mockQueryMany).toHaveBeenCalledWith(
-        expect.stringContaining('position > $1'),
+        expect.stringContaining('"position" > $1'),
         expect.arrayContaining(['5', 2, 100])
       );
     });

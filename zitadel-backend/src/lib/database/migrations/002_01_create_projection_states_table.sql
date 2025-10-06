@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS projection_states (
     name VARCHAR(255) PRIMARY KEY,
-    position BIGINT NOT NULL DEFAULT 0,
+    position DECIMAL NOT NULL DEFAULT 0,
     last_processed_at TIMESTAMP WITH TIME ZONE,
     status VARCHAR(50) NOT NULL DEFAULT 'stopped',
     error_count INTEGER NOT NULL DEFAULT 0,

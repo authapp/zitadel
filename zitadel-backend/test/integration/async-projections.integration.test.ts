@@ -71,7 +71,7 @@ describe('Async Projection System Integration Tests', () => {
       expect(status).not.toBeNull();
       expect(status!.name).toBe('users');
       expect(status!.status).toBe('stopped');
-      expect(status!.position).toBe(0n);
+      expect(status!.position).toBe(0);
     });
 
     it('should initialize projection state in database', async () => {
@@ -115,15 +115,15 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           username: 'async.user',
           email: 'async.user@example.com',
           firstName: 'Async',
           lastName: 'User',
           displayName: 'Async User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -149,14 +149,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           username: 'update.test',
           email: 'old@example.com',
           firstName: 'Old',
           lastName: 'Name',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -171,12 +171,12 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.updated',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           email: 'new@example.com',
           firstName: 'New',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -203,14 +203,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           username: 'deactivate.test',
           email: 'deactivate@example.com',
           firstName: 'Test',
           lastName: 'User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -225,9 +225,9 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.deactivated',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {},
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        payload: {},
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -253,14 +253,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           username: 'position.test',
           email: 'position@example.com',
           firstName: 'Test',
           lastName: 'User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -273,7 +273,7 @@ describe('Async Projection System Integration Tests', () => {
       // Check position was updated
       const status = await projectionManager.getStatus('users');
       expect(status).not.toBeNull();
-      expect(BigInt(status!.position)).toBeGreaterThan(0n);
+      expect(status!.position).toBeGreaterThan(0);
       expect(status!.lastProcessedAt).toBeDefined();
     }, 15000);
 
@@ -287,14 +287,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId1,
-        eventData: {
+        payload: {
           username: 'first.user',
           email: 'first@example.com',
           firstName: 'First',
           lastName: 'User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -308,14 +308,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId2,
-        eventData: {
+        payload: {
           username: 'second.user',
           email: 'second@example.com',
           firstName: 'Second',
           lastName: 'User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-instance',
+        creator: 'system',
+        owner: 'test-instance',
         instanceID: 'test-instance',
       });
       
@@ -356,14 +356,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId,
-        eventData: {
+        payload: {
           username: 'stopped.user',
           email: 'stopped@example.com',
           firstName: 'Stopped',
           lastName: 'User',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -388,14 +388,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId1,
-        eventData: {
+        payload: {
           username: 'rebuild.user1',
           email: 'rebuild1@example.com',
           firstName: 'Rebuild',
           lastName: 'User1',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -403,14 +403,14 @@ describe('Async Projection System Integration Tests', () => {
         eventType: 'user.created',
         aggregateType: 'user',
         aggregateID: userId2,
-        eventData: {
+        payload: {
           username: 'rebuild.user2',
           email: 'rebuild2@example.com',
           firstName: 'Rebuild',
           lastName: 'User2',
         },
-        editorUser: 'system',
-        resourceOwner: 'test-org',
+        creator: 'system',
+        owner: 'test-org',
         instanceID: 'test-instance',
       });
       
@@ -447,14 +447,14 @@ describe('Async Projection System Integration Tests', () => {
           eventType: 'user.created',
           aggregateType: 'user',
           aggregateID: userId,
-          eventData: {
+          payload: {
             username: `batch.user${i}`,
             email: `batch${i}@example.com`,
             firstName: 'Batch',
             lastName: `User${i}`,
           },
-          editorUser: 'system',
-          resourceOwner: 'test-org',
+          creator: 'system',
+          owner: 'test-org',
           instanceID: 'test-instance',
         });
       }
