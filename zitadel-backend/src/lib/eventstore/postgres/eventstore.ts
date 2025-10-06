@@ -36,8 +36,9 @@ export class PostgresEventstore implements Eventstore {
 
   /**
    * Push multiple commands as events in a transaction
+   * Includes retry logic for handling concurrent updates (Zitadel-style)
    */
-  async pushMany(commands: Command[]): Promise<Event[]> {
+  async pushMany(commands: Command[], maxRetries = 3): Promise<Event[]> {
     if (commands.length === 0) {
       return [];
     }
@@ -54,14 +55,57 @@ export class PostgresEventstore implements Eventstore {
       this.validateCommand(command);
     }
 
+    // Retry logic for handling serialization failures (Zitadel-style)
+    let lastError: Error | null = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.pushManyInternal(commands);
+      } catch (error: any) {
+        lastError = error;
+
+        // Extract PostgreSQL error code from different error structures
+        // ZitadelError wraps the original error in the 'parent' property
+        const pgError = error.parent || error.cause || error;
+        const errorCode = pgError?.code || error?.code;
+        const errorMessage = error?.message || '';
+        
+        // Check if it's a retryable error
+        const isRetryable = 
+          errorCode === '40001' ||  // serialization_failure
+          errorCode === '40P01' ||  // deadlock_detected
+          errorCode === '55P03' ||  // lock_not_available
+          errorCode === '23505' ||  // unique_violation (position/version conflict)
+          errorMessage.includes('could not serialize') ||
+          errorMessage.includes('deadlock detected') ||
+          errorMessage.includes('duplicate key value');
+
+        if (isRetryable && attempt < maxRetries) {
+          // Exponential backoff: 10ms, 20ms, 40ms
+          const backoffMs = 10 * Math.pow(2, attempt);
+          await new Promise(resolve => setTimeout(resolve, backoffMs));
+          continue;
+        }
+
+        // Not retryable or max retries exceeded
+        throw error;
+      }
+    }
+
+    throw lastError || new Error('Failed to push events after retries');
+  }
+
+  /**
+   * Internal push implementation with transaction and locking
+   */
+  private async pushManyInternal(commands: Command[]): Promise<Event[]> {
     return await this.db.withTransaction(async (tx) => {
       const events: Event[] = [];
 
       for (const command of commands) {
-        // Get next position
+        // Get next position (with global lock)
         const position = await this.getNextPosition(tx);
 
-        // Get current aggregate version
+        // Get current aggregate version (with per-aggregate lock)
         const currentVersion = await this.getCurrentVersion(
           tx,
           command.aggregateType,
@@ -341,11 +385,25 @@ export class PostgresEventstore implements Eventstore {
   }
 
   private async getNextPosition(tx: QueryExecutor): Promise<Position> {
-    const result = await tx.query<{ position: string; count: string }>(
-      'SELECT COALESCE(MAX(position), 0) as position, COUNT(*) as count FROM events WHERE position = COALESCE((SELECT MAX(position) FROM events), 0)'
+    // Lock the latest position row to prevent concurrent position generation
+    // We first find the max position, then lock those rows
+    // Note: We can't use FOR UPDATE with MAX() directly in PostgreSQL
+    
+    // Get current max position
+    const maxResult = await tx.query<{ position: string }>(
+      'SELECT COALESCE(MAX(position), 0) as position FROM events'
     );
-
-    const currentMaxPosition = BigInt(result.rows[0]?.position ?? '0');
+    
+    const currentMaxPosition = BigInt(maxResult.rows[0]?.position ?? '0');
+    
+    // Lock rows at max position to prevent concurrent inserts at same position
+    // This is a lightweight advisory approach
+    if (currentMaxPosition > 0n) {
+      await tx.query(
+        'SELECT position FROM events WHERE position = $1 FOR UPDATE',
+        [currentMaxPosition.toString()]
+      );
+    }
 
     return {
       position: currentMaxPosition + 1n,
@@ -358,8 +416,19 @@ export class PostgresEventstore implements Eventstore {
     aggregateType: string,
     aggregateID: string
   ): Promise<number> {
+    // Use FOR UPDATE to lock only this aggregate's rows
+    // This prevents concurrent transactions from updating the same aggregate
+    // Similar to Zitadel's approach: locks per-aggregate, not globally
+    
+    // We need to lock the latest event row for this aggregate
+    // Using a subquery approach since FOR UPDATE doesn't work with MAX()
     const result = await tx.query<{ version: number }>(
-      'SELECT COALESCE(MAX(aggregate_version), 0) as version FROM events WHERE aggregate_type = $1 AND aggregate_id = $2',
+      `SELECT aggregate_version as version
+       FROM events 
+       WHERE aggregate_type = $1 AND aggregate_id = $2
+       ORDER BY aggregate_version DESC
+       LIMIT 1
+       FOR UPDATE`,
       [aggregateType, aggregateID]
     );
 

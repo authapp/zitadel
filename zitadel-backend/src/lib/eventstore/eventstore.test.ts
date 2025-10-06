@@ -56,11 +56,19 @@ describe('PostgresEventstore', () => {
       };
 
       const mockTx = {
-        query: jest.fn().mockResolvedValueOnce({
-          rows: [{ position: '1', count: '0' }],
-        }).mockResolvedValueOnce({
-          rows: [{ version: 0 }],
-        }).mockResolvedValueOnce({}),
+        query: jest.fn()
+          // getNextPosition: SELECT MAX(position)
+          .mockResolvedValueOnce({
+            rows: [{ position: '0' }],
+          })
+          // getCurrentVersion: SELECT ... FOR UPDATE (returns empty for new aggregate)
+          .mockResolvedValueOnce({
+            rows: [],
+          })
+          // insertEvent: INSERT
+          .mockResolvedValueOnce({
+            rows: [],
+          }),
       };
 
       mockWithTransaction.mockImplementation(async (fn) => {
@@ -125,9 +133,14 @@ describe('PostgresEventstore', () => {
 
       const mockTx = {
         query: jest.fn()
-          .mockResolvedValueOnce({ rows: [{ version: 1 }] }) // Current version check
-          .mockResolvedValueOnce({ rows: [{ position: '2', count: '0' }] }) // Next position
-          .mockResolvedValueOnce({}), // Insert event
+          // getCurrentVersion: SELECT ... FOR UPDATE → returns version 1
+          .mockResolvedValueOnce({ rows: [{ version: 1 }] })
+          // getNextPosition: SELECT MAX(position)
+          .mockResolvedValueOnce({ rows: [{ position: '1' }] })
+          // getNextPosition: SELECT ... FOR UPDATE (if position > 0)
+          .mockResolvedValueOnce({ rows: [] })
+          // insertEvent: INSERT
+          .mockResolvedValueOnce({ rows: [] }),
       };
 
       mockWithTransaction.mockImplementation(async (fn) => {
