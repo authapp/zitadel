@@ -86,7 +86,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(30); // We have 30 migration steps (Priority 2 + Priority 3 + multi-tenant fix + position type fix)
+      expect(version).toBe(31); // We have 31 migration steps (includes unique_constraints table)
     });
   });
 
@@ -112,8 +112,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 30 records (one per migration step)
-      expect(migrations.length).toBe(30);
+      // Should still only have 31 records (one per migration step)
+      expect(migrations.length).toBe(31);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(30);
+      expect(migrations1.length).toBe(31);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +159,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(30);
+      expect(applied.length).toBe(31);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(30);
+      expect(applied[applied.length - 1].version).toBe(31);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

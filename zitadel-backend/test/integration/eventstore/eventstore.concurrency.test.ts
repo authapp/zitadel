@@ -5,10 +5,10 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
-import { DatabasePool } from '@/database/pool';
-import { PostgresEventstore } from './eventstore';
-import { Command } from '../types';
-import { TEST_DB_CONFIG } from '../../../../test/integration/setup';
+import { DatabasePool } from '../../../src/lib/database/pool';
+import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
+import { Command } from '../../../src/lib/eventstore/types';
+import { TEST_DB_CONFIG } from '../setup';
 
 describe('PostgresEventstore Concurrency', () => {
   let pool: DatabasePool;

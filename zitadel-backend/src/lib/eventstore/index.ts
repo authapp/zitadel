@@ -11,6 +11,8 @@
 
 export * from './types';
 export { PostgresEventstore } from './postgres/eventstore';
+export * from './unique-constraint';
+export * from './subscription';
 
 // Re-export commonly used types for convenience
 export type {
@@ -25,9 +27,22 @@ export type {
   EventPusher,
   EventQuerier,
   EventSearcher,
+  Reducer,
 } from './types';
 
 export {
   EventValidationError,
   ConcurrencyError,
 } from './types';
+
+export {
+  UniqueConstraintAction,
+  newAddEventUniqueConstraint,
+  newRemoveUniqueConstraint,
+  newAddGlobalUniqueConstraint,
+  newRemoveGlobalUniqueConstraint,
+  newRemoveInstanceUniqueConstraints,
+  UniqueConstraintViolationError,
+} from './unique-constraint';
+
+export type { UniqueConstraint } from './unique-constraint';

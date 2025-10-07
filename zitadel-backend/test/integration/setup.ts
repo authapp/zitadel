@@ -110,6 +110,7 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     await pool.query('TRUNCATE TABLE users_projection CASCADE');
     await pool.query('TRUNCATE TABLE projection_states CASCADE');
     await pool.query('TRUNCATE TABLE events CASCADE');
+    await pool.query('TRUNCATE TABLE unique_constraints CASCADE');
   } catch (error) {
     console.error('Failed to clean database:', error);
     throw error;

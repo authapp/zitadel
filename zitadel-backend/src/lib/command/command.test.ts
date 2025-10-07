@@ -1,4 +1,4 @@
-import { Eventstore, Event, Command as EventstoreCommand, EventFilter } from '../eventstore/types';
+import { Eventstore, Event, Command as EventstoreCommand, EventFilter, Reducer, Position } from '../eventstore/types';
 import { InMemoryCommandBus } from './command-bus';
 import { BaseAggregate, UserAggregate } from './aggregate';
 import { AggregateRepository } from './repository';
@@ -73,6 +73,22 @@ class MockEventstore implements Eventstore {
 
   async eventsAfterPosition(): Promise<Event[]> {
     return [];
+  }
+
+  async latestPosition(_filter?: EventFilter): Promise<Position> {
+    // Return the last event's position or zero
+    if (this.events.length === 0) {
+      return { position: 0, inTxOrder: 0 };
+    }
+    const lastEvent = this.events[this.events.length - 1];
+    return lastEvent.position;
+  }
+
+  async filterToReducer(_filter: EventFilter, reducer: Reducer): Promise<void> {
+    // Simple implementation: pass all events to reducer
+    const events = await this.query(_filter);
+    reducer.appendEvents(...events);
+    await reducer.reduce();
   }
 
   async health(): Promise<boolean> {

@@ -1,5 +1,5 @@
-import { DatabasePool } from '@/database/pool';
-import { PostgresEventstore } from './postgres/eventstore';
+import { DatabasePool } from '../../../src/lib/database/pool';
+import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
 import {
   Command,
   EventFilter,
@@ -7,7 +7,7 @@ import {
   EventstoreConfig,
   EventValidationError,
   ConcurrencyError,
-} from './types';
+} from '../../../src/lib/eventstore/types';
 
 // Mock the database pool
 const mockQuery = jest.fn();

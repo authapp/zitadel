@@ -12,6 +12,7 @@ import {
   EventValidationError,
   ConcurrencyError,
 } from '../types';
+import { globalSubscriptionManager } from '../subscription';
 
 /**
  * PostgreSQL implementation of the eventstore
@@ -101,6 +102,11 @@ export class PostgresEventstore implements Eventstore {
       const events: Event[] = [];
 
       for (const command of commands) {
+        // Check and apply unique constraints BEFORE inserting event
+        if (command.uniqueConstraints && command.uniqueConstraints.length > 0) {
+          await this.handleUniqueConstraints(tx, command);
+        }
+
         // Get current aggregate version (with per-aggregate lock)
         const currentVersion = await this.getCurrentVersion(
           tx,
@@ -130,6 +136,14 @@ export class PostgresEventstore implements Eventstore {
         // Insert event (returns event with DB-generated values)
         const insertedEvent = await this.insertEvent(tx, event, events.length);
         events.push(insertedEvent);
+      }
+
+      // Notify subscribers after successful transaction (if enabled)
+      if (events.length > 0 && this.config.enableSubscriptions !== false) {
+        // Use setImmediate to notify after transaction commits
+        setImmediate(() => {
+          globalSubscriptionManager.notify(events);
+        });
       }
 
       return events;
@@ -359,6 +373,98 @@ export class PostgresEventstore implements Eventstore {
     await this.db.close();
   }
 
+  /**
+   * Get the latest position across all events matching the filter
+   * Essential for projections and catch-up subscriptions
+   */
+  async latestPosition(filter?: EventFilter): Promise<Position> {
+    let query = `
+      SELECT MAX("position") as position, MAX(in_tx_order) as in_tx_order
+      FROM events
+    `;
+    const values: any[] = [];
+    const conditions: string[] = [];
+    let paramIndex = 1;
+
+    if (filter) {
+      if (filter.instanceID) {
+        conditions.push(`instance_id = $${paramIndex}`);
+        values.push(filter.instanceID);
+        paramIndex++;
+      }
+
+      if (filter.aggregateTypes?.length) {
+        conditions.push(`aggregate_type = ANY($${paramIndex})`);
+        values.push(filter.aggregateTypes);
+        paramIndex++;
+      }
+
+      if (filter.aggregateIDs?.length) {
+        conditions.push(`aggregate_id = ANY($${paramIndex})`);
+        values.push(filter.aggregateIDs);
+        paramIndex++;
+      }
+
+      if (filter.eventTypes?.length) {
+        conditions.push(`event_type = ANY($${paramIndex})`);
+        values.push(filter.eventTypes);
+        paramIndex++;
+      }
+
+      if (filter.owner) {
+        conditions.push(`"owner" = $${paramIndex}`);
+        values.push(filter.owner);
+        paramIndex++;
+      }
+
+      if (filter.creator) {
+        conditions.push(`creator = $${paramIndex}`);
+        values.push(filter.creator);
+        paramIndex++;
+      }
+    }
+
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(' AND ')}`;
+    }
+
+    const result = await this.db.queryOne<{ position: string; in_tx_order: number }>(
+      query,
+      values
+    );
+
+    // If no events match, return zero position
+    if (!result?.position) {
+      return { position: 0, inTxOrder: 0 };
+    }
+
+    return {
+      position: parseFloat(result.position),
+      inTxOrder: result.in_tx_order || 0,
+    };
+  }
+
+  /**
+   * Stream events to a reducer instead of loading all into memory
+   * Memory-efficient for large event streams
+   */
+  async filterToReducer(filter: EventFilter, reducer: import('../types').Reducer): Promise<void> {
+    const { query, values } = this.buildEventQuery(filter);
+    
+    // Use cursor-based streaming for memory efficiency
+    const rows = await this.db.queryMany(query, values);
+    
+    // Process events in batches
+    const batchSize = 100;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      const events = batch.map(this.mapRowToEvent);
+      
+      reducer.appendEvents(...events);
+      await reducer.reduce();
+    }
+  }
+
   // Private helper methods
 
   private validateCommand(command: Command): void {
@@ -545,5 +651,72 @@ export class PostgresEventstore implements Eventstore {
         inTxOrder: row.in_tx_order,
       },
     };
+  }
+
+  /**
+   * Handle unique constraints for a command
+   * Checks existing constraints and adds/removes as specified
+   */
+  private async handleUniqueConstraints(
+    tx: QueryExecutor,
+    command: Command
+  ): Promise<void> {
+    if (!command.uniqueConstraints) {
+      return;
+    }
+
+    const { UniqueConstraintAction, UniqueConstraintViolationError } = await import('../unique-constraint');
+
+    for (const constraint of command.uniqueConstraints) {
+      if (constraint.action === UniqueConstraintAction.Add) {
+        // Check if constraint already exists
+        const checkQuery = `
+          SELECT 1 FROM unique_constraints
+          WHERE unique_type = $1 AND unique_field = $2 AND instance_id = $3
+        `;
+        const exists = await tx.query(checkQuery, [
+          constraint.uniqueType,
+          constraint.uniqueField,
+          constraint.isGlobal ? '' : command.instanceID,
+        ]);
+
+        if (exists.rows.length > 0) {
+          throw new UniqueConstraintViolationError(
+            constraint.errorMessage || `Unique constraint violated: ${constraint.uniqueType}.${constraint.uniqueField}`,
+            constraint.uniqueType,
+            constraint.uniqueField
+          );
+        }
+
+        // Add constraint
+        const insertQuery = `
+          INSERT INTO unique_constraints (unique_type, unique_field, instance_id)
+          VALUES ($1, $2, $3)
+        `;
+        await tx.query(insertQuery, [
+          constraint.uniqueType,
+          constraint.uniqueField,
+          constraint.isGlobal ? '' : command.instanceID,
+        ]);
+      } else if (constraint.action === UniqueConstraintAction.Remove) {
+        // Remove constraint
+        const deleteQuery = `
+          DELETE FROM unique_constraints
+          WHERE unique_type = $1 AND unique_field = $2 AND instance_id = $3
+        `;
+        await tx.query(deleteQuery, [
+          constraint.uniqueType,
+          constraint.uniqueField,
+          constraint.isGlobal ? '' : command.instanceID,
+        ]);
+      } else if (constraint.action === UniqueConstraintAction.InstanceRemove) {
+        // Remove all constraints for instance
+        const deleteQuery = `
+          DELETE FROM unique_constraints
+          WHERE instance_id = $1
+        `;
+        await tx.query(deleteQuery, [command.instanceID]);
+      }
+    }
   }
 }

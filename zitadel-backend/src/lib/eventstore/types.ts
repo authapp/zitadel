@@ -41,6 +41,7 @@ export interface Command {
   creator: string; // User or service creating the event
   owner: string; // Resource owner
   revision?: number; // Default to 1 if not specified
+  uniqueConstraints?: import('./unique-constraint').UniqueConstraint[]; // Unique constraints to enforce
 }
 
 /**
@@ -147,6 +148,28 @@ export interface EventSearcher {
    * Get events after a specific position
    */
   eventsAfterPosition(position: Position, limit?: number): Promise<Event[]>;
+
+  /**
+   * Get the latest position across all events matching the filter
+   * Essential for projections and catch-up subscriptions
+   */
+  latestPosition(filter?: EventFilter): Promise<Position>;
+}
+
+/**
+ * Reducer interface for streaming event processing
+ * Allows memory-efficient handling of large event streams
+ */
+export interface Reducer {
+  /**
+   * Append events to internal buffer
+   */
+  appendEvents(...events: Event[]): void;
+
+  /**
+   * Process buffered events and update state
+   */
+  reduce(): Promise<void>;
 }
 
 /**
@@ -162,6 +185,12 @@ export interface Eventstore extends EventPusher, EventQuerier, EventSearcher {
    * Close connections
    */
   close(): Promise<void>;
+
+  /**
+   * Stream events to a reducer instead of loading all into memory
+   * Memory-efficient for large event streams
+   */
+  filterToReducer(filter: EventFilter, reducer: Reducer): Promise<void>;
 }
 
 /**
@@ -171,6 +200,7 @@ export interface EventstoreConfig {
   instanceID: string;
   maxPushBatchSize?: number;
   pushTimeout?: number;
+  enableSubscriptions?: boolean; // Default true, set false in tests to avoid cross-test contamination
 }
 
 /**

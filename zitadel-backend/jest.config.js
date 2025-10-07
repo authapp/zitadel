@@ -49,7 +49,7 @@ module.exports = {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',
       },
-      // CRITICAL: Force sequential execution for integration tests
+      // CRITICAL: Force sequential execution for ALL integration tests
       maxWorkers: 1,
       maxConcurrency: 1,
       // Run tests serially within each file as well
