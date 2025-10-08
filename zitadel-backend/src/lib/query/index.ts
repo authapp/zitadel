@@ -10,7 +10,12 @@
  */
 
 export * from './types';
+export * from './factory';
 export * from './filter';
+export * from './postgres/query';
+export * from './postgres/projection-manager';
+export * from './projections/user-projection';
+
 export { PostgresQuery, createPostgresQuery } from './postgres/query';
 export { PostgresProjectionManager } from './postgres/projection-manager';
 

@@ -165,10 +165,12 @@ export class InMemoryCommandBus implements CommandBus {
       version: events[events.length - 1].aggregateVersion,
     };
 
-    // Apply each event's data to build up state
+    // Apply each event's payload to build up state
     for (const event of events) {
-      // Merge event data
-      Object.assign(state, event.eventData);
+      // Merge event payload (v2 schema uses 'payload' not 'eventData')
+      if (event.payload) {
+        Object.assign(state, event.payload);
+      }
       
       // Handle special state transitions based on event type
       if (event.eventType.endsWith('.created')) {

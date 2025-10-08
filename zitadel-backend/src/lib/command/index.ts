@@ -10,9 +10,12 @@
  */
 
 export * from './types';
-export * from './command-bus';
 export * from './aggregate';
 export * from './repository';
+export * from './command-bus';
+export * from './commands/user';
+export * from './commands/organization';
+export * from './commands/project';
 
 // Re-export commonly used types for convenience
 export type {
@@ -20,7 +23,6 @@ export type {
   CommandContext,
   CommandResult,
   CommandHandler,
-  CommandValidator,
   CommandMiddleware,
   CommandBus,
   AggregateRoot,
