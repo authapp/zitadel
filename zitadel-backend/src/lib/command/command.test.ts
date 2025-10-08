@@ -91,6 +91,12 @@ class MockEventstore implements Eventstore {
     await reducer.reduce();
   }
 
+  async instanceIDs(_filter?: EventFilter): Promise<string[]> {
+    // Return unique instance IDs from events
+    const uniqueInstances = new Set(this.events.map(e => e.instanceID));
+    return Array.from(uniqueInstances).sort();
+  }
+
   async health(): Promise<boolean> {
     return true;
   }

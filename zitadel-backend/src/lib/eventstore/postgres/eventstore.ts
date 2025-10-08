@@ -11,6 +11,7 @@ import {
   EventstoreConfig,
   EventValidationError,
   ConcurrencyError,
+  Reducer,
 } from '../types';
 import { globalSubscriptionManager } from '../subscription';
 
@@ -293,20 +294,24 @@ export class PostgresEventstore implements Eventstore {
   }
 
   /**
-   * Search events with complex filters
+   * Search events with complex filters (supports OR logic and exclusions)
    */
   async search(query: SearchQuery): Promise<Event[]> {
-    if (query.filters.length === 0) {
+    // Support both 'filters' (legacy) and 'queries' (new query builder)
+    const filters = query.queries || query.filters || [];
+    
+    if (filters.length === 0) {
       return [];
     }
 
-    // Build union query for multiple filters
+    // Build union query for multiple filters (OR logic)
     const subQueries: string[] = [];
     const allValues: any[] = [];
     let valueIndex = 1;
 
-    for (const filter of query.filters) {
-      const { query: subQuery, values } = this.buildEventQuery(filter, valueIndex);
+    for (const filter of filters) {
+      // Build query without ORDER BY and LIMIT (we'll add them to the final UNION query)
+      const { query: subQuery, values } = this.buildEventQuery(filter, valueIndex, false, true);
       subQueries.push(`(${subQuery})`);
       allValues.push(...values);
       valueIndex += values.length;
@@ -314,15 +319,49 @@ export class PostgresEventstore implements Eventstore {
 
     let finalQuery = subQueries.join(' UNION ');
     
+    // Apply exclusion filter if provided
+    if (query.excludeFilter && this.hasFiltersInFilter(query.excludeFilter)) {
+      const excludeConditions: string[] = [];
+      
+      if (query.excludeFilter.aggregateTypes?.length) {
+        excludeConditions.push(`aggregate_type NOT IN (${query.excludeFilter.aggregateTypes.map(() => `$${valueIndex++}`).join(',')})`);
+        allValues.push(...query.excludeFilter.aggregateTypes);
+      }
+      
+      if (query.excludeFilter.aggregateIDs?.length) {
+        excludeConditions.push(`aggregate_id NOT IN (${query.excludeFilter.aggregateIDs.map(() => `$${valueIndex++}`).join(',')})`);
+        allValues.push(...query.excludeFilter.aggregateIDs);
+      }
+      
+      if (query.excludeFilter.eventTypes?.length) {
+        excludeConditions.push(`event_type NOT IN (${query.excludeFilter.eventTypes.map(() => `$${valueIndex++}`).join(',')})`);
+        allValues.push(...query.excludeFilter.eventTypes);
+      }
+      
+      if (excludeConditions.length > 0) {
+        finalQuery = `SELECT * FROM (${finalQuery}) AS results WHERE ${excludeConditions.join(' AND ')}`;
+      }
+    }
+    
     // Add ordering and limit
     finalQuery += ` ORDER BY position ${query.desc ? 'DESC' : 'ASC'}`;
-    
     if (query.limit) {
       finalQuery += ` LIMIT ${query.limit}`;
     }
 
     const rows = await this.db.queryMany(finalQuery, allValues);
     return rows.map(this.mapRowToEvent);
+  }
+
+  /**
+   * Helper to check if a filter has any conditions
+   */
+  private hasFiltersInFilter(filter: EventFilter): boolean {
+    return !!(
+      filter.aggregateTypes?.length ||
+      filter.aggregateIDs?.length ||
+      filter.eventTypes?.length
+    );
   }
 
   /**
@@ -445,10 +484,52 @@ export class PostgresEventstore implements Eventstore {
   }
 
   /**
+   * Get distinct instance IDs matching a filter
+   * Useful for multi-tenant operations
+   */
+  async instanceIDs(filter?: EventFilter): Promise<string[]> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (filter) {
+      if (filter.aggregateTypes && filter.aggregateTypes.length > 0) {
+        conditions.push(`aggregate_type = ANY($${paramIndex})`);
+        params.push(filter.aggregateTypes);
+        paramIndex++;
+      }
+
+      if (filter.aggregateIDs && filter.aggregateIDs.length > 0) {
+        conditions.push(`aggregate_id = ANY($${paramIndex})`);
+        params.push(filter.aggregateIDs);
+        paramIndex++;
+      }
+
+      if (filter.eventTypes && filter.eventTypes.length > 0) {
+        conditions.push(`event_type = ANY($${paramIndex})`);
+        params.push(filter.eventTypes);
+        paramIndex++;
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    const query = `
+      SELECT DISTINCT instance_id
+      FROM events
+      ${whereClause}
+      ORDER BY instance_id
+    `;
+
+    const results = await this.db.queryMany<{ instance_id: string }>(query, params);
+    return results.map(r => r.instance_id);
+  }
+
+  /**
    * Stream events to a reducer instead of loading all into memory
    * Memory-efficient for large event streams
    */
-  async filterToReducer(filter: EventFilter, reducer: import('../types').Reducer): Promise<void> {
+  async filterToReducer(filter: EventFilter, reducer: Reducer): Promise<void> {
     const { query, values } = this.buildEventQuery(filter);
     
     // Use cursor-based streaming for memory efficiency
@@ -554,7 +635,8 @@ export class PostgresEventstore implements Eventstore {
   private buildEventQuery(
     filter: EventFilter,
     startIndex = 1,
-    isCount = false
+    isCount = false,
+    skipOrderLimit = false
   ): { query: string; values: any[] } {
     const conditions: string[] = [];
     const values: any[] = [];
@@ -623,9 +705,10 @@ export class PostgresEventstore implements Eventstore {
       query += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    if (!isCount) {
-      query += ` ORDER BY "position" ${filter.desc ? 'DESC' : 'ASC'}, in_tx_order ${filter.desc ? 'DESC' : 'ASC'}`;
-
+    // Add ordering and limit if not counting and not skipping
+    if (!isCount && !skipOrderLimit) {
+      query += ` ORDER BY position ${filter.desc ? 'DESC' : 'ASC'}, in_tx_order ASC`;
+      
       if (filter.limit) {
         query += ` LIMIT ${filter.limit}`;
       }

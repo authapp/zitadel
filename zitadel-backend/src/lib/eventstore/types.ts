@@ -69,16 +69,18 @@ export interface EventFilter {
   creator?: string; // Event creator
   createdAtFrom?: Date;
   createdAtTo?: Date;
-  position?: Position;
+  position?: Position; // Position for filtering
   limit?: number;
   desc?: boolean;
 }
 
 /**
- * Search query for events
+ * Search query with multiple filters (OR logic)
  */
 export interface SearchQuery {
-  filters: EventFilter[];
+  filters?: EventFilter[]; // Legacy support
+  queries?: EventFilter[]; // New query builder format (same as filters)
+  excludeFilter?: EventFilter; // Exclusion filter
   limit?: number;
   desc?: boolean;
 }
@@ -182,15 +184,21 @@ export interface Eventstore extends EventPusher, EventQuerier, EventSearcher {
   health(): Promise<boolean>;
 
   /**
-   * Close connections
    */
   close(): Promise<void>;
 
   /**
    * Stream events to a reducer instead of loading all into memory
-   * Memory-efficient for large event streams
+   /**
+   * Filter events to a reducer with batching support
    */
-  filterToReducer(filter: EventFilter, reducer: Reducer): Promise<void>;
+  filterToReducer(filter: EventFilter, reducer: Reducer, batchSize?: number): Promise<void>;
+
+  /**
+   * Get distinct instance IDs matching a query
+   * Useful for multi-tenant operations
+   */
+  instanceIDs(filter?: EventFilter): Promise<string[]>;
 }
 
 /**

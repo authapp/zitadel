@@ -13,6 +13,8 @@ export * from './types';
 export { PostgresEventstore } from './postgres/eventstore';
 export * from './unique-constraint';
 export * from './subscription';
+export * from './read-model';
+export * from './query-builder';
 
 // Re-export commonly used types for convenience
 export type {
