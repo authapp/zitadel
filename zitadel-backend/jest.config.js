@@ -32,7 +32,7 @@ module.exports = {
       displayName: 'unit',
       preset: 'ts-jest',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/src/**/*.test.ts'],
+      testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/test/unit/**/*.test.ts'],
       moduleNameMapper: {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',

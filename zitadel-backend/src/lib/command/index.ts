@@ -1,18 +1,27 @@
 /**
- * Command module - CQRS Write-side implementation for Zitadel
+ * Command Module
  * 
- * This module provides command handling capabilities including:
- * - Command bus for executing commands
- * - Aggregate root base class
- * - Repository pattern for loading aggregates
- * - Command validation
- * - Event generation from commands
+ * Write-side (CQRS) implementation for Zitadel
  */
 
+// Core infrastructure
 export * from './types';
 export * from './aggregate';
-export * from './repository';
 export * from './command-bus';
+export * from './repository';
+export * from './factory';
+
+// Zitadel v2 command infrastructure
+export * from './write-model';
+export * from './context';
+export * from './validation';
+export * from './commands';
+
+// Write models by aggregate
+export * from './user';
+export * from './org';
+
+// Legacy command types (Phase 3)
 export * from './commands/user';
 export * from './commands/organization';
 export * from './commands/project';
