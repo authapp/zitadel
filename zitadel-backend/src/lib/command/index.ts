@@ -15,11 +15,15 @@ export * from './factory';
 export * from './write-model';
 export * from './context';
 export * from './validation';
+export * from './permissions';
+export * from './preparation';
 export * from './commands';
 
 // Write models by aggregate
 export * from './user';
 export * from './org';
+export * from './project';
+export * from './application';
 
 // Legacy command types (Phase 3)
 export * from './commands/user';

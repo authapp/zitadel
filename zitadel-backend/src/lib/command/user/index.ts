@@ -3,3 +3,4 @@
  */
 
 export * from './user-write-model';
+export * from './user-commands';

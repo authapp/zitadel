@@ -6,15 +6,10 @@
 
 import { Event } from '../../eventstore/types';
 import { WriteModel } from '../write-model';
+import { OrgState, isOrgActive, isOrgStateExists as orgExists, isOrgStateInactive } from '../../domain/organization';
 
-/**
- * Organization state enum
- */
-export enum OrgState {
-  UNSPECIFIED = 0,
-  ACTIVE = 1,
-  INACTIVE = 2,
-}
+// Re-export for backward compatibility
+export { OrgState };
 
 /**
  * Organization write model
@@ -58,16 +53,11 @@ export class OrgWriteModel extends WriteModel {
 
 /**
  * Helper functions for org state
+ * These mirror Go's command helpers
  */
 
 export function isOrgStateExists(state: OrgState): boolean {
-  return state !== OrgState.UNSPECIFIED;
+  return orgExists(state);
 }
 
-export function isOrgStateActive(state: OrgState): boolean {
-  return state === OrgState.ACTIVE;
-}
-
-export function isOrgStateInactive(state: OrgState): boolean {
-  return state === OrgState.INACTIVE;
-}
+export { isOrgActive as isOrgStateActive, isOrgStateInactive };

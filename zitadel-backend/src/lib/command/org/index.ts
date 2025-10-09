@@ -3,3 +3,4 @@
  */
 
 export * from './org-write-model';
+export * from './org-commands';

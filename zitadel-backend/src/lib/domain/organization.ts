@@ -48,3 +48,17 @@ export function isOrgActive(state: OrgState): boolean {
 export function isDomainVerified(domain: OrgDomain): boolean {
   return domain.isVerified;
 }
+
+/**
+ * Check if organization exists
+ */
+export function isOrgStateExists(state: OrgState): boolean {
+  return state !== OrgState.UNSPECIFIED;
+}
+
+/**
+ * Check if organization is inactive
+ */
+export function isOrgStateInactive(state: OrgState): boolean {
+  return state === OrgState.INACTIVE;
+}

@@ -2,20 +2,28 @@
  * Validation Utilities
  * 
  * Common validation functions for command data
+ * Uses domain validators for core business logic
  */
 
 import { throwInvalidArgument, throwPreconditionFailed } from '@/zerrors/errors';
+import {
+  validateEmailAddress,
+  validatePhoneNumber as domainValidatePhone,
+  validateUsername as domainValidateUsername,
+  validateDomainName,
+  validateURL as domainValidateURL,
+} from '../domain/validators';
 
 /**
- * Validate email format
+ * Validate email format (uses domain validator)
  */
 export function validateEmail(email: string, fieldName: string = 'email'): void {
-  if (!email || email.trim().length === 0) {
-    throwInvalidArgument(`${fieldName} is required`, 'COMMAND-Email1');
-  }
-  
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  try {
+    validateEmailAddress(email);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
     throwInvalidArgument(`${fieldName} has invalid format`, 'COMMAND-Email2');
   }
 }
@@ -24,18 +32,19 @@ export function validateEmail(email: string, fieldName: string = 'email'): void 
  * Check if email is valid (boolean return)
  */
 export function isValidEmail(email: string): boolean {
-  if (!email) return false;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+  try {
+    validateEmailAddress(email);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Validate username
+ * Validate username (uses domain validator + additional length check)
  */
 export function validateUsername(username: string, minLength: number = 3): void {
-  if (!username || username.trim().length === 0) {
-    throwInvalidArgument('username is required', 'COMMAND-User1');
-  }
+  domainValidateUsername(username);
   
   if (username.length < minLength) {
     throwInvalidArgument(
@@ -166,49 +175,48 @@ export function validateID(id: string, fieldName: string = 'id'): void {
 }
 
 /**
- * Validate URL format
+ * Validate URL format (uses domain validator)
  */
 export function validateURL(url: string, fieldName: string = 'url'): void {
-  if (!url || url.trim().length === 0) {
-    throwInvalidArgument(`${fieldName} is required`, 'COMMAND-URL1');
-  }
-  
   try {
-    new URL(url);
-  } catch {
+    domainValidateURL(url, fieldName);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
     throwInvalidArgument(`${fieldName} has invalid format`, 'COMMAND-URL2');
   }
 }
 
 /**
- * Validate domain format
+ * Validate domain format (uses domain validator)
  */
 export function validateDomain(domain: string): void {
-  if (!domain || domain.trim().length === 0) {
-    throwInvalidArgument('domain is required', 'COMMAND-Dom1');
-  }
-  
-  const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?(\.[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?)*\.[a-zA-Z]{2,}$/;
-  if (!domainRegex.test(domain)) {
+  try {
+    validateDomainName(domain);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
     throwInvalidArgument('domain has invalid format', 'COMMAND-Dom2');
   }
 }
 
 /**
- * Validate phone number (basic international format)
+ * Validate phone number (uses domain phone validator)
  */
-export function validatePhone(phone: string): void {
-  if (!phone || phone.trim().length === 0) {
-    throwInvalidArgument('phone is required', 'COMMAND-Phone1');
-  }
-  
-  // Basic E.164 format: +[country code][number]
-  const phoneRegex = /^\+[1-9]\d{1,14}$/;
-  if (!phoneRegex.test(phone)) {
+export function validatePhone(phone: string, defaultRegion?: string): string {
+  try {
+    return domainValidatePhone(phone, defaultRegion);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
     throwInvalidArgument(
       'phone must be in international format (+...)',
       'COMMAND-Phone2'
     );
+    throw error; // unreachable but TS needs it
   }
 }
 

@@ -6,27 +6,15 @@
 
 import { Event } from '../../eventstore/types';
 import { WriteModel } from '../write-model';
+import { 
+  UserState, 
+  UserType,
+  userExists,
+  isUserLocked 
+} from '../../domain/user';
 
-/**
- * User state enum
- */
-export enum UserState {
-  UNSPECIFIED = 0,
-  ACTIVE = 1,
-  INACTIVE = 2,
-  DELETED = 3,
-  LOCKED = 4,
-  INITIAL = 5,
-}
-
-/**
- * User type enum
- */
-export enum UserType {
-  UNSPECIFIED = 0,
-  HUMAN = 1,
-  MACHINE = 2,
-}
+// Re-export for backward compatibility
+export { UserState, UserType };
 
 /**
  * User write model
@@ -150,10 +138,11 @@ export class UserWriteModel extends WriteModel {
 
 /**
  * Helper functions for user state
+ * These mirror Go's command/user_model.go helpers
  */
 
 export function isUserStateExists(state: UserState): boolean {
-  return state !== UserState.UNSPECIFIED && state !== UserState.DELETED;
+  return userExists(state);
 }
 
 export function isUserStateActive(state: UserState): boolean {
@@ -169,7 +158,7 @@ export function isUserStateInitial(state: UserState): boolean {
 }
 
 export function isUserStateLocked(state: UserState): boolean {
-  return state === UserState.LOCKED;
+  return isUserLocked(state);
 }
 
 export function isUserStateDeleted(state: UserState): boolean {

@@ -100,17 +100,20 @@ export enum OIDCGrantType {
 }
 
 export enum OIDCApplicationType {
-  WEB = 'web',
-  USER_AGENT = 'user_agent',
-  NATIVE = 'native',
+  WEB = 0,
+  USER_AGENT = 1,
+  NATIVE = 2,
 }
 
 export enum OIDCAuthMethodType {
-  BASIC = 'client_secret_basic',
-  POST = 'client_secret_post',
-  NONE = 'none',
-  PRIVATE_KEY_JWT = 'private_key_jwt',
+  BASIC = 0,
+  POST = 1,
+  NONE = 2,
+  PRIVATE_KEY_JWT = 3,
 }
+
+// Type alias for command compatibility
+export { OIDCApplicationType as OIDCAppType };
 
 export enum OIDCTokenType {
   BEARER = 'bearer',
@@ -143,6 +146,25 @@ export interface SAMLApplication extends Application {
 }
 
 /**
+ * Project type enum
+ */
+export enum ProjectType {
+  UNSPECIFIED = 0,
+  OWNED = 1,
+  GRANTED = 2,
+}
+
+/**
+ * Application type enum
+ */
+export enum AppType {
+  UNSPECIFIED = 0,
+  OIDC = 1,
+  API = 2,
+  SAML = 3,
+}
+
+/**
  * Check if project is active
  */
 export function isProjectActive(state: ProjectState): boolean {
@@ -150,8 +172,36 @@ export function isProjectActive(state: ProjectState): boolean {
 }
 
 /**
+ * Check if project is inactive
+ */
+export function isProjectStateInactive(state: ProjectState): boolean {
+  return state === ProjectState.INACTIVE;
+}
+
+/**
+ * Check if project exists
+ */
+export function isProjectStateExists(state: ProjectState): boolean {
+  return state !== ProjectState.UNSPECIFIED;
+}
+
+/**
  * Check if application is active
  */
 export function isAppActive(state: AppState): boolean {
   return state === AppState.ACTIVE;
+}
+
+/**
+ * Check if application is inactive
+ */
+export function isAppStateInactive(state: AppState): boolean {
+  return state === AppState.INACTIVE;
+}
+
+/**
+ * Check if app exists
+ */
+export function isAppStateExists(state: AppState): boolean {
+  return state !== AppState.UNSPECIFIED;
 }
