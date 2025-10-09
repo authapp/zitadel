@@ -342,6 +342,214 @@ export class Commands {
    */
   addAppKey: typeof import('./application/app-commands').addAppKey = 
     require('./application/app-commands').addAppKey;
+
+  // ============================================================================
+  // Session Commands (Phase 3)
+  // ============================================================================
+  
+  /**
+   * Create session
+   */
+  createSession: typeof import('./session/session-commands').createSession = 
+    require('./session/session-commands').createSession;
+  
+  /**
+   * Update session
+   */
+  updateSession: typeof import('./session/session-commands').updateSession = 
+    require('./session/session-commands').updateSession;
+  
+  /**
+   * Terminate session
+   */
+  terminateSession: typeof import('./session/session-commands').terminateSession = 
+    require('./session/session-commands').terminateSession;
+  
+  /**
+   * Set session token
+   */
+  setSessionToken: typeof import('./session/session-commands').setSessionToken = 
+    require('./session/session-commands').setSessionToken;
+  
+  /**
+   * Check session token
+   */
+  checkSessionToken: typeof import('./session/session-commands').checkSessionToken = 
+    require('./session/session-commands').checkSessionToken;
+  
+  /**
+   * Set authentication factor
+   */
+  setAuthFactor: typeof import('./session/session-commands').setAuthFactor = 
+    require('./session/session-commands').setAuthFactor;
+  
+  /**
+   * Set session metadata
+   */
+  setSessionMetadata: typeof import('./session/session-commands').setSessionMetadata = 
+    require('./session/session-commands').setSessionMetadata;
+  
+  /**
+   * Delete session metadata
+   */
+  deleteSessionMetadata: typeof import('./session/session-commands').deleteSessionMetadata = 
+    require('./session/session-commands').deleteSessionMetadata;
+
+  // ============================================================================
+  // Instance Commands (Phase 3)
+  // ============================================================================
+  
+  /**
+   * Setup instance
+   */
+  setupInstance: typeof import('./instance/instance-commands').setupInstance = 
+    require('./instance/instance-commands').setupInstance;
+  
+  /**
+   * Add instance domain
+   */
+  addInstanceDomain: typeof import('./instance/instance-commands').addInstanceDomain = 
+    require('./instance/instance-commands').addInstanceDomain;
+  
+  /**
+   * Set default instance domain
+   */
+  setDefaultInstanceDomain: typeof import('./instance/instance-commands').setDefaultInstanceDomain = 
+    require('./instance/instance-commands').setDefaultInstanceDomain;
+  
+  /**
+   * Remove instance domain
+   */
+  removeInstanceDomain: typeof import('./instance/instance-commands').removeInstanceDomain = 
+    require('./instance/instance-commands').removeInstanceDomain;
+  
+  /**
+   * Set instance features
+   */
+  setInstanceFeatures: typeof import('./instance/instance-commands').setInstanceFeatures = 
+    require('./instance/instance-commands').setInstanceFeatures;
+  
+  /**
+   * Reset instance features
+   */
+  resetInstanceFeatures: typeof import('./instance/instance-commands').resetInstanceFeatures = 
+    require('./instance/instance-commands').resetInstanceFeatures;
+  
+  /**
+   * Add instance member
+   */
+  addInstanceMember: typeof import('./instance/instance-commands').addInstanceMember = 
+    require('./instance/instance-commands').addInstanceMember;
+  
+  /**
+   * Change instance member
+   */
+  changeInstanceMember: typeof import('./instance/instance-commands').changeInstanceMember = 
+    require('./instance/instance-commands').changeInstanceMember;
+  
+  /**
+   * Remove instance member
+   */
+  removeInstanceMember: typeof import('./instance/instance-commands').removeInstanceMember = 
+    require('./instance/instance-commands').removeInstanceMember;
+
+  // ============================================================================
+  // Policy Commands (Phase 3)
+  // ============================================================================
+  
+  /**
+   * Add default password age policy
+   */
+  addDefaultPasswordAgePolicy: typeof import('./policy/password-age-policy-commands').addDefaultPasswordAgePolicy = 
+    require('./policy/password-age-policy-commands').addDefaultPasswordAgePolicy;
+  
+  /**
+   * Change default password age policy
+   */
+  changeDefaultPasswordAgePolicy: typeof import('./policy/password-age-policy-commands').changeDefaultPasswordAgePolicy = 
+    require('./policy/password-age-policy-commands').changeDefaultPasswordAgePolicy;
+  
+  /**
+   * Remove default password age policy
+   */
+  removeDefaultPasswordAgePolicy: typeof import('./policy/password-age-policy-commands').removeDefaultPasswordAgePolicy = 
+    require('./policy/password-age-policy-commands').removeDefaultPasswordAgePolicy;
+  
+  /**
+   * Add organization password age policy
+   */
+  addOrgPasswordAgePolicy: typeof import('./policy/password-age-policy-commands').addOrgPasswordAgePolicy = 
+    require('./policy/password-age-policy-commands').addOrgPasswordAgePolicy;
+  
+  /**
+   * Add default login policy
+   */
+  addDefaultLoginPolicy: typeof import('./policy/login-policy-commands').addDefaultLoginPolicy = 
+    require('./policy/login-policy-commands').addDefaultLoginPolicy;
+  
+  /**
+   * Change default login policy
+   */
+  changeDefaultLoginPolicy: typeof import('./policy/login-policy-commands').changeDefaultLoginPolicy = 
+    require('./policy/login-policy-commands').changeDefaultLoginPolicy;
+  
+  /**
+   * Add second factor to default login policy
+   */
+  addSecondFactorToDefaultLoginPolicy: typeof import('./policy/login-policy-commands').addSecondFactorToDefaultLoginPolicy = 
+    require('./policy/login-policy-commands').addSecondFactorToDefaultLoginPolicy;
+  
+  /**
+   * Remove second factor from default login policy
+   */
+  removeSecondFactorFromDefaultLoginPolicy: typeof import('./policy/login-policy-commands').removeSecondFactorFromDefaultLoginPolicy = 
+    require('./policy/login-policy-commands').removeSecondFactorFromDefaultLoginPolicy;
+  
+  /**
+   * Add multi factor to default login policy
+   */
+  addMultiFactorToDefaultLoginPolicy: typeof import('./policy/login-policy-commands').addMultiFactorToDefaultLoginPolicy = 
+    require('./policy/login-policy-commands').addMultiFactorToDefaultLoginPolicy;
+
+  // ============================================================================
+  // Authentication Commands (Phase 3)
+  // ============================================================================
+  
+  /**
+   * Add authentication request
+   */
+  addAuthRequest: typeof import('./auth/auth-commands').addAuthRequest = 
+    require('./auth/auth-commands').addAuthRequest;
+  
+  /**
+   * Select user for authentication
+   */
+  selectUser: typeof import('./auth/auth-commands').selectUser = 
+    require('./auth/auth-commands').selectUser;
+  
+  /**
+   * Check password for authentication
+   */
+  checkPassword: typeof import('./auth/auth-commands').checkPassword = 
+    require('./auth/auth-commands').checkPassword;
+  
+  /**
+   * Check TOTP for authentication
+   */
+  checkTOTP: typeof import('./auth/auth-commands').checkTOTP = 
+    require('./auth/auth-commands').checkTOTP;
+  
+  /**
+   * Succeed authentication request
+   */
+  succeedAuthRequest: typeof import('./auth/auth-commands').succeedAuthRequest = 
+    require('./auth/auth-commands').succeedAuthRequest;
+  
+  /**
+   * Fail authentication request
+   */
+  failAuthRequest: typeof import('./auth/auth-commands').failAuthRequest = 
+    require('./auth/auth-commands').failAuthRequest;
 }
 
 /**
