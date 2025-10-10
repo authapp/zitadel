@@ -233,6 +233,18 @@ export class Commands {
   setPrimaryDomain: typeof import('./org/org-commands').setPrimaryDomain = 
     require('./org/org-commands').setPrimaryDomain;
   
+  /**
+   * Setup organization with admins and domains
+   */
+  setupOrg: typeof import('./org/org-setup-commands').setupOrg = 
+    require('./org/org-setup-commands').setupOrg;
+  
+  /**
+   * Remove organization
+   */
+  removeOrg: typeof import('./org/org-setup-commands').removeOrg = 
+    require('./org/org-setup-commands').removeOrg;
+  
   // ============================================================================
   // Project Commands (Week 4)
   // ============================================================================
