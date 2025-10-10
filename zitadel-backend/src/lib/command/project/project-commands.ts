@@ -6,7 +6,7 @@
 
 import { Commands } from '../commands';
 import { Context } from '../context';
-import { ProjectWriteModel, ProjectState } from './project-write-model';
+import { ProjectWriteModel, ProjectState, ProjectGrantState } from './project-write-model';
 import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../write-model';
 import { validateRequired, validateLength } from '../validation';
 import { throwInvalidArgument, throwNotFound, throwAlreadyExists, throwPreconditionFailed } from '@/zerrors/errors';
@@ -587,5 +587,222 @@ export async function changeProjectGrant(
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
   
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove project command
+ * Based on Go: RemoveProject (project.go:317-366)
+ */
+export async function removeProject(
+  this: Commands,
+  ctx: Context,
+  projectID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  
+  const wm = new ProjectWriteModel();
+  await wm.load(this.getEventstore(), projectID, ctx.orgID);
+  
+  if (wm.state === ProjectState.UNSPECIFIED) {
+    throwNotFound('project not found', 'COMMAND-Prj50');
+  }
+  
+  await this.checkPermission(ctx, 'project', 'delete', projectID);
+  
+  const command: Command = {
+    eventType: 'project.removed',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { name: wm.name },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove project member command
+ * Based on Go: RemoveProjectMember (project_member.go:134-160)
+ */
+export async function removeProjectMember(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  userID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(userID, 'userID');
+  
+  const wm = new ProjectWriteModel();
+  await wm.load(this.getEventstore(), projectID, ctx.orgID);
+  
+  if (wm.state === ProjectState.UNSPECIFIED) {
+    throwNotFound('project not found', 'COMMAND-Prj60');
+  }
+  
+  await this.checkPermission(ctx, 'project.member', 'delete', projectID);
+  
+  const command: Command = {
+    eventType: 'project.member.removed',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { userID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Deactivate project grant command
+ * Based on Go: DeactivateProjectGrant (project_grant.go:189-235)
+ */
+export async function deactivateProjectGrant(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  grantID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(grantID, 'grantID');
+  
+  const wm = new ProjectWriteModel();
+  await wm.load(this.getEventstore(), projectID, ctx.orgID);
+  
+  if (wm.state === ProjectState.UNSPECIFIED) {
+    throwNotFound('project not found', 'COMMAND-Prj70');
+  }
+  
+  const grant = wm.grants.find(g => g.grantID === grantID);
+  if (!grant) {
+    throwNotFound('project grant not found', 'COMMAND-Prj71');
+  }
+  
+  if (grant.state === ProjectGrantState.INACTIVE) {
+    return writeModelToObjectDetails(wm);
+  }
+  
+  if (grant.state !== ProjectGrantState.ACTIVE) {
+    throwPreconditionFailed('project grant is not active', 'COMMAND-Prj72');
+  }
+  
+  await this.checkPermission(ctx, 'project.grant', 'update', projectID);
+  
+  const command: Command = {
+    eventType: 'project.grant.deactivated',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { grantID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Reactivate project grant command
+ * Based on Go: ReactivateProjectGrant (project_grant.go:248-294)
+ */
+export async function reactivateProjectGrant(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  grantID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(grantID, 'grantID');
+  
+  const wm = new ProjectWriteModel();
+  await wm.load(this.getEventstore(), projectID, ctx.orgID);
+  
+  if (wm.state === ProjectState.UNSPECIFIED) {
+    throwNotFound('project not found', 'COMMAND-Prj80');
+  }
+  
+  const grant = wm.grants.find(g => g.grantID === grantID);
+  if (!grant) {
+    throwNotFound('project grant not found', 'COMMAND-Prj81');
+  }
+  
+  if (grant.state === ProjectGrantState.ACTIVE) {
+    return writeModelToObjectDetails(wm);
+  }
+  
+  if (grant.state !== ProjectGrantState.INACTIVE) {
+    throwPreconditionFailed('project grant is not inactive', 'COMMAND-Prj82');
+  }
+  
+  await this.checkPermission(ctx, 'project.grant', 'update', projectID);
+  
+  const command: Command = {
+    eventType: 'project.grant.reactivated',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { grantID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove project grant command
+ * Based on Go: RemoveProjectGrant (project_grant.go:297-337)
+ */
+export async function removeProjectGrant(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  grantID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(grantID, 'grantID');
+  
+  const wm = new ProjectWriteModel();
+  await wm.load(this.getEventstore(), projectID, ctx.orgID);
+  
+  if (wm.state === ProjectState.UNSPECIFIED) {
+    throwNotFound('project not found', 'COMMAND-Prj90');
+  }
+  
+  const grant = wm.grants.find(g => g.grantID === grantID);
+  if (!grant) {
+    throwNotFound('project grant not found', 'COMMAND-Prj91');
+  }
+  
+  await this.checkPermission(ctx, 'project.grant', 'delete', projectID);
+  
+  const command: Command = {
+    eventType: 'project.grant.removed',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      grantID,
+      grantedOrgID: grant.grantedOrgID,
+    },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
   return writeModelToObjectDetails(wm);
 }

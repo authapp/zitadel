@@ -492,3 +492,273 @@ export async function addAppKey(
     keyData,
   };
 }
+
+/**
+ * Remove application key command
+ * Based on Go: RemoveApplicationKey (project_application_key.go:112-135)
+ */
+export async function removeAppKey(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  appID: string,
+  keyID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(appID, 'appID');
+  validateRequired(keyID, 'keyID');
+  
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, ctx.orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-App70');
+  }
+  
+  await this.checkPermission(ctx, 'application', 'update', ctx.orgID);
+  
+  const command: Command = {
+    eventType: 'application.key.removed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { projectID, keyID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Add SAML application command
+ * Based on Go: AddSAMLApplication (project_application_saml.go:15-57)
+ */
+export interface AddSAMLAppData {
+  projectID: string;
+  name: string;
+  metadata: string; // SAML metadata XML
+  metadataURL?: string;
+}
+
+export async function addSAMLApp(
+  this: Commands,
+  ctx: Context,
+  data: AddSAMLAppData
+): Promise<{ appID: string; details: ObjectDetails }> {
+  validateRequired(data.projectID, 'projectID');
+  validateRequired(data.name, 'name');
+  validateRequired(data.metadata, 'metadata');
+  
+  // Note: In production, parse and validate SAML metadata XML
+  const appID = await this.nextID();
+  
+  await this.checkPermission(ctx, 'application', 'create', ctx.orgID);
+  
+  const commands: Command[] = [
+    {
+      eventType: 'application.added',
+      aggregateType: 'project',
+      aggregateID: data.projectID,
+      owner: ctx.orgID,
+      instanceID: ctx.instanceID,
+      creator: ctx.userID || 'system',
+      payload: { appID, name: data.name },
+    },
+    {
+      eventType: 'application.saml.config.added',
+      aggregateType: 'project',
+      aggregateID: data.projectID,
+      owner: ctx.orgID,
+      instanceID: ctx.instanceID,
+      creator: ctx.userID || 'system',
+      payload: {
+        appID,
+        metadata: data.metadata,
+        metadataURL: data.metadataURL,
+      },
+    },
+  ];
+  
+  await this.getEventstore().pushMany(commands);
+  
+  return {
+    appID,
+    details: {
+      sequence: 0n,
+      eventDate: new Date(),
+      resourceOwner: ctx.orgID,
+    },
+  };
+}
+
+/**
+ * Update SAML application command
+ * Based on Go: UpdateSAMLApplication (project_application_saml.go:97-169)
+ */
+export interface UpdateSAMLAppData {
+  projectID: string;
+  appID: string;
+  metadata?: string;
+  metadataURL?: string;
+}
+
+export async function updateSAMLApp(
+  this: Commands,
+  ctx: Context,
+  data: UpdateSAMLAppData
+): Promise<ObjectDetails> {
+  validateRequired(data.projectID, 'projectID');
+  validateRequired(data.appID, 'appID');
+  
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), data.appID, ctx.orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-App80');
+  }
+  
+  await this.checkPermission(ctx, 'application', 'update', ctx.orgID);
+  
+  const command: Command = {
+    eventType: 'application.saml.config.changed',
+    aggregateType: 'project',
+    aggregateID: data.projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      appID: data.appID,
+      metadata: data.metadata,
+      metadataURL: data.metadataURL,
+    },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Deactivate application command
+ * Based on Go: DeactivateApplication (project_application.go:54-86)
+ */
+export async function deactivateApplication(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  appID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(appID, 'appID');
+  
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, ctx.orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-App90');
+  }
+  
+  if (wm.state !== AppState.ACTIVE) {
+    throwPreconditionFailed('application is not active', 'COMMAND-App91');
+  }
+  
+  await this.checkPermission(ctx, 'application', 'update', ctx.orgID);
+  
+  const command: Command = {
+    eventType: 'application.deactivated',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { appID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Reactivate application command
+ * Based on Go: ReactivateApplication (project_application.go:88-119)
+ */
+export async function reactivateApplication(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  appID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(appID, 'appID');
+  
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, ctx.orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppA0');
+  }
+  
+  if (wm.state !== AppState.INACTIVE) {
+    throwPreconditionFailed('application is not inactive', 'COMMAND-AppA1');
+  }
+  
+  await this.checkPermission(ctx, 'application', 'update', ctx.orgID);
+  
+  const command: Command = {
+    eventType: 'application.reactivated',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: { appID },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove application command
+ * Based on Go: RemoveApplication (project_application.go:121-157)
+ */
+export async function removeApplication(
+  this: Commands,
+  ctx: Context,
+  projectID: string,
+  appID: string
+): Promise<ObjectDetails> {
+  validateRequired(projectID, 'projectID');
+  validateRequired(appID, 'appID');
+  
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, ctx.orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppB0');
+  }
+  
+  await this.checkPermission(ctx, 'application', 'delete', ctx.orgID);
+  
+  const command: Command = {
+    eventType: 'application.removed',
+    aggregateType: 'project',
+    aggregateID: projectID,
+    owner: ctx.orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      appID,
+      name: wm.name,
+    },
+  };
+  
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  return writeModelToObjectDetails(wm);
+}

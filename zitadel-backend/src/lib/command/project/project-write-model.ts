@@ -13,9 +13,10 @@ import {
   isProjectStateExists as projectExists,
   isProjectStateInactive
 } from '../../domain/project';
+import { ProjectGrant, ProjectGrantState } from '../../domain/entities/project';
 
 // Re-export for backward compatibility
-export { ProjectState, ProjectType };
+export { ProjectState, ProjectType, ProjectGrantState };
 
 /**
  * Project write model
@@ -28,6 +29,7 @@ export class ProjectWriteModel extends WriteModel {
   projectRoleCheck: boolean = false;
   hasProjectCheck: boolean = false;
   privateLabelingSetting: number = 0;
+  grants: ProjectGrant[] = [];
   
   constructor() {
     super('project');
@@ -69,6 +71,52 @@ export class ProjectWriteModel extends WriteModel {
         
       case 'project.reactivated':
         this.state = ProjectState.ACTIVE;
+        break;
+        
+      case 'project.grant.added':
+        if (event.payload) {
+          const grant = new ProjectGrant(
+            event.payload.grantID,
+            this.aggregateID,
+            event.payload.grantedOrgID,
+            event.payload.roleKeys || [],
+            ProjectGrantState.ACTIVE
+          );
+          this.grants.push(grant);
+        }
+        break;
+        
+      case 'project.grant.changed':
+        if (event.payload) {
+          const grant = this.grants.find(g => g.grantID === event.payload?.grantID);
+          if (grant && event.payload?.roleKeys) {
+            grant.roleKeys = event.payload.roleKeys;
+          }
+        }
+        break;
+        
+      case 'project.grant.deactivated':
+        if (event.payload) {
+          const grant = this.grants.find(g => g.grantID === event.payload?.grantID);
+          if (grant) {
+            grant.state = ProjectGrantState.INACTIVE;
+          }
+        }
+        break;
+        
+      case 'project.grant.reactivated':
+        if (event.payload) {
+          const grant = this.grants.find(g => g.grantID === event.payload?.grantID);
+          if (grant) {
+            grant.state = ProjectGrantState.ACTIVE;
+          }
+        }
+        break;
+        
+      case 'project.grant.removed':
+        if (event.payload) {
+          this.grants = this.grants.filter(g => g.grantID !== event.payload?.grantID);
+        }
         break;
     }
   }
