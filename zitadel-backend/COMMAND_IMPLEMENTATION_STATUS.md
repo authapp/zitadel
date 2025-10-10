@@ -8,34 +8,38 @@ Generated: 2025-10-10
 
 ## 📊 **Overall Summary**
 
-| Category | Go Implementation Files | TypeScript Files | Coverage |
-|----------|------------------------|------------------|----------|
-| **Organization** | 10 files | 2 files | ~40% |
-| **User** | 25+ files | 1 file | ~20% |
-| **Project** | 10 files | 2 files | ~50% |
-| **Application** | 4 files | 1 file | ~40% |
-| **Instance** | 20+ files | 1 file | ~30% |
-| **Authentication** | 5 files | 1 file | ~60% |
-| **Session** | 3 files | 1 file | ~80% |
-| **IDP** | 10+ files | 0 files | 0% |
-| **Policies** | 15+ files | 2 files | ~15% |
-| **Actions** | 2 files | 0 files | 0% |
-| **OIDC/SAML** | 4 files | 0 files | 0% |
-| **Notifications** | 5 files | 0 files | 0% |
-| **Other** | 10+ files | 0 files | 0% |
-| **TOTAL** | ~120 files | 10 files | **~25%** |
+**Last Updated:** 2025-10-10 (Phase 4 Complete)
+
+| Category | Go Implementation Files | TypeScript Files | Coverage | Status |
+|----------|------------------------|------------------|----------|---------|
+| **Organization** | 10 files | 2 files | ~50% | ✅ Phase 4.1 |
+| **User** | 25+ files | 2 files | ~35% | ✅ Phase 4.4 |
+| **Project** | 10 files | 2 files | ~60% | ✅ Phase 4.2 |
+| **Application** | 4 files | 1 file | ~55% | ✅ Phase 4.3 |
+| **Instance** | 20+ files | 1 file | ~30% | ✅ Phase 3 |
+| **Authentication** | 5 files | 1 file | ~60% | ✅ Phase 3 |
+| **Session** | 3 files | 1 file | ~80% | ✅ Phase 3 |
+| **IDP** | 10+ files | 0 files | 0% | ⏳ Pending |
+| **Policies** | 15+ files | 2 files | ~15% | ⏳ Phase 5 |
+| **Actions** | 2 files | 0 files | 0% | ⏳ Pending |
+| **OIDC/SAML** | 4 files | 0 files | 0% | ⏳ Pending |
+| **Notifications** | 5 files | 0 files | 0% | ⏳ Pending |
+| **Other** | 10+ files | 0 files | 0% | ⏳ Pending |
+| **TOTAL** | ~120 files | 11 files | **~35%** | **Phase 4 Done** |
+
+**Phase 4 Achievement:** +21 commands, +10% coverage increase
 
 ---
 
 ## ✅ **IMPLEMENTED COMMANDS**
 
-### **1. Organization Commands** ✅ **Partial (40%)**
+### **1. Organization Commands** ✅ **Improved (50%)**
 
 **File:** `src/lib/command/org/org-commands.ts`
 
 | Command | Go Function | TypeScript Function | Status | Notes |
 |---------|------------|---------------------|--------|-------|
-| Add Org | `AddOrg()` | `addOrg()` | ✅ **NEW: Uses domain model!** | Updated with domain validation |
+| Add Org | `AddOrg()` | `addOrg()` | ✅ Complete | Uses domain model validation |
 | Change Org | `ChangeOrg()` | `changeOrg()` | ✅ Complete | |
 | Deactivate Org | `DeactivateOrg()` | `deactivateOrg()` | ✅ Complete | |
 | Reactivate Org | `ReactivateOrg()` | `reactivateOrg()` | ✅ Complete | |
@@ -47,9 +51,9 @@ Generated: 2025-10-10
 | Add Domain | `AddOrgDomain()` | `addDomain()` | ✅ Complete | |
 | Verify Domain | `VerifyOrgDomain()` | `verifyDomain()` | ✅ Complete | |
 | Set Primary Domain | `SetPrimaryOrgDomain()` | `setPrimaryDomain()` | ✅ Complete | |
-| Remove Domain | `RemoveOrgDomain()` | ❌ Missing | Need to implement |
-| Generate Domain Validation | `GenerateOrgDomainValidation()` | ❌ Missing | Need to implement |
-| Validate Domain | `ValidateOrgDomain()` | ❌ Missing | Need to implement |
+| Remove Domain | `RemoveOrgDomain()` | `removeDomain()` | ✅ **Phase 4.1** | Validates not primary |
+| Generate Domain Validation | `GenerateOrgDomainValidation()` | `generateDomainValidation()` | ✅ **Phase 4.1** | HTTP/DNS validation |
+| Validate Domain | `ValidateOrgDomain()` | `validateOrgDomain()` | ✅ **Phase 4.1** | With user claiming |
 
 **Missing from Go:**
 - `org_metadata.go` - Organization metadata management
@@ -61,9 +65,9 @@ Generated: 2025-10-10
 
 ---
 
-### **2. User Commands** ⚠️ **Partial (20%)**
+### **2. User Commands** ✅ **Improved (35%)**
 
-**File:** `src/lib/command/user/user-commands.ts`
+**Files:** `src/lib/command/user/user-commands.ts`, `src/lib/command/user/user-grant-commands.ts`
 
 | Command | Go Files | TypeScript Function | Status | Notes |
 |---------|----------|---------------------|--------|-------|
@@ -85,9 +89,13 @@ Generated: 2025-10-10
 | Change Machine | `user_machine.go` | `changeMachine()` | ✅ Complete | |
 | Add Machine Key | `user_machine_key.go` | `addMachineKey()` | ✅ Complete | |
 | Remove Machine Key | `user_machine_key.go` | `removeMachineKey()` | ✅ Complete | |
-| Add Machine Secret | `user_machine_secret.go` | ❌ Missing | Need to implement |
-| Add Personal Access Token | `user_personal_access_token.go` | ❌ Missing | Need to implement |
-| Remove PAT | `user_personal_access_token.go` | ❌ Missing | Need to implement |
+| Generate Machine Secret | `user_machine_secret.go` | `generateMachineSecret()` | ✅ **Phase 4.4** | Returns client secret |
+| Remove Machine Secret | `user_machine_secret.go` | `removeMachineSecret()` | ✅ **Phase 4.4** | |
+| Add Personal Access Token | `user_personal_access_token.go` | `addPersonalAccessToken()` | ✅ **Phase 4.4** | With expiration |
+| Remove PAT | `user_personal_access_token.go` | `removePersonalAccessToken()` | ✅ **Phase 4.4** | |
+| Add User Grant | `user_grant.go` | `addUserGrant()` | ✅ **Phase 4.4** | Project access |
+| Change User Grant | `user_grant.go` | `changeUserGrant()` | ✅ **Phase 4.4** | Role updates |
+| Remove User Grant | `user_grant.go` | `removeUserGrant()` | ✅ **Phase 4.4** | Revoke access |
 
 **Missing from Go:**
 - `user_human_init.go` - User initialization/registration
@@ -104,7 +112,7 @@ Generated: 2025-10-10
 
 ---
 
-### **3. Project Commands** ✅ **Partial (50%)**
+### **3. Project Commands** ✅ **Improved (60%)**
 
 **File:** `src/lib/command/project/project-commands.ts`
 
@@ -114,25 +122,25 @@ Generated: 2025-10-10
 | Change Project | `ChangeProject()` | `changeProject()` | ✅ Complete | |
 | Deactivate Project | `DeactivateProject()` | `deactivateProject()` | ✅ Complete | |
 | Reactivate Project | `ReactivateProject()` | `reactivateProject()` | ✅ Complete | |
-| Remove Project | `RemoveProject()` | ❌ Missing | Need to implement |
+| Remove Project | `RemoveProject()` | `removeProject()` | ✅ **Phase 4.2** | With cascading |
 | Add Project Role | `AddProjectRole()` | `addProjectRole()` | ✅ Complete | |
 | Change Project Role | `ChangeProjectRole()` | `changeProjectRole()` | ✅ Complete | |
 | Remove Project Role | `RemoveProjectRole()` | `removeProjectRole()` | ✅ Complete | |
 | Add Project Member | `AddProjectMember()` | `addProjectMember()` | ✅ Complete | |
 | Change Project Member | `ChangeProjectMember()` | `changeProjectMember()` | ✅ Complete | |
-| Remove Project Member | `RemoveProjectMember()` | ❌ Missing | Need to implement |
+| Remove Project Member | `RemoveProjectMember()` | `removeProjectMember()` | ✅ **Phase 4.2** | |
 | Add Project Grant | `AddProjectGrant()` | `addProjectGrant()` | ✅ Complete | |
 | Change Project Grant | `ChangeProjectGrant()` | `changeProjectGrant()` | ✅ Complete | |
-| Deactivate Project Grant | `DeactivateProjectGrant()` | ❌ Missing | Need to implement |
-| Reactivate Project Grant | `ReactivateProjectGrant()` | ❌ Missing | Need to implement |
-| Remove Project Grant | `RemoveProjectGrant()` | ❌ Missing | Need to implement |
+| Deactivate Project Grant | `DeactivateProjectGrant()` | `deactivateProjectGrant()` | ✅ **Phase 4.2** | State validation |
+| Reactivate Project Grant | `ReactivateProjectGrant()` | `reactivateProjectGrant()` | ✅ **Phase 4.2** | State validation |
+| Remove Project Grant | `RemoveProjectGrant()` | `removeProjectGrant()` | ✅ **Phase 4.2** | |
 
 **Missing from Go:**
 - `project_grant_member.go` - Project grant member management
 
 ---
 
-### **4. Application Commands** ⚠️ **Partial (40%)**
+### **4. Application Commands** ✅ **Improved (55%)**
 
 **File:** `src/lib/command/application/app-commands.ts`
 
@@ -144,12 +152,12 @@ Generated: 2025-10-10
 | Update API App | `project_application_api.go` | `updateAPIApp()` | ✅ Complete | |
 | Change App Secret | `project_application.go` | `changeAppSecret()` | ✅ Complete | |
 | Add App Key | `project_application_key.go` | `addAppKey()` | ✅ Complete | |
-| Remove App Key | `project_application_key.go` | ❌ Missing | Need to implement |
-| Add SAML App | `project_application_saml.go` | ❌ Missing | Need to implement |
-| Update SAML App | `project_application_saml.go` | ❌ Missing | Need to implement |
-| Remove Application | `project_application.go` | ❌ Missing | Need to implement |
-| Deactivate Application | `project_application.go` | ❌ Missing | Need to implement |
-| Reactivate Application | `project_application.go` | ❌ Missing | Need to implement |
+| Remove App Key | `project_application_key.go` | `removeAppKey()` | ✅ **Phase 4.3** | |
+| Add SAML App | `project_application_saml.go` | `addSAMLApp()` | ✅ **Phase 4.3** | With metadata |
+| Update SAML App | `project_application_saml.go` | `updateSAMLApp()` | ✅ **Phase 4.3** | |
+| Remove Application | `project_application.go` | `removeApplication()` | ✅ **Phase 4.3** | |
+| Deactivate Application | `project_application.go` | `deactivateApplication()` | ✅ **Phase 4.3** | State validation |
+| Reactivate Application | `project_application.go` | `reactivateApplication()` | ✅ **Phase 4.3** | State validation |
 
 ---
 
