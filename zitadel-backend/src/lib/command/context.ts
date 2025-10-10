@@ -23,6 +23,9 @@ export interface Context {
   /** Request ID for tracing */
   requestID?: string;
   
+  /** Requested domain for IAM domain generation */
+  requestedDomain?: string;
+  
   /** Additional metadata */
   metadata?: Record<string, any>;
   

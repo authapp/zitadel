@@ -11,6 +11,7 @@ import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../wr
 import { validateRequired, validateLength } from '../validation';
 import { throwInvalidArgument, throwNotFound, throwAlreadyExists, throwPreconditionFailed } from '@/zerrors/errors';
 import { Command } from '../../eventstore/types';
+import { Organization, OrgState as DomainOrgState } from '@/domain/entities/organization';
 
 /**
  * Add Organization Data
@@ -28,19 +29,29 @@ export async function addOrg(
   ctx: Context,
   data: AddOrgData
 ): Promise<ObjectDetails & { orgID: string }> {
-  // 1. Validate input
-  validateRequired(data.name, 'name');
-  validateLength(data.name, 'name', 1, 200);
+  // 1. Create domain object (following Go pattern)
+  const organisation = new Organization(
+    data.orgID || '',
+    ctx.instanceID,
+    data.name,
+    DomainOrgState.ACTIVE
+  );
   
-  // 2. Generate org ID if not provided
-  if (!data.orgID) {
-    data.orgID = await this.nextID();
+  // 2. Validate domain object (following Go pattern: organisation.IsValid())
+  if (!organisation.isValid()) {
+    throwInvalidArgument('invalid organization data', 'COMMAND-Org01');
   }
   
-  // 3. Check permissions (instance level)
+  // 3. Generate org ID if not provided
+  if (!data.orgID) {
+    data.orgID = await this.nextID();
+    organisation.aggregateID = data.orgID;
+  }
+  
+  // 4. Check permissions (instance level)
   await this.checkPermission(ctx, 'org', 'create', ctx.instanceID);
   
-  // 4. Load write model
+  // 5. Load write model to check existence
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), data.orgID, data.orgID);
   
@@ -48,24 +59,80 @@ export async function addOrg(
     throwAlreadyExists('organization already exists', 'COMMAND-Org10');
   }
   
-  // 5. Create command
-  const command: Command = {
-    eventType: 'org.added',
-    aggregateType: 'org',
-    aggregateID: data.orgID,
-    owner: data.orgID,
-    instanceID: ctx.instanceID,
-    creator: ctx.userID || 'system',
-    payload: {
-      name: data.name,
+  // 6. Use domain method to add IAM domain (following Go pattern)
+  organisation.addIAMDomain(ctx.requestedDomain || 'localhost');
+  
+  // 7. Generate commands from domain object
+  const commands: Command[] = [
+    {
+      eventType: 'org.added',
+      aggregateType: 'org',
+      aggregateID: data.orgID,
+      owner: data.orgID,
+      instanceID: ctx.instanceID,
+      creator: ctx.userID || 'system',
+      payload: {
+        name: organisation.name, // Use domain object's validated name
+      },
     },
-  };
+  ];
   
-  // 6. Push to eventstore
-  const event = await this.getEventstore().push(command);
+  // 8. Add domain commands (following Go pattern: iterate organisation.Domains)
+  for (const orgDomain of organisation.domains) {
+    if (orgDomain.domain) {
+      commands.push({
+        eventType: 'org.domain.added',
+        aggregateType: 'org',
+        aggregateID: data.orgID,
+        owner: data.orgID,
+        instanceID: ctx.instanceID,
+        creator: ctx.userID || 'system',
+        payload: {
+          domain: orgDomain.domain,
+          isPrimary: orgDomain.isPrimary,
+          isVerified: orgDomain.isVerified,
+        },
+      });
+      
+      // If domain is verified, add verification event
+      if (orgDomain.isVerified) {
+        commands.push({
+          eventType: 'org.domain.verified',
+          aggregateType: 'org',
+          aggregateID: data.orgID,
+          owner: data.orgID,
+          instanceID: ctx.instanceID,
+          creator: ctx.userID || 'system',
+          payload: {
+            domain: orgDomain.domain,
+          },
+        });
+      }
+      
+      // If domain is primary, add primary set event
+      if (orgDomain.isPrimary) {
+        commands.push({
+          eventType: 'org.domain.primary.set',
+          aggregateType: 'org',
+          aggregateID: data.orgID,
+          owner: data.orgID,
+          instanceID: ctx.instanceID,
+          creator: ctx.userID || 'system',
+          payload: {
+            domain: orgDomain.domain,
+          },
+        });
+      }
+    }
+  }
   
-  // 7. Update write model
-  appendAndReduce(wm, event);
+  // 9. Push all commands to eventstore
+  const events = await this.getEventstore().pushMany(commands);
+  
+  // 10. Update write model with all events
+  for (const event of events) {
+    appendAndReduce(wm, event);
+  }
   
   return {
     ...writeModelToObjectDetails(wm),
