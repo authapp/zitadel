@@ -31,6 +31,7 @@ export class UserWriteModel extends WriteModel {
   lastName?: string;
   displayName?: string;
   preferredLanguage?: string;
+  avatar?: string; // Avatar storage key
   
   constructor() {
     super('user');
@@ -131,6 +132,15 @@ export class UserWriteModel extends WriteModel {
       case 'user.removed':
       case 'user.deleted':
         this.state = UserState.DELETED;
+        break;
+        
+      // Avatar changes
+      case 'user.human.avatar.added':
+        this.avatar = event.payload?.storeKey;
+        break;
+        
+      case 'user.human.avatar.removed':
+        this.avatar = undefined;
         break;
     }
   }

@@ -59,6 +59,14 @@ export const UserEventTypes = {
   UNLOCKED: 'user.unlocked',
   REMOVED: 'user.removed',
   DELETED: 'user.deleted',
+  
+  // Refresh tokens
+  REFRESH_TOKEN_ADDED: 'user.human.refresh.token.added',
+  REFRESH_TOKEN_RENEWED: 'user.human.refresh.token.renewed',
+  REFRESH_TOKEN_REMOVED: 'user.human.refresh.token.removed',
+  
+  // Sign out
+  SIGNED_OUT: 'user.human.signedout',
 } as const;
 
 export type UserEventType = typeof UserEventTypes[keyof typeof UserEventTypes];
@@ -113,6 +121,10 @@ export interface PhoneChangedPayload {
 export interface PasswordChangedPayload {
   encodedHash?: string;
   changeRequired?: boolean;
+}
+
+export interface RefreshTokenRemovedPayload {
+  tokenId: string;
 }
 
 /**
@@ -379,5 +391,23 @@ export function newUserRemovedEvent(
     instanceID,
     creator,
     payload: {},
+  };
+}
+
+export function newRefreshTokenRemovedEvent(
+  aggregateID: string,
+  owner: string,
+  payload: RefreshTokenRemovedPayload,
+  instanceID: string = 'default',
+  creator: string = 'system'
+): Command {
+  return {
+    eventType: UserEventTypes.REFRESH_TOKEN_REMOVED,
+    aggregateType: USER_AGGREGATE_TYPE,
+    aggregateID,
+    owner,
+    instanceID,
+    creator,
+    payload,
   };
 }

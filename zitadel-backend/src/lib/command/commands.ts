@@ -88,6 +88,13 @@ export class Commands {
   }
   
   /**
+   * Alias for nextID (used by action commands)
+   */
+  async generateID(): Promise<string> {
+    return this.idGenerator.generate();
+  }
+  
+  /**
    * Check permission
    */
   async checkPermission(ctx: Context, resource: string, action: string, scope?: string): Promise<void> {
@@ -169,6 +176,236 @@ export class Commands {
   removeUser: typeof import('./user/user-commands').removeUser = 
     require('./user/user-commands').removeUser;
   
+  // --------------------------------------------------------------------------
+  // User OTP/MFA Commands (Phase 1)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Import existing TOTP secret
+   */
+  importHumanTOTP: typeof import('./user/user-otp-commands').importHumanTOTP = 
+    require('./user/user-otp-commands').importHumanTOTP;
+  
+  /**
+   * Add TOTP authenticator (generates secret)
+   */
+  addHumanTOTP: typeof import('./user/user-otp-commands').addHumanTOTP = 
+    require('./user/user-otp-commands').addHumanTOTP;
+  
+  /**
+   * Verify TOTP setup code
+   */
+  humanCheckMFATOTPSetup: typeof import('./user/user-otp-commands').humanCheckMFATOTPSetup = 
+    require('./user/user-otp-commands').humanCheckMFATOTPSetup;
+  
+  /**
+   * Remove TOTP authenticator
+   */
+  humanRemoveTOTP: typeof import('./user/user-otp-commands').humanRemoveTOTP = 
+    require('./user/user-otp-commands').humanRemoveTOTP;
+  
+  /**
+   * Add SMS OTP (enable SMS 2FA)
+   */
+  addHumanOTPSMS: typeof import('./user/user-otp-commands').addHumanOTPSMS = 
+    require('./user/user-otp-commands').addHumanOTPSMS;
+  
+  /**
+   * Remove SMS OTP (disable SMS 2FA)
+   */
+  removeHumanOTPSMS: typeof import('./user/user-otp-commands').removeHumanOTPSMS = 
+    require('./user/user-otp-commands').removeHumanOTPSMS;
+  
+  /**
+   * Send SMS OTP code
+   */
+  humanSendOTPSMS: typeof import('./user/user-otp-commands').humanSendOTPSMS = 
+    require('./user/user-otp-commands').humanSendOTPSMS;
+  
+  /**
+   * Verify SMS OTP code
+   */
+  humanCheckOTPSMS: typeof import('./user/user-otp-commands').humanCheckOTPSMS = 
+    require('./user/user-otp-commands').humanCheckOTPSMS;
+  
+  /**
+   * Add Email OTP (enable Email 2FA)
+   */
+  addHumanOTPEmail: typeof import('./user/user-otp-commands').addHumanOTPEmail = 
+    require('./user/user-otp-commands').addHumanOTPEmail;
+  
+  /**
+   * Remove Email OTP (disable Email 2FA)
+   */
+  removeHumanOTPEmail: typeof import('./user/user-otp-commands').removeHumanOTPEmail = 
+    require('./user/user-otp-commands').removeHumanOTPEmail;
+  
+  /**
+   * Verify Email OTP code
+   */
+  humanCheckOTPEmail: typeof import('./user/user-otp-commands').humanCheckOTPEmail = 
+    require('./user/user-otp-commands').humanCheckOTPEmail;
+  
+  // --------------------------------------------------------------------------
+  // User WebAuthn/Passkey Commands (Phase 1B)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Begin U2F registration
+   */
+  humanAddU2FSetup: typeof import('./user/user-webauthn-commands').humanAddU2FSetup = 
+    require('./user/user-webauthn-commands').humanAddU2FSetup;
+  
+  /**
+   * Complete U2F registration
+   */
+  humanVerifyU2FSetup: typeof import('./user/user-webauthn-commands').humanVerifyU2FSetup = 
+    require('./user/user-webauthn-commands').humanVerifyU2FSetup;
+  
+  /**
+   * Begin U2F login
+   */
+  humanBeginU2FLogin: typeof import('./user/user-webauthn-commands').humanBeginU2FLogin = 
+    require('./user/user-webauthn-commands').humanBeginU2FLogin;
+  
+  /**
+   * Complete U2F login
+   */
+  humanFinishU2FLogin: typeof import('./user/user-webauthn-commands').humanFinishU2FLogin = 
+    require('./user/user-webauthn-commands').humanFinishU2FLogin;
+  
+  /**
+   * Remove U2F token
+   */
+  humanRemoveU2F: typeof import('./user/user-webauthn-commands').humanRemoveU2F = 
+    require('./user/user-webauthn-commands').humanRemoveU2F;
+  
+  /**
+   * Begin Passwordless registration
+   */
+  humanAddPasswordlessSetup: typeof import('./user/user-webauthn-commands').humanAddPasswordlessSetup = 
+    require('./user/user-webauthn-commands').humanAddPasswordlessSetup;
+  
+  /**
+   * Begin Passwordless registration with init code
+   */
+  humanAddPasswordlessSetupInitCode: typeof import('./user/user-webauthn-commands').humanAddPasswordlessSetupInitCode = 
+    require('./user/user-webauthn-commands').humanAddPasswordlessSetupInitCode;
+  
+  /**
+   * Complete Passwordless registration with init code
+   */
+  humanPasswordlessSetupInitCode: typeof import('./user/user-webauthn-commands').humanPasswordlessSetupInitCode = 
+    require('./user/user-webauthn-commands').humanPasswordlessSetupInitCode;
+  
+  /**
+   * Complete Passwordless registration
+   */
+  humanHumanPasswordlessSetup: typeof import('./user/user-webauthn-commands').humanHumanPasswordlessSetup = 
+    require('./user/user-webauthn-commands').humanHumanPasswordlessSetup;
+  
+  /**
+   * Begin Passwordless login
+   */
+  humanBeginPasswordlessLogin: typeof import('./user/user-webauthn-commands').humanBeginPasswordlessLogin = 
+    require('./user/user-webauthn-commands').humanBeginPasswordlessLogin;
+  
+  /**
+   * Complete Passwordless login
+   */
+  humanFinishPasswordlessLogin: typeof import('./user/user-webauthn-commands').humanFinishPasswordlessLogin = 
+    require('./user/user-webauthn-commands').humanFinishPasswordlessLogin;
+  
+  /**
+   * Remove Passwordless token
+   */
+  humanRemovePasswordless: typeof import('./user/user-webauthn-commands').humanRemovePasswordless = 
+    require('./user/user-webauthn-commands').humanRemovePasswordless;
+  
+  // --------------------------------------------------------------------------
+  // User Initialization Commands (Phase 2)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Resend initial registration mail
+   */
+  resendInitialMail: typeof import('./user/user-init-commands').resendInitialMail = 
+    require('./user/user-init-commands').resendInitialMail;
+  
+  /**
+   * Verify initialization code
+   */
+  humanVerifyInitCode: typeof import('./user/user-init-commands').humanVerifyInitCode = 
+    require('./user/user-init-commands').humanVerifyInitCode;
+  
+  /**
+   * Mark init code as sent
+   */
+  humanInitCodeSent: typeof import('./user/user-init-commands').humanInitCodeSent = 
+    require('./user/user-init-commands').humanInitCodeSent;
+  
+  // --------------------------------------------------------------------------
+  // User IDP Link Commands (Phase 2B)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Add User IDP Link (social login)
+   */
+  addUserIDPLink: typeof import('./user/user-idp-link-commands').addUserIDPLink = 
+    require('./user/user-idp-link-commands').addUserIDPLink;
+  
+  /**
+   * Bulk Add User IDP Links
+   */
+  bulkAddedUserIDPLinks: typeof import('./user/user-idp-link-commands').bulkAddedUserIDPLinks = 
+    require('./user/user-idp-link-commands').bulkAddedUserIDPLinks;
+  
+  /**
+   * Remove User IDP Link
+   */
+  removeUserIDPLink: typeof import('./user/user-idp-link-commands').removeUserIDPLink = 
+    require('./user/user-idp-link-commands').removeUserIDPLink;
+  
+  /**
+   * Mark IDP login successful
+   */
+  userIDPLoginChecked: typeof import('./user/user-idp-link-commands').userIDPLoginChecked = 
+    require('./user/user-idp-link-commands').userIDPLoginChecked;
+  
+  /**
+   * Migrate User IDP external ID
+   */
+  migrateUserIDP: typeof import('./user/user-idp-link-commands').migrateUserIDP = 
+    require('./user/user-idp-link-commands').migrateUserIDP;
+  
+  /**
+   * Update IDP link username
+   */
+  updateUserIDPLinkUsername: typeof import('./user/user-idp-link-commands').updateUserIDPLinkUsername = 
+    require('./user/user-idp-link-commands').updateUserIDPLinkUsername;
+  
+  // --------------------------------------------------------------------------
+  // User Refresh Token Commands (Phase 4)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Revoke a single refresh token
+   */
+  revokeRefreshToken: typeof import('./user/user-refresh-token-commands').revokeRefreshToken = 
+    require('./user/user-refresh-token-commands').revokeRefreshToken;
+  
+  /**
+   * Revoke multiple refresh tokens
+   */
+  revokeRefreshTokens: typeof import('./user/user-refresh-token-commands').revokeRefreshTokens = 
+    require('./user/user-refresh-token-commands').revokeRefreshTokens;
+  
+  /**
+   * Revoke all refresh tokens for a user
+   */
+  revokeAllUserRefreshTokens: typeof import('./user/user-refresh-token-commands').revokeAllUserRefreshTokens = 
+    require('./user/user-refresh-token-commands').revokeAllUserRefreshTokens;
+  
   // ============================================================================
   // Organization Commands (Week 3)
   // ============================================================================
@@ -244,6 +481,130 @@ export class Commands {
    */
   removeOrg: typeof import('./org/org-setup-commands').removeOrg = 
     require('./org/org-setup-commands').removeOrg;
+  
+  /**
+   * Add organization action
+   */
+  addAction: typeof import('./org/org-action-commands').addAction = 
+    require('./org/org-action-commands').addAction;
+  
+  /**
+   * Add organization action with ID
+   */
+  addActionWithID: typeof import('./org/org-action-commands').addActionWithID = 
+    require('./org/org-action-commands').addActionWithID;
+  
+  /**
+   * Change organization action
+   */
+  changeAction: typeof import('./org/org-action-commands').changeAction = 
+    require('./org/org-action-commands').changeAction;
+  
+  /**
+   * Deactivate organization action
+   */
+  deactivateAction: typeof import('./org/org-action-commands').deactivateAction = 
+    require('./org/org-action-commands').deactivateAction;
+  
+  /**
+   * Reactivate organization action
+   */
+  reactivateAction: typeof import('./org/org-action-commands').reactivateAction = 
+    require('./org/org-action-commands').reactivateAction;
+  
+  /**
+   * Delete organization action
+   */
+  deleteAction: typeof import('./org/org-action-commands').deleteAction = 
+    require('./org/org-action-commands').deleteAction;
+  
+  /**
+   * Clear organization flow
+   */
+  clearFlow: typeof import('./org/org-flow-commands').clearFlow = 
+    require('./org/org-flow-commands').clearFlow;
+  
+  /**
+   * Set trigger actions for organization flow
+   */
+  setTriggerActions: typeof import('./org/org-flow-commands').setTriggerActions = 
+    require('./org/org-flow-commands').setTriggerActions;
+  
+  // --------------------------------------------------------------------------
+  // Organization Policy Commands (Phase 3)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Add organization domain policy
+   */
+  addOrgDomainPolicy: typeof import('./org/org-domain-policy-commands').addOrgDomainPolicy = 
+    require('./org/org-domain-policy-commands').addOrgDomainPolicy;
+  
+  /**
+   * Change organization domain policy
+   */
+  changeOrgDomainPolicy: typeof import('./org/org-domain-policy-commands').changeOrgDomainPolicy = 
+    require('./org/org-domain-policy-commands').changeOrgDomainPolicy;
+  
+  /**
+   * Remove organization domain policy
+   */
+  removeOrgDomainPolicy: typeof import('./org/org-domain-policy-commands').removeOrgDomainPolicy = 
+    require('./org/org-domain-policy-commands').removeOrgDomainPolicy;
+  
+  /**
+   * Add organization privacy policy
+   */
+  addOrgPrivacyPolicy: typeof import('./org/org-privacy-policy-commands').addOrgPrivacyPolicy = 
+    require('./org/org-privacy-policy-commands').addOrgPrivacyPolicy;
+  
+  /**
+   * Change organization privacy policy
+   */
+  changeOrgPrivacyPolicy: typeof import('./org/org-privacy-policy-commands').changeOrgPrivacyPolicy = 
+    require('./org/org-privacy-policy-commands').changeOrgPrivacyPolicy;
+  
+  /**
+   * Remove organization privacy policy
+   */
+  removeOrgPrivacyPolicy: typeof import('./org/org-privacy-policy-commands').removeOrgPrivacyPolicy = 
+    require('./org/org-privacy-policy-commands').removeOrgPrivacyPolicy;
+  
+  /**
+   * Add organization notification policy
+   */
+  addOrgNotificationPolicy: typeof import('./org/org-notification-policy-commands').addOrgNotificationPolicy = 
+    require('./org/org-notification-policy-commands').addOrgNotificationPolicy;
+  
+  /**
+   * Change organization notification policy
+   */
+  changeOrgNotificationPolicy: typeof import('./org/org-notification-policy-commands').changeOrgNotificationPolicy = 
+    require('./org/org-notification-policy-commands').changeOrgNotificationPolicy;
+  
+  /**
+   * Remove organization notification policy
+   */
+  removeOrgNotificationPolicy: typeof import('./org/org-notification-policy-commands').removeOrgNotificationPolicy = 
+    require('./org/org-notification-policy-commands').removeOrgNotificationPolicy;
+  
+  /**
+   * Add organization mail template policy
+   */
+  addOrgMailTemplatePolicy: typeof import('./org/org-mail-template-policy-commands').addOrgMailTemplatePolicy = 
+    require('./org/org-mail-template-policy-commands').addOrgMailTemplatePolicy;
+  
+  /**
+   * Change organization mail template policy
+   */
+  changeOrgMailTemplatePolicy: typeof import('./org/org-mail-template-policy-commands').changeOrgMailTemplatePolicy = 
+    require('./org/org-mail-template-policy-commands').changeOrgMailTemplatePolicy;
+  
+  /**
+   * Remove organization mail template policy
+   */
+  removeOrgMailTemplatePolicy: typeof import('./org/org-mail-template-policy-commands').removeOrgMailTemplatePolicy = 
+    require('./org/org-mail-template-policy-commands').removeOrgMailTemplatePolicy;
   
   // ============================================================================
   // Project Commands (Week 4)

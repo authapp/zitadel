@@ -494,3 +494,67 @@ export async function removeInstanceMember(
 
   return writeModelToObjectDetails(wm);
 }
+
+/**
+ * Remove instance permanently
+ * Based on Go: RemoveInstance (instance.go:975-998)
+ * 
+ * WARNING: This is a destructive operation that removes the entire instance
+ * and all associated data. Use with extreme caution.
+ */
+export async function removeInstance(
+  this: Commands,
+  ctx: Context,
+  instanceID: string
+): Promise<ObjectDetails> {
+  // 1. Validate instance ID
+  const trimmedID = instanceID.trim();
+  if (!trimmedID || trimmedID.length > 200) {
+    throwInvalidArgument('invalid instance ID', 'COMMAND-Instance90');
+  }
+
+  // 2. Load instance write model
+  const wm = new InstanceWriteModel();
+  await wm.load(this.getEventstore(), trimmedID, trimmedID);
+
+  // 3. Check if instance exists
+  if (wm.state === InstanceState.UNSPECIFIED) {
+    throwNotFound('instance not found', 'COMMAND-Instance91');
+  }
+
+  if (wm.state === InstanceState.REMOVED) {
+    throwPreconditionFailed('instance already removed', 'COMMAND-Instance92');
+  }
+
+  // 4. Check permissions (requires system-level or instance admin)
+  await this.checkPermission(ctx, 'instance', 'delete', trimmedID);
+
+  // 5. Collect instance data for event payload
+  const domains: string[] = [];
+  wm.domains.forEach((_domainData, domain) => {
+    domains.push(domain);
+  });
+
+  // 6. Create removal command
+  const command: Command = {
+    eventType: 'instance.removed',
+    aggregateType: 'instance',
+    aggregateID: trimmedID,
+    owner: trimmedID,
+    instanceID: trimmedID,
+    creator: ctx.userID || 'system',
+    payload: {
+      name: wm.instanceName || '',
+      domains: domains,
+    },
+  };
+
+  // 7. Push event
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+
+  // Note: In Go, this also creates a milestone.reached event for InstanceDeleted
+  // and invalidates milestone cache. We're keeping this simpler for now.
+
+  return writeModelToObjectDetails(wm);
+}
