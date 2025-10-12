@@ -284,6 +284,11 @@ export async function addHumanOTPSMS(
   const wm = new HumanOTPSMSWriteModel(userID, orgID);
   await wm.load(this.getEventstore(), userID, orgID);
 
+  // Check user state first (before phone verification)
+  if (wm.userState === UserState.UNSPECIFIED || wm.userState === UserState.DELETED) {
+    throwNotFound('user not found', 'OTP-sms00');
+  }
+
   if (wm.otpAdded) {
     throwAlreadyExists('SMS OTP already configured', 'OTP-sms01');
   }

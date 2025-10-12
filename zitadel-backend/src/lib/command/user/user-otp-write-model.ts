@@ -8,6 +8,7 @@
 import { Event } from '../../eventstore/types';
 import { WriteModel } from '../write-model';
 import { MFAState } from '../../domain/mfa';
+import { UserState } from '../../domain/user';
 
 /**
  * TOTP Write Model
@@ -73,6 +74,7 @@ export class HumanTOTPWriteModel extends WriteModel {
 export class HumanOTPSMSWriteModel extends WriteModel {
   phoneVerified: boolean = false;
   otpAdded: boolean = false;
+  userState: UserState = UserState.UNSPECIFIED;
 
   constructor(userID: string, orgID: string) {
     super('user');
@@ -82,7 +84,13 @@ export class HumanOTPSMSWriteModel extends WriteModel {
 
   reduce(event: Event): void {
     switch (event.eventType) {
+      case 'user.human.added':
+      case 'user.human.registered':
+        this.userState = UserState.ACTIVE;
+        break;
+
       case 'user.human.phone.verified':
+      case 'user.v2.phone.verified':
         this.phoneVerified = true;
         break;
 
@@ -95,8 +103,13 @@ export class HumanOTPSMSWriteModel extends WriteModel {
         break;
 
       case 'user.human.phone.removed':
+      case 'user.v2.phone.removed':
+        this.phoneVerified = false;
+        break;
+
       case 'user.removed':
       case 'user.deleted':
+        this.userState = UserState.DELETED;
         this.phoneVerified = false;
         this.otpAdded = false;
         break;
@@ -182,6 +195,7 @@ export class HumanOTPEmailWriteModel extends WriteModel {
   reduce(event: Event): void {
     switch (event.eventType) {
       case 'user.human.email.verified':
+      case 'user.v2.email.verified':
         this.emailVerified = true;
         break;
 
@@ -193,6 +207,8 @@ export class HumanOTPEmailWriteModel extends WriteModel {
         this.otpAdded = false;
         break;
 
+      case 'user.human.email.changed':
+      case 'user.v2.email.changed':
       case 'user.removed':
       case 'user.deleted':
         this.emailVerified = false;

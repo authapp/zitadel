@@ -14,11 +14,8 @@ import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
 import { UserBuilder } from '../../helpers/test-data-builders';
 
-describe.skip('User SMS/Email OTP Commands (TODO: implement phone/email verification)', () => {
-  // NOTE: This test suite requires phone and email verification commands
-  // which are not yet implemented. Core OTP functionality works.
-  // Required commands: verifyPhone(), verifyEmail(), resendVerificationCode()
-  // Priority: P2 - Optional feature for production
+describe('User SMS/Email OTP Commands', () => {
+  // Phone and email verification commands implemented
   let pool: DatabasePool;
   let ctx: CommandTestContext;
 
@@ -48,9 +45,21 @@ describe.skip('User SMS/Email OTP Commands (TODO: implement phone/email verifica
       userData
     );
 
-    // Simulate phone verification (in production, this would be a separate flow)
-    // Note: verifyPhone command not yet implemented, skipping verification for tests
-    // In production this would use: await ctx.commands.verifyPhone(...)
+    // Set different phone and verify it
+    const phoneNumber = `+1${Date.now().toString().slice(-10)}`;
+    const { plainCode } = await ctx.commands.changeUserPhone(
+      ctx.createContext(),
+      createResult.userID,
+      phoneNumber,
+      true // returnCode = true for testing
+    );
+
+    // Verify phone with the code
+    await ctx.commands.verifyUserPhone(
+      ctx.createContext(),
+      createResult.userID,
+      plainCode!
+    );
 
     return { createResult, userData };
   }
@@ -67,9 +76,21 @@ describe.skip('User SMS/Email OTP Commands (TODO: implement phone/email verifica
       userData
     );
 
-    // Email is typically verified during user creation or via separate flow
-    // Note: verifyEmail command not yet implemented, assuming email verified for tests
-    // In production this would use: await ctx.commands.verifyEmail(...)
+    // Change email and verify it (use different email to trigger change)
+    const newEmail = `verified.${Date.now()}@example.com`;
+    const { plainCode } = await ctx.commands.changeUserEmail(
+      ctx.createContext(),
+      createResult.userID,
+      newEmail,
+      true // returnCode = true for testing
+    );
+
+    // Verify email with the code
+    await ctx.commands.verifyUserEmail(
+      ctx.createContext(),
+      createResult.userID,
+      plainCode!
+    );
 
     return { createResult, userData };
   }

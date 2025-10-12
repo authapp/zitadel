@@ -434,6 +434,56 @@ export class Commands {
   bulkRemoveUserMetadata: typeof import('./user/user-metadata-commands').bulkRemoveUserMetadata = 
     require('./user/user-metadata-commands').bulkRemoveUserMetadata;
   
+  // --------------------------------------------------------------------------
+  // User Phone Verification Commands
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Change user phone and send verification code
+   */
+  changeUserPhone: typeof import('./user/user-phone-commands').changeUserPhone = 
+    require('./user/user-phone-commands').changeUserPhone;
+  
+  /**
+   * Resend phone verification code
+   */
+  resendUserPhoneCode: typeof import('./user/user-phone-commands').resendUserPhoneCode = 
+    require('./user/user-phone-commands').resendUserPhoneCode;
+  
+  /**
+   * Verify user phone with code
+   */
+  verifyUserPhone: typeof import('./user/user-phone-commands').verifyUserPhone = 
+    require('./user/user-phone-commands').verifyUserPhone;
+  
+  /**
+   * Remove user phone
+   */
+  removeUserPhone: typeof import('./user/user-phone-commands').removeUserPhone = 
+    require('./user/user-phone-commands').removeUserPhone;
+  
+  // --------------------------------------------------------------------------
+  // User Email Verification Commands
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Change user email and send verification code
+   */
+  changeUserEmail: typeof import('./user/user-email-commands').changeUserEmail = 
+    require('./user/user-email-commands').changeUserEmail;
+  
+  /**
+   * Resend email verification code
+   */
+  resendUserEmailCode: typeof import('./user/user-email-commands').resendUserEmailCode = 
+    require('./user/user-email-commands').resendUserEmailCode;
+  
+  /**
+   * Verify user email with code
+   */
+  verifyUserEmail: typeof import('./user/user-email-commands').verifyUserEmail = 
+    require('./user/user-email-commands').verifyUserEmail;
+  
   // ============================================================================
   // Organization Commands (Week 3)
   // ============================================================================
