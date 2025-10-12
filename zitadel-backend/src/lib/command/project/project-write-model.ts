@@ -118,6 +118,10 @@ export class ProjectWriteModel extends WriteModel {
           this.grants = this.grants.filter(g => g.grantID !== event.payload?.grantID);
         }
         break;
+        
+      case 'project.removed':
+        this.state = ProjectState.REMOVED;
+        break;
     }
   }
 }

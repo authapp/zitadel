@@ -11,6 +11,7 @@ import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../wr
 import { validateRequired, validateLength } from '../validation';
 import { throwInvalidArgument, throwNotFound, throwAlreadyExists, throwPreconditionFailed } from '@/zerrors/errors';
 import { Command } from '../../eventstore/types';
+import { OrgWriteModel, OrgState } from '../org/org-write-model';
 
 /**
  * Add Project Data
@@ -38,15 +39,23 @@ export async function addProject(
   validateLength(data.name, 'name', 1, 200);
   validateRequired(data.orgID, 'orgID');
   
-  // 2. Generate project ID if not provided
+  // 2. Check if organization exists
+  const orgWM = new OrgWriteModel();
+  await orgWM.load(this.getEventstore(), data.orgID, data.orgID);
+  
+  if (orgWM.state === OrgState.UNSPECIFIED) {
+    throwNotFound('organization not found', 'COMMAND-Proj09');
+  }
+  
+  // 3. Generate project ID if not provided
   if (!data.projectID) {
     data.projectID = await this.nextID();
   }
   
-  // 3. Check permissions
+  // 4. Check permissions
   await this.checkPermission(ctx, 'project', 'create', data.orgID);
   
-  // 4. Load write model
+  // 5. Load write model
   const wm = new ProjectWriteModel();
   await wm.load(this.getEventstore(), data.projectID, data.orgID);
   
@@ -54,7 +63,7 @@ export async function addProject(
     throwAlreadyExists('project already exists', 'COMMAND-Proj10');
   }
   
-  // 5. Create command
+  // 6. Create command
   const command: Command = {
     eventType: 'project.added',
     aggregateType: 'project',
@@ -71,10 +80,10 @@ export async function addProject(
     },
   };
   
-  // 6. Push to eventstore
+  // 7. Push to eventstore
   const event = await this.getEventstore().push(command);
   
-  // 7. Update write model
+  // 8. Update write model
   appendAndReduce(wm, event);
   
   return {
@@ -123,6 +132,9 @@ export async function changeProject(
   
   if (wm.state === ProjectState.UNSPECIFIED) {
     throwNotFound('project not found', 'COMMAND-Proj21');
+  }
+  if (wm.state === ProjectState.REMOVED) {
+    throwNotFound('project has been removed', 'COMMAND-Proj21a');
   }
   
   // 3. Check permissions
@@ -503,14 +515,17 @@ export async function addProjectGrant(
   projectID: string,
   orgID: string,
   data: AddProjectGrantData
-): Promise<ObjectDetails> {
+): Promise<ObjectDetails & { grantID: string }> {
   // 1. Validate
   validateRequired(data.grantedOrgID, 'grantedOrgID');
   if (!data.roleKeys || data.roleKeys.length === 0) {
     throwInvalidArgument('at least one role required', 'COMMAND-ProjA0');
   }
   
-  // 2. Load project write model
+  // 2. Generate grant ID
+  const grantID = await this.nextID();
+  
+  // 3. Load project write model
   const wm = new ProjectWriteModel();
   await wm.load(this.getEventstore(), projectID, orgID);
   
@@ -518,10 +533,10 @@ export async function addProjectGrant(
     throwNotFound('project not found', 'COMMAND-ProjA1');
   }
   
-  // 3. Check permissions
+  // 4. Check permissions
   await this.checkPermission(ctx, 'project.grant', 'create', orgID);
   
-  // 4. Create command
+  // 5. Create command
   const command: Command = {
     eventType: 'project.grant.added',
     aggregateType: 'project',
@@ -530,16 +545,20 @@ export async function addProjectGrant(
     instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
+      grantID,
       grantedOrgID: data.grantedOrgID,
       roleKeys: data.roleKeys,
     },
   };
   
-  // 5. Push and update
+  // 6. Push and update
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
   
-  return writeModelToObjectDetails(wm);
+  return {
+    ...writeModelToObjectDetails(wm),
+    grantID,
+  };
 }
 
 /**

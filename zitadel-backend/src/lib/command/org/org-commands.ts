@@ -7,11 +7,12 @@
 import { Commands } from '../commands';
 import { Context } from '../context';
 import { OrgWriteModel, OrgState } from './org-write-model';
-import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../write-model';
+import { appendAndReduce, ObjectDetails, writeModelToObjectDetails, WriteModel } from '../write-model';
 import { validateRequired, validateLength } from '../validation';
 import { throwInvalidArgument, throwNotFound, throwAlreadyExists, throwPreconditionFailed } from '@/zerrors/errors';
-import { Command } from '../../eventstore/types';
+import { Command, Event } from '../../eventstore/types';
 import { Organization, OrgState as DomainOrgState } from '@/domain/entities/organization';
+import { UserWriteModel, UserState } from '../user/user-write-model';
 import * as crypto from 'crypto';
 
 /**
@@ -23,6 +24,37 @@ export interface AddOrgData {
 }
 
 /**
+ * Organization Member Write Model
+ * Tracks whether a user is a member of an organization
+ */
+class OrgMemberWriteModel extends WriteModel {
+  isMember: boolean = false;
+  roles: string[] = [];
+
+  constructor(orgID: string, userID: string) {
+    super('org');
+    // Use composite ID to track specific member
+    this.aggregateID = `${orgID}:member:${userID}`;
+  }
+
+  reduce(event: Event): void {
+    switch (event.eventType) {
+      case 'org.member.added':
+        this.isMember = true;
+        this.roles = event.payload?.roles || [];
+        break;
+      case 'org.member.changed':
+        this.roles = event.payload?.roles || [];
+        break;
+      case 'org.member.removed':
+        this.isMember = false;
+        this.roles = [];
+        break;
+    }
+  }
+}
+
+/**
  * Add organization command
  */
 export async function addOrg(
@@ -30,7 +62,16 @@ export async function addOrg(
   ctx: Context,
   data: AddOrgData
 ): Promise<ObjectDetails & { orgID: string }> {
-  // 1. Create domain object (following Go pattern)
+  // 1. Validate name length
+  validateRequired(data.name, 'name');
+  if (data.name.length < 3) {
+    throwInvalidArgument('name must be at least 3 characters', 'COMMAND-Org00a');
+  }
+  if (data.name.length > 200) {
+    throwInvalidArgument('name must be less than 200 characters', 'COMMAND-Org00b');
+  }
+  
+  // 2. Create domain object (following Go pattern)
   const organisation = new Organization(
     data.orgID || '',
     ctx.instanceID,
@@ -38,21 +79,21 @@ export async function addOrg(
     DomainOrgState.ACTIVE
   );
   
-  // 2. Validate domain object (following Go pattern: organisation.IsValid())
+  // 3. Validate domain object (following Go pattern: organisation.IsValid())
   if (!organisation.isValid()) {
     throwInvalidArgument('invalid organization data', 'COMMAND-Org01');
   }
   
-  // 3. Generate org ID if not provided
+  // 4. Generate org ID if not provided
   if (!data.orgID) {
     data.orgID = await this.nextID();
     organisation.aggregateID = data.orgID;
   }
   
-  // 4. Check permissions (instance level)
+  // 5. Check permissions (instance level)
   await this.checkPermission(ctx, 'org', 'create', ctx.instanceID);
   
-  // 5. Load write model to check existence
+  // 6. Load write model to check existence
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), data.orgID, data.orgID);
   
@@ -60,10 +101,10 @@ export async function addOrg(
     throwAlreadyExists('organization already exists', 'COMMAND-Org10');
   }
   
-  // 6. Use domain method to add IAM domain (following Go pattern)
+  // 7. Use domain method to add IAM domain (following Go pattern)
   organisation.addIAMDomain(ctx.requestedDomain || 'localhost');
   
-  // 7. Generate commands from domain object
+  // 8. Generate commands from domain object
   const commands: Command[] = [
     {
       eventType: 'org.added',
@@ -78,7 +119,7 @@ export async function addOrg(
     },
   ];
   
-  // 8. Add domain commands (following Go pattern: iterate organisation.Domains)
+  // 9. Add domain commands (following Go pattern: iterate organisation.Domains)
   for (const orgDomain of organisation.domains) {
     if (orgDomain.domain) {
       commands.push({
@@ -127,10 +168,10 @@ export async function addOrg(
     }
   }
   
-  // 9. Push all commands to eventstore
+  // 10. Push commands to eventstore
   const events = await this.getEventstore().pushMany(commands);
   
-  // 10. Update write model with all events
+  // 11. Update write model with all events
   for (const event of events) {
     appendAndReduce(wm, event);
   }
@@ -303,7 +344,15 @@ export async function addOrgMember(
     throwInvalidArgument('at least one role required', 'COMMAND-Org50');
   }
   
-  // 2. Load org write model
+  // 2. Check if user exists
+  const userWM = new UserWriteModel();
+  await userWM.load(this.getEventstore(), data.userID, data.userID);
+  
+  if (userWM.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-Org50a');
+  }
+  
+  // 3. Load org write model
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), orgID, orgID);
   
@@ -311,10 +360,10 @@ export async function addOrgMember(
     throwNotFound('organization not found', 'COMMAND-Org51');
   }
   
-  // 3. Check permissions
+  // 4. Check permissions
   await this.checkPermission(ctx, 'org.member', 'create', orgID);
   
-  // 4. Create command
+  // 5. Create command
   const command: Command = {
     eventType: 'org.member.added',
     aggregateType: 'org',
@@ -328,7 +377,7 @@ export async function addOrgMember(
     },
   };
   
-  // 5. Push and update
+  // 6. Push and update
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
   
@@ -350,7 +399,15 @@ export async function changeOrgMember(
     throwInvalidArgument('at least one role required', 'COMMAND-Org60');
   }
   
-  // 2. Load org write model
+  // 2. Check if user is a member
+  const memberWM = new OrgMemberWriteModel(orgID, userID);
+  await memberWM.load(this.getEventstore(), orgID, orgID);
+  
+  if (!memberWM.isMember) {
+    throwNotFound('member not found', 'COMMAND-Org60a');
+  }
+  
+  // 3. Load org write model
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), orgID, orgID);
   
@@ -358,10 +415,10 @@ export async function changeOrgMember(
     throwNotFound('organization not found', 'COMMAND-Org61');
   }
   
-  // 3. Check permissions
+  // 4. Check permissions
   await this.checkPermission(ctx, 'org.member', 'update', orgID);
   
-  // 4. Create command
+  // 5. Create command
   const command: Command = {
     eventType: 'org.member.changed',
     aggregateType: 'org',
@@ -375,7 +432,7 @@ export async function changeOrgMember(
     },
   };
   
-  // 5. Push and update
+  // 6. Push and update
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
   
@@ -391,7 +448,15 @@ export async function removeOrgMember(
   orgID: string,
   userID: string
 ): Promise<ObjectDetails> {
-  // 1. Load org write model
+  // 1. Check if user is a member
+  const memberWM = new OrgMemberWriteModel(orgID, userID);
+  await memberWM.load(this.getEventstore(), orgID, orgID);
+  
+  if (!memberWM.isMember) {
+    throwNotFound('member not found', 'COMMAND-Org70a');
+  }
+  
+  // 2. Load org write model
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), orgID, orgID);
   
@@ -399,10 +464,10 @@ export async function removeOrgMember(
     throwNotFound('organization not found', 'COMMAND-Org70');
   }
   
-  // 2. Check permissions
+  // 3. Check permissions
   await this.checkPermission(ctx, 'org.member', 'delete', orgID);
   
-  // 3. Create command
+  // 4. Create command
   const command: Command = {
     eventType: 'org.member.removed',
     aggregateType: 'org',
@@ -415,7 +480,7 @@ export async function removeOrgMember(
     },
   };
   
-  // 4. Push and update
+  // 5. Push and update
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
   
@@ -432,6 +497,18 @@ export interface AddDomainData {
 /**
  * Add domain command
  */
+/**
+ * Validate domain format
+ * Allows: example.com, subdomain.example.com, app.sub.example.com
+ * Rejects: invalid domain!, domain with spaces, -leading.com
+ */
+function isValidDomainFormat(domain: string): boolean {
+  // Basic domain regex: allows alphanumeric, hyphens, dots
+  // Must not start/end with hyphen or dot
+  const domainRegex = /^(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+  return domainRegex.test(domain);
+}
+
 export async function addDomain(
   this: Commands,
   ctx: Context,
@@ -441,12 +518,22 @@ export async function addDomain(
   // 1. Validate
   validateRequired(data.domain, 'domain');
   
+  // Validate domain format
+  if (!isValidDomainFormat(data.domain)) {
+    throwInvalidArgument('invalid domain format', 'COMMAND-Org79');
+  }
+  
   // 2. Load org write model
   const wm = new OrgWriteModel();
   await wm.load(this.getEventstore(), orgID, orgID);
   
   if (wm.state === OrgState.UNSPECIFIED) {
     throwNotFound('organization not found', 'COMMAND-Org80');
+  }
+  
+  // Check if domain already exists
+  if (wm.hasDomain(data.domain)) {
+    throwAlreadyExists('domain already exists in organization', 'COMMAND-Org80a');
   }
   
   // 3. Check permissions
@@ -489,6 +576,11 @@ export async function verifyDomain(
     throwNotFound('organization not found', 'COMMAND-Org90');
   }
   
+  // Check if domain exists
+  if (!wm.hasDomain(domain)) {
+    throwNotFound('domain not found in organization', 'COMMAND-Org90a');
+  }
+  
   // 2. Check permissions
   await this.checkPermission(ctx, 'org.domain', 'update', orgID);
   
@@ -527,6 +619,16 @@ export async function setPrimaryDomain(
   
   if (wm.state === OrgState.UNSPECIFIED) {
     throwNotFound('organization not found', 'COMMAND-OrgA0');
+  }
+  
+  // Check if domain exists
+  if (!wm.hasDomain(domain)) {
+    throwNotFound('domain not found in organization', 'COMMAND-OrgA0a');
+  }
+  
+  // Check if domain is verified
+  if (!wm.isDomainVerified(domain)) {
+    throwPreconditionFailed('domain must be verified before setting as primary', 'COMMAND-OrgA0b');
   }
   
   // 2. Check permissions
@@ -571,6 +673,11 @@ export async function removeDomain(
   
   if (wm.state === OrgState.UNSPECIFIED) {
     throwNotFound('organization not found', 'COMMAND-OrgB0');
+  }
+  
+  // Check if domain exists
+  if (!wm.hasDomain(domain)) {
+    throwNotFound('domain not found in organization', 'COMMAND-OrgB0a');
   }
   
   // 3. Validate domain exists and is not primary

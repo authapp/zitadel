@@ -406,6 +406,34 @@ export class Commands {
   revokeAllUserRefreshTokens: typeof import('./user/user-refresh-token-commands').revokeAllUserRefreshTokens = 
     require('./user/user-refresh-token-commands').revokeAllUserRefreshTokens;
   
+  // --------------------------------------------------------------------------
+  // User Metadata Commands
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Set user metadata (single key-value)
+   */
+  setUserMetadata: typeof import('./user/user-metadata-commands').setUserMetadata = 
+    require('./user/user-metadata-commands').setUserMetadata;
+  
+  /**
+   * Bulk set user metadata (multiple key-values)
+   */
+  bulkSetUserMetadata: typeof import('./user/user-metadata-commands').bulkSetUserMetadata = 
+    require('./user/user-metadata-commands').bulkSetUserMetadata;
+  
+  /**
+   * Remove user metadata (single key)
+   */
+  removeUserMetadata: typeof import('./user/user-metadata-commands').removeUserMetadata = 
+    require('./user/user-metadata-commands').removeUserMetadata;
+  
+  /**
+   * Bulk remove user metadata (multiple keys)
+   */
+  bulkRemoveUserMetadata: typeof import('./user/user-metadata-commands').bulkRemoveUserMetadata = 
+    require('./user/user-metadata-commands').bulkRemoveUserMetadata;
+  
   // ============================================================================
   // Organization Commands (Week 3)
   // ============================================================================
@@ -469,6 +497,12 @@ export class Commands {
    */
   setPrimaryDomain: typeof import('./org/org-commands').setPrimaryDomain = 
     require('./org/org-commands').setPrimaryDomain;
+  
+  /**
+   * Remove domain
+   */
+  removeDomain: typeof import('./org/org-commands').removeDomain = 
+    require('./org/org-commands').removeDomain;
   
   /**
    * Setup organization with admins and domains
@@ -676,6 +710,36 @@ export class Commands {
   changeProjectGrant: typeof import('./project/project-commands').changeProjectGrant = 
     require('./project/project-commands').changeProjectGrant;
   
+  /**
+   * Remove project
+   */
+  removeProject: typeof import('./project/project-commands').removeProject = 
+    require('./project/project-commands').removeProject;
+  
+  /**
+   * Remove project member
+   */
+  removeProjectMember: typeof import('./project/project-commands').removeProjectMember = 
+    require('./project/project-commands').removeProjectMember;
+  
+  /**
+   * Deactivate project grant
+   */
+  deactivateProjectGrant: typeof import('./project/project-commands').deactivateProjectGrant = 
+    require('./project/project-commands').deactivateProjectGrant;
+  
+  /**
+   * Reactivate project grant
+   */
+  reactivateProjectGrant: typeof import('./project/project-commands').reactivateProjectGrant = 
+    require('./project/project-commands').reactivateProjectGrant;
+  
+  /**
+   * Remove project grant
+   */
+  removeProjectGrant: typeof import('./project/project-commands').removeProjectGrant = 
+    require('./project/project-commands').removeProjectGrant;
+  
   // ============================================================================
   // Application Commands (Week 5)
   // ============================================================================
@@ -715,6 +779,42 @@ export class Commands {
    */
   addAppKey: typeof import('./application/app-commands').addAppKey = 
     require('./application/app-commands').addAppKey;
+
+  /**
+   * Remove application key
+   */
+  removeAppKey: typeof import('./application/app-commands').removeAppKey = 
+    require('./application/app-commands').removeAppKey;
+
+  /**
+   * Add SAML application
+   */
+  addSAMLApp: typeof import('./application/app-commands').addSAMLApp = 
+    require('./application/app-commands').addSAMLApp;
+
+  /**
+   * Update SAML application
+   */
+  updateSAMLApp: typeof import('./application/app-commands').updateSAMLApp = 
+    require('./application/app-commands').updateSAMLApp;
+
+  /**
+   * Deactivate application
+   */
+  deactivateApplication: typeof import('./application/app-commands').deactivateApplication = 
+    require('./application/app-commands').deactivateApplication;
+
+  /**
+   * Reactivate application
+   */
+  reactivateApplication: typeof import('./application/app-commands').reactivateApplication = 
+    require('./application/app-commands').reactivateApplication;
+
+  /**
+   * Remove application
+   */
+  removeApplication: typeof import('./application/app-commands').removeApplication = 
+    require('./application/app-commands').removeApplication;
 
   // ============================================================================
   // Session Commands (Phase 3)
@@ -883,6 +983,78 @@ export class Commands {
    */
   addMultiFactorToDefaultLoginPolicy: typeof import('./policy/login-policy-commands').addMultiFactorToDefaultLoginPolicy = 
     require('./policy/login-policy-commands').addMultiFactorToDefaultLoginPolicy;
+  
+  /**
+   * Add default password complexity policy
+   */
+  addDefaultPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').addDefaultPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').addDefaultPasswordComplexityPolicy;
+  
+  /**
+   * Change default password complexity policy
+   */
+  changeDefaultPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').changeDefaultPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').changeDefaultPasswordComplexityPolicy;
+  
+  /**
+   * Remove default password complexity policy
+   */
+  removeDefaultPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').removeDefaultPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').removeDefaultPasswordComplexityPolicy;
+  
+  /**
+   * Add organization password complexity policy
+   */
+  addOrgPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').addOrgPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').addOrgPasswordComplexityPolicy;
+  
+  /**
+   * Change organization password complexity policy
+   */
+  changeOrgPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').changeOrgPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').changeOrgPasswordComplexityPolicy;
+  
+  /**
+   * Remove organization password complexity policy
+   */
+  removeOrgPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').removeOrgPasswordComplexityPolicy = 
+    require('./policy/password-complexity-policy-commands').removeOrgPasswordComplexityPolicy;
+  
+  /**
+   * Add default password lockout policy
+   */
+  addDefaultPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').addDefaultPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').addDefaultPasswordLockoutPolicy;
+  
+  /**
+   * Change default password lockout policy
+   */
+  changeDefaultPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').changeDefaultPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').changeDefaultPasswordLockoutPolicy;
+  
+  /**
+   * Remove default password lockout policy
+   */
+  removeDefaultPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').removeDefaultPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').removeDefaultPasswordLockoutPolicy;
+  
+  /**
+   * Add organization password lockout policy
+   */
+  addOrgPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').addOrgPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').addOrgPasswordLockoutPolicy;
+  
+  /**
+   * Change organization password lockout policy
+   */
+  changeOrgPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').changeOrgPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').changeOrgPasswordLockoutPolicy;
+  
+  /**
+   * Remove organization password lockout policy
+   */
+  removeOrgPasswordLockoutPolicy: typeof import('./policy/password-lockout-policy-commands').removeOrgPasswordLockoutPolicy = 
+    require('./policy/password-lockout-policy-commands').removeOrgPasswordLockoutPolicy;
 
   // ============================================================================
   // Authentication Commands (Phase 3)

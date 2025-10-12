@@ -20,6 +20,7 @@ import {
 } from './user-otp-write-model';
 import { MFAState, TOTP } from '../../domain/mfa';
 import { generateTOTPKey, validateTOTP } from '../../crypto/totp';
+import { UserWriteModel, UserState } from './user-write-model';
 
 // ============================================================================
 // TOTP Commands (4 commands)
@@ -41,6 +42,17 @@ export async function importHumanTOTP(
   validateRequired(orgID, 'orgID');
   validateRequired(secret, 'secret');
 
+  // Check if user exists
+  const userWM = new UserWriteModel();
+  await userWM.load(this.getEventstore(), userID, userID);
+  
+  if (userWM.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'OTP-imp00');
+  }
+  if (userWM.state === UserState.DELETED) {
+    throwNotFound('user not found', 'OTP-imp00a');
+  }
+
   // Check permissions
   await this.checkPermission(ctx, 'user.credential', 'write', orgID);
 
@@ -48,7 +60,7 @@ export async function importHumanTOTP(
   const wm = new HumanTOTPWriteModel(userID, orgID);
   await wm.load(this.getEventstore(), userID, orgID);
 
-  if (wm.state === MFAState.READY) {
+  if (wm.state === MFAState.READY || wm.state === MFAState.NOT_READY) {
     throwAlreadyExists('TOTP already configured', 'OTP-imp01');
   }
 
@@ -100,6 +112,17 @@ export async function addHumanTOTP(
   validateRequired(userID, 'userID');
   validateRequired(orgID, 'orgID');
 
+  // Check if user exists
+  const userWM = new UserWriteModel();
+  await userWM.load(this.getEventstore(), userID, userID);
+  
+  if (userWM.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'OTP-add00');
+  }
+  if (userWM.state === UserState.DELETED) {
+    throwNotFound('user not found', 'OTP-add00a');
+  }
+
   // Check permissions
   await this.checkPermission(ctx, 'user.credential', 'write', orgID);
 
@@ -107,7 +130,7 @@ export async function addHumanTOTP(
   const wm = new HumanTOTPWriteModel(userID, orgID);
   await wm.load(this.getEventstore(), userID, orgID);
 
-  if (wm.state === MFAState.READY) {
+  if (wm.state === MFAState.READY || wm.state === MFAState.NOT_READY) {
     throwAlreadyExists('TOTP already configured', 'OTP-add01');
   }
 

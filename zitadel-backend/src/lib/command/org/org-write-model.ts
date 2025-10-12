@@ -12,12 +12,22 @@ import { OrgState, isOrgActive, isOrgStateExists as orgExists, isOrgStateInactiv
 export { OrgState };
 
 /**
+ * Domain info tracked in org write model
+ */
+interface DomainInfo {
+  domain: string;
+  isVerified: boolean;
+  isPrimary: boolean;
+}
+
+/**
  * Organization write model
  */
 export class OrgWriteModel extends WriteModel {
   state: OrgState = OrgState.UNSPECIFIED;
   name?: string;
   primaryDomain?: string;
+  domains: DomainInfo[] = [];
   
   constructor() {
     super('org');
@@ -44,10 +54,59 @@ export class OrgWriteModel extends WriteModel {
         this.state = OrgState.ACTIVE;
         break;
         
+      case 'org.domain.added':
+        if (event.payload?.domain) {
+          this.domains.push({
+            domain: event.payload.domain,
+            isVerified: false,
+            isPrimary: false,
+          });
+        }
+        break;
+        
+      case 'org.domain.verified':
+        if (event.payload?.domain) {
+          const domain = this.domains.find(d => d.domain === event.payload?.domain);
+          if (domain) {
+            domain.isVerified = true;
+          }
+        }
+        break;
+        
       case 'org.domain.primary.set':
-        this.primaryDomain = event.payload?.domain;
+        // Unset previous primary
+        this.domains.forEach(d => d.isPrimary = false);
+        // Set new primary
+        if (event.payload?.domain) {
+          const domain = this.domains.find(d => d.domain === event.payload?.domain);
+          if (domain) {
+            domain.isPrimary = true;
+            this.primaryDomain = domain.domain;
+          }
+        }
+        break;
+        
+      case 'org.domain.removed':
+        if (event.payload?.domain) {
+          this.domains = this.domains.filter(d => d.domain !== event.payload?.domain);
+        }
         break;
     }
+  }
+  
+  /**
+   * Check if domain exists in organization
+   */
+  hasDomain(domain: string): boolean {
+    return this.domains.some(d => d.domain === domain);
+  }
+  
+  /**
+   * Check if domain is verified
+   */
+  isDomainVerified(domain: string): boolean {
+    const d = this.domains.find(d => d.domain === domain);
+    return d ? d.isVerified : false;
   }
 }
 

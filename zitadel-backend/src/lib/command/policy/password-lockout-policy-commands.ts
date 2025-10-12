@@ -27,7 +27,7 @@ export interface PasswordLockoutPolicyData {
 class PasswordLockoutPolicyWriteModel extends WriteModel {
   maxPasswordAttempts: number = 5;
   showLockoutFailures: boolean = true;
-  isDefault: boolean = false;
+  isDefault: boolean = true; // true = using default/instance policy, false = has org-specific policy
 
   constructor(aggregateType: 'instance' | 'org' = 'org') {
     super(aggregateType);

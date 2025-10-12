@@ -6,6 +6,7 @@ export enum ProjectState {
   UNSPECIFIED = 0,
   ACTIVE = 1,
   INACTIVE = 2,
+  REMOVED = 3,
 }
 
 export interface Project {

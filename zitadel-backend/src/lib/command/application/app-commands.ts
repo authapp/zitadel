@@ -669,8 +669,8 @@ export async function deactivateApplication(
   
   const command: Command = {
     eventType: 'application.deactivated',
-    aggregateType: 'project',
-    aggregateID: projectID,
+    aggregateType: 'application',
+    aggregateID: appID,
     owner: ctx.orgID,
     instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
@@ -710,8 +710,8 @@ export async function reactivateApplication(
   
   const command: Command = {
     eventType: 'application.reactivated',
-    aggregateType: 'project',
-    aggregateID: projectID,
+    aggregateType: 'application',
+    aggregateID: appID,
     owner: ctx.orgID,
     instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
@@ -747,8 +747,8 @@ export async function removeApplication(
   
   const command: Command = {
     eventType: 'application.removed',
-    aggregateType: 'project',
-    aggregateID: projectID,
+    aggregateType: 'application',
+    aggregateID: appID,
     owner: ctx.orgID,
     instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
