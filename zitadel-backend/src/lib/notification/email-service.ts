@@ -1,11 +1,22 @@
 /**
  * Email Service
  * Based on Zitadel Go: internal/notification/channels/email.go
+ * 
+ * Supports multiple providers: SMTP, Mock
  */
+
+export interface EmailOptions {
+  to: string | string[];
+  subject: string;
+  body: string;
+  html?: string;
+  cc?: string[];
+  bcc?: string[];
+}
 
 export interface EmailProvider {
   name: string;
-  sendEmail(to: string, subject: string, body: string, html?: string): Promise<{ messageId: string }>;
+  sendEmail(to: string | string[], subject: string, body: string, html?: string, cc?: string[], bcc?: string[]): Promise<{ messageId: string }>;
 }
 
 /**
@@ -14,18 +25,22 @@ export interface EmailProvider {
 export class MockEmailProvider implements EmailProvider {
   name = 'mock';
   public sentEmails: Array<{
-    to: string;
+    to: string | string[];
     subject: string;
     body: string;
     html?: string;
+    cc?: string[];
+    bcc?: string[];
     timestamp: Date;
   }> = [];
 
   async sendEmail(
-    to: string,
+    to: string | string[],
     subject: string,
     body: string,
-    html?: string
+    html?: string,
+    cc?: string[],
+    bcc?: string[]
   ): Promise<{ messageId: string }> {
     const messageId = `mock_${Date.now()}_${Math.random().toString(36).substring(7)}`;
 
@@ -34,10 +49,15 @@ export class MockEmailProvider implements EmailProvider {
       subject,
       body,
       html,
+      cc,
+      bcc,
       timestamp: new Date(),
     });
 
-    console.log(`[MOCK EMAIL] To: ${to}, Subject: ${subject}`);
+    const toList = Array.isArray(to) ? to.join(', ') : to;
+    const ccList = cc?.length ? ` CC: ${cc.join(', ')}` : '';
+    const bccList = bcc?.length ? ` BCC: ${bcc.join(', ')}` : '';
+    console.log(`[MOCK EMAIL] To: ${toList}${ccList}${bccList}, Subject: ${subject}`);
 
     return { messageId };
   }
@@ -66,8 +86,21 @@ export class EmailService {
   }
 
   private createDefaultProvider(): EmailProvider {
-    // For now, use mock (can be extended with SendGrid, AWS SES, etc.)
-    console.log('[EMAIL] Using mock provider');
+    // Try to create SMTP provider from environment variables
+    // Falls back to mock if SMTP not configured
+    try {
+      const { createSMTPProviderFromEnv } = require('./smtp-email-service');
+      const smtpProvider = createSMTPProviderFromEnv();
+      
+      if (smtpProvider) {
+        console.log('[EMAIL] Using SMTP provider');
+        return smtpProvider;
+      }
+    } catch (error) {
+      console.log('[EMAIL] SMTP not available, using mock provider');
+    }
+    
+    console.log('[EMAIL] Using mock provider (set SMTP_* env vars for real emails)');
     return new MockEmailProvider();
   }
 
