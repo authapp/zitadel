@@ -9,9 +9,24 @@
  * - Event-to-projection materialization
  */
 
+// Core exports
+export * from './queries';
 export * from './types';
 export * from './factory';
-export * from './filter';
+
+// Projection framework
+export * from './projection';
+
+// Search framework
+export * from './search';
+
+// Converters
+export * from './converters';
+
+// Helpers
+export * from './helpers';
+
+// Legacy postgres exports
 export * from './postgres/query';
 export * from './postgres/projection-manager';
 export * from './projections/user-projection';
