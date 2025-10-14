@@ -14,8 +14,19 @@ export * from './queries';
 export * from './types';
 export * from './factory';
 
+// Domain query modules
+export * from './user';
+
 // Projection framework
-export * from './projection';
+export { Projection } from './projection/projection';
+export { ProjectionHandler } from './projection/projection-handler';
+export { ProjectionRegistry } from './projection/projection-registry';
+export { CurrentStateTracker } from './projection/current-state';
+export { FailedEventHandler } from './projection/failed-events';
+export { 
+  applyProjectionDefaults,
+  eventMatchesFilter 
+} from './projection/projection-config';
 
 // Search framework
 export * from './search';
@@ -26,13 +37,8 @@ export * from './converters';
 // Helpers
 export * from './helpers';
 
-// Legacy postgres exports
-export * from './postgres/query';
-export * from './postgres/projection-manager';
+// Projection exports
 export * from './projections/user-projection';
-
-export { PostgresQuery, createPostgresQuery } from './postgres/query';
-export { PostgresProjectionManager } from './postgres/projection-manager';
 
 // Re-export commonly used types for convenience
 export type {
@@ -40,10 +46,6 @@ export type {
   QueryOptions,
   QueryResult,
   QueryBuilder,
-  ProjectionManager,
-  ProjectionConfig,
-  ProjectionState,
-  ProjectionHandler,
   FilterCondition,
   FilterGroup,
   FilterOperator,
@@ -58,3 +60,23 @@ export {
   FilterError,
   ProjectionStatus,
 } from './types';
+
+// Re-export projection system types
+export type {
+  ProjectionConfig,
+  ProjectionHandlerConfig,
+  ProjectionFilter,
+} from './projection/projection-config';
+
+export type {
+  ProjectionRegistryConfig,
+  ProjectionHealth,
+} from './projection/projection-registry';
+
+export type {
+  CurrentState,
+} from './projection/current-state';
+
+export type {
+  FailedEvent,
+} from './projection/failed-events';

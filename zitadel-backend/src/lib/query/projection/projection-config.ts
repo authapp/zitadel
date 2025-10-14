@@ -99,7 +99,7 @@ export interface ProjectionHandlerConfig {
   retryDelay: number;
   enableLocking: boolean;
   lockTTL: number;
-  instanceID: string;
+  instanceID?: string; // Optional - undefined means process events from all instances
   startPosition?: number;
   rebuildOnStart: boolean;
 }
@@ -121,7 +121,7 @@ export function applyProjectionDefaults(
     retryDelay: config.retryDelay || 5000,
     enableLocking: config.enableLocking !== false,
     lockTTL: config.lockTTL || 60,
-    instanceID: config.instanceID || 'default',
+    instanceID: config.instanceID, // No default - undefined means process all instances
     startPosition: config.startPosition,
     rebuildOnStart: config.rebuildOnStart || false,
   };

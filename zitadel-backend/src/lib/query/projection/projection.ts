@@ -9,13 +9,14 @@
 
 import { Event } from '../../eventstore/types';
 import { Eventstore } from '../../eventstore/types';
-import { DatabasePool } from '../../database/pool';
+import { DatabasePool, QueryExecutor } from '../../database/pool';
 import { CurrentStateTracker } from './current-state';
 
 /**
  * Abstract projection base class
  * 
  * All projections must extend this class and implement the reduce method.
+ * Configuration is managed separately via ProjectionConfig.
  */
 export abstract class Projection {
   /**
@@ -118,12 +119,12 @@ export abstract class Projection {
   async setCurrentPosition(
     position: number,
     eventTimestamp: Date,
-    instanceID: string,
+    instanceID: string | undefined,
     aggregateType: string,
     aggregateID: string,
     sequence: number
   ): Promise<void> {
-    await this.stateTracker.updateState(
+    await this.stateTracker.updatePosition(
       this.name,
       position,
       eventTimestamp,
@@ -164,21 +165,14 @@ export abstract class Projection {
 
   /**
    * Execute a query within a transaction
+   * 
+   * Note: This is a convenience wrapper around DatabasePool.withTransaction()
+   * Use this.database.withTransaction() directly for the same functionality.
    */
   protected async transaction<T>(
-    callback: (client: DatabasePool) => Promise<T>
+    callback: (tx: QueryExecutor) => Promise<T>
   ): Promise<T> {
-    const client = this.database;
-    
-    try {
-      await client.query('BEGIN');
-      const result = await callback(client);
-      await client.query('COMMIT');
-      return result;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    }
+    return this.database.withTransaction(callback);
   }
 
   /**
@@ -189,7 +183,10 @@ export abstract class Projection {
   }
 
   /**
-   * Insert a record
+   * Insert a record into any table
+   * 
+   * Note: For single-table projections, consider using BaseRepository pattern.
+   * This method supports multi-table projections.
    */
   protected async insert(
     table: string,
@@ -207,7 +204,10 @@ export abstract class Projection {
   }
 
   /**
-   * Update a record
+   * Update a record in any table
+   * 
+   * Note: For single-table projections, consider using BaseRepository pattern.
+   * This method supports multi-table projections.
    */
   protected async update(
     table: string,
@@ -225,14 +225,14 @@ export abstract class Projection {
   }
 
   /**
-   * Delete a record
+   * Delete a record from any table
    */
   protected async delete(table: string, id: string): Promise<void> {
     await this.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
   }
 
   /**
-   * Check if a record exists
+   * Check if a record exists in any table
    */
   protected async exists(table: string, id: string): Promise<boolean> {
     const result = await this.query(
@@ -243,7 +243,7 @@ export abstract class Projection {
   }
 
   /**
-   * Get a record by ID
+   * Get a record by ID from any table
    */
   protected async getByID<T>(table: string, id: string): Promise<T | null> {
     const result = await this.query(

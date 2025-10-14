@@ -71,10 +71,18 @@ export class ProjectionRegistry {
 
   /**
    * Register a projection
+   * 
+   * @param config - Projection configuration
+   * @param projection - Projection instance
    */
-  register(config: ProjectionConfig, projection?: Projection): void {
+  register(config: ProjectionConfig, projection: Projection): void {
     if (this.handlers.has(config.name)) {
       throw new Error(`Projection ${config.name} is already registered`);
+    }
+
+    // Validate that projection name matches config
+    if (projection.name !== config.name) {
+      throw new Error(`Projection name mismatch: projection.name="${projection.name}" but config.name="${config.name}"`);
     }
 
     // Apply defaults to config
@@ -82,7 +90,7 @@ export class ProjectionRegistry {
 
     // Create handler
     const handler = new ProjectionHandler(
-      projection!,
+      projection,
       handlerConfig,
       this.eventstore,
       this.database
@@ -259,7 +267,7 @@ export class ProjectionRegistry {
     return {
       name: projectionName,
       healthy: handler.isRunning() && handler.getErrorCount() < 5 && lag < 1000,
-      currentPosition: state?.position || 0,
+      currentPosition: typeof state?.position === 'string' ? parseFloat(state.position) : (state?.position || 0),
       lag,
       lastProcessed: state?.lastUpdated || null,
       errorCount: handler.getErrorCount(),
@@ -274,7 +282,7 @@ export class ProjectionRegistry {
     try {
       // Query the latest event position
       const result = await this.database.query(
-        'SELECT MAX(position) as max_position FROM eventstore.events'
+        'SELECT MAX(position) as max_position FROM events'
       );
       
       if (result.rows.length > 0 && result.rows[0].max_position !== null) {

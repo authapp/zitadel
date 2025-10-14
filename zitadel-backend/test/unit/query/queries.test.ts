@@ -204,14 +204,19 @@ describe('Queries', () => {
   });
 
   describe('projection registry', () => {
-    it('should register projection', () => {
+    it('should throw error for deprecated registerProjection', () => {
       expect(() => {
         queries.registerProjection({
           name: 'test_projection',
           tables: ['test_table'],
           eventTypes: ['test.event'],
         });
-      }).not.toThrow();
+      }).toThrow('registerProjection is deprecated');
+    });
+
+    it('should provide access to projection registry', () => {
+      const registry = queries.getProjectionRegistry();
+      expect(registry).toBeDefined();
     });
   });
 });

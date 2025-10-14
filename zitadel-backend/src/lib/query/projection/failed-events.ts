@@ -81,7 +81,7 @@ export class FailedEventHandler {
     projectionName: string,
     event: Event,
     error: Error,
-    instanceID: string
+    instanceID?: string
   ): Promise<void> {
     // Check if this event has already failed before
     const existing = await this.getFailedEvent(projectionName, event.position.position);
@@ -103,10 +103,10 @@ export class FailedEventHandler {
         `INSERT INTO ${this.tableName} (
           id,
           projection_name,
-          failed_sequence,
+          position,
           failure_count,
           error,
-          event_data,
+          event_payload,
           last_failed,
           instance_id
         ) VALUES ($1, $2, $3, 1, $4, $5, NOW(), $6)`,
@@ -115,7 +115,9 @@ export class FailedEventHandler {
           projectionName,
           event.position.position,
           error.message,
-          JSON.stringify(event),
+          JSON.stringify(event, (_key, value) =>
+            typeof value === 'bigint' ? value.toString() : value
+          ),
           instanceID,
         ]
       );

@@ -34,8 +34,9 @@ export interface QueriesConfig {
 
   /**
    * Projection configurations
+   * @deprecated Use ProjectionRegistry.register(config, projection) directly
    */
-  projections?: ProjectionConfig[];
+  projections?: never;
 
   /**
    * Default language for text queries
@@ -116,12 +117,8 @@ export class Queries {
       database: this.database,
     });
 
-    // Register projections if provided
-    if (config.projections) {
-      for (const projectionConfig of config.projections) {
-        this.projectionRegistry.register(projectionConfig);
-      }
-    }
+    // Note: Projections must be registered manually using:
+    // projectionRegistry.register(config, projection)
   }
 
   /**
@@ -200,9 +197,10 @@ export class Queries {
 
   /**
    * Register a new projection
+   * @deprecated Use getProjectionRegistry().register(config, projection) directly
    */
-  registerProjection(config: ProjectionConfig): void {
-    this.projectionRegistry.register(config);
+  registerProjection(_config: ProjectionConfig): void {
+    throw new Error('registerProjection is deprecated. Use getProjectionRegistry().register(config, projection) instead.');
   }
 
   /**

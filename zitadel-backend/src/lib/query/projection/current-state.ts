@@ -92,11 +92,11 @@ export class CurrentStateTracker {
   /**
    * Update projection state
    */
-  async updateState(
+  async updatePosition(
     projectionName: string,
     position: number,
     eventTimestamp: Date,
-    instanceID: string,
+    instanceID: string | undefined,
     aggregateType: string,
     aggregateID: string,
     sequence: number
@@ -205,7 +205,7 @@ export class CurrentStateTracker {
         position DECIMAL NOT NULL DEFAULT 0,
         event_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        instance_id TEXT NOT NULL,
+        instance_id TEXT,
         aggregate_type TEXT NOT NULL DEFAULT '',
         aggregate_id TEXT NOT NULL DEFAULT '',
         sequence BIGINT NOT NULL DEFAULT 0

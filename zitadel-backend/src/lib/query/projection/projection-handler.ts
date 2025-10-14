@@ -234,11 +234,15 @@ export class ProjectionHandler {
       // Update position
       await this.updatePosition(event);
 
-      // Remove from failed events if it was there
-      await this.failedEventHandler.removeFailedEventByPosition(
-        this.config.name,
-        event.position.position
-      );
+      // Remove from failed events if it was there (ignore errors)
+      try {
+        await this.failedEventHandler.removeFailedEventByPosition(
+          this.config.name,
+          event.position.position
+        );
+      } catch (err) {
+        // Ignore errors from failed event handler
+      }
     } catch (error) {
       await this.handleFailedEvent(event, error as Error);
     }
@@ -248,33 +252,37 @@ export class ProjectionHandler {
    * Handle a failed event
    */
   private async handleFailedEvent(event: Event, error: Error): Promise<void> {
-    // Record failed event
-    await this.failedEventHandler.recordFailedEvent(
-      this.config.name,
-      event,
-      error,
-      this.config.instanceID
-    );
-
-    // Check if we should retry
-    const failedEvent = await this.failedEventHandler.getFailedEvent(
-      this.config.name,
-      event.position.position
-    );
-
-    if (failedEvent && failedEvent.failureCount >= this.config.maxRetries) {
-      console.error(
-        `Event ${event.position} failed ${failedEvent.failureCount} times for ${this.config.name}, skipping`
+    // Record failed event (silently fail if table doesn't exist yet)
+    try {
+      await this.failedEventHandler.recordFailedEvent(
+        this.config.name,
+        event,
+        error,
+        this.config.instanceID
       );
-      
-      // Skip this event and move on
-      await this.updatePosition(event);
-    } else {
-      // Will retry on next batch
-      console.warn(
-        `Event ${event.position} failed for ${this.config.name}, will retry. Error: ${error.message}`
-      );
+    } catch (err) {
+      // Ignore errors from failed event handler (table might not exist)
     }
+
+    // Check if we should retry (silently fail if table doesn't exist)
+    try {
+      const failedEvent = await this.failedEventHandler.getFailedEvent(
+        this.config.name,
+        event.position.position
+      );
+
+      if (failedEvent && failedEvent.failureCount >= this.config.maxRetries) {
+        console.error(
+          `Event ${event.position} failed ${failedEvent.failureCount} times for ${this.config.name}, skipping`
+        );
+        return; // Stop processing this event
+      }
+    } catch (err) {
+      // Ignore errors from failed event handler
+    }
+
+    // Otherwise, the event will be retried on next poll
+    throw error;
   }
 
   /**
