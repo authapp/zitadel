@@ -68,7 +68,7 @@ export interface FailedEventStats {
  */
 export class FailedEventHandler {
   private readonly database: DatabasePool;
-  private readonly tableName = 'projections.failed_events';
+  private readonly tableName = 'projection_failed_events';
 
   constructor(database: DatabasePool) {
     this.database = database;

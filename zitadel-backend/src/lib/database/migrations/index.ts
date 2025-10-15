@@ -57,4 +57,5 @@ export const migrations = [
   { version: 34, name: 'Create org domains projection table', filename: '002_19_create_org_domains_projection_table.sql' },
   { version: 35, name: 'Create projects projection table', filename: '002_20_create_projects_projection_table.sql' },
   { version: 36, name: 'Create project roles projection table', filename: '002_21_create_project_roles_projection_table.sql' },
+  { version: 37, name: 'Create applications projection table', filename: '002_22_create_applications_projection_table.sql' },
 ];

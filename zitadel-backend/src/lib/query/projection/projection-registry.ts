@@ -329,7 +329,7 @@ export class ProjectionRegistry {
    */
   private async initLockTable(): Promise<void> {
     await this.database.query(`
-      CREATE TABLE IF NOT EXISTS projections.locks (
+      CREATE TABLE IF NOT EXISTS projection_locks (
         projection_name TEXT PRIMARY KEY,
         instance_id TEXT NOT NULL,
         acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -340,12 +340,12 @@ export class ProjectionRegistry {
     // Create index on expires_at for cleanup
     await this.database.query(`
       CREATE INDEX IF NOT EXISTS idx_projection_locks_expires_at 
-      ON projections.locks (expires_at)
+      ON projection_locks (expires_at)
     `);
 
     // Clean up expired locks
     await this.database.query(`
-      DELETE FROM projections.locks WHERE expires_at < NOW()
+      DELETE FROM projection_locks WHERE expires_at < NOW()
     `);
   }
 
@@ -354,7 +354,7 @@ export class ProjectionRegistry {
    */
   async cleanupExpiredLocks(): Promise<void> {
     await this.database.query(`
-      DELETE FROM projections.locks WHERE expires_at < NOW()
+      DELETE FROM projection_locks WHERE expires_at < NOW()
     `);
   }
 }

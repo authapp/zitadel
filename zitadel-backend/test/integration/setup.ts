@@ -104,16 +104,38 @@ async function initializeSchemaWithMigrator(pool: DatabasePool): Promise<void> {
  * Truncates only tables that exist in the migration system
  */
 export async function cleanDatabase(pool: DatabasePool): Promise<void> {
-  try {
-    // Clean tables created by migrations (in reverse dependency order)
-    // Cascade will handle user_addresses and user_metadata
-    await pool.query('TRUNCATE TABLE users_projection CASCADE');
-    await pool.query('TRUNCATE TABLE projection_states CASCADE');
-    await pool.query('TRUNCATE TABLE events CASCADE');
-    await pool.query('TRUNCATE TABLE unique_constraints CASCADE');
-  } catch (error) {
-    console.error('Failed to clean database:', error);
-    throw error;
+  const tables = [
+    'users_projection',
+    'orgs_projection',
+    'org_domains_projection',
+    'projects_projection',
+    'project_roles_projection',
+    'applications_projection',
+    'projection_states',
+    'projection_current_states',
+    'projection_failed_events',
+    'projection_locks',
+    'unique_constraints',
+    'events', // Events table MUST be cleaned
+  ];
+
+  for (const table of tables) {
+    try {
+      await pool.query(`TRUNCATE TABLE ${table} CASCADE`);
+    } catch (error: any) {
+      // Only ignore if table doesn't exist, otherwise throw
+      const errorMsg = error?.message || '';
+      const parentMsg = error?.parent?.message || '';
+      const causeMsg = error?.cause?.message || '';
+      
+      const combinedMsg = `${errorMsg} ${parentMsg} ${causeMsg}`.toLowerCase();
+      
+      if (!combinedMsg.includes('does not exist')) {
+        console.error(`Failed to truncate ${table}:`, errorMsg, parentMsg);
+        throw error;
+      }
+      // Table doesn't exist yet, skip silently
+    }
   }
 }
 

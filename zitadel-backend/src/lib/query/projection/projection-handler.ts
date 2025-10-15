@@ -328,7 +328,7 @@ export class ProjectionHandler {
   private async acquireLock(): Promise<boolean> {
     try {
       const result = await this.database.query(
-        `INSERT INTO projections.locks (
+        `INSERT INTO projection_locks (
           projection_name,
           instance_id,
           acquired_at,
@@ -338,7 +338,7 @@ export class ProjectionHandler {
           instance_id = EXCLUDED.instance_id,
           acquired_at = NOW(),
           expires_at = NOW() + INTERVAL '${this.config.lockTTL} seconds'
-        WHERE projections.locks.expires_at < NOW()
+        WHERE projection_locks.expires_at < NOW()
         RETURNING instance_id`,
         [this.config.name, this.config.instanceID]
       );
@@ -356,7 +356,7 @@ export class ProjectionHandler {
   private async releaseLock(): Promise<void> {
     try {
       await this.database.query(
-        `DELETE FROM projections.locks 
+        `DELETE FROM projection_locks 
          WHERE projection_name = $1 AND instance_id = $2`,
         [this.config.name, this.config.instanceID]
       );
@@ -373,7 +373,7 @@ export class ProjectionHandler {
   private async renewLock(): Promise<boolean> {
     try {
       const result = await this.database.query(
-        `UPDATE projections.locks SET
+        `UPDATE projection_locks SET
           expires_at = NOW() + INTERVAL '${this.config.lockTTL} seconds'
         WHERE projection_name = $1 AND instance_id = $2
         RETURNING instance_id`,

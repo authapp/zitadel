@@ -11,7 +11,7 @@ import { DatabasePool } from '../../../src/lib/database';
 // Test projection that uses real database
 class UserCountProjection extends Projection {
   readonly name = 'user_count_projection';
-  readonly tables = ['projections.user_counts'];
+  readonly tables = ['test_user_counts'];
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
@@ -27,19 +27,16 @@ class UserCountProjection extends Projection {
   async init(): Promise<void> {
     // Create projection tables
     await this.database.query(`
-      CREATE SCHEMA IF NOT EXISTS projections
-    `);
-
-    await this.database.query(`
-      CREATE TABLE IF NOT EXISTS projections.user_counts (
+      CREATE TABLE IF NOT EXISTS test_user_counts (
         instance_id TEXT PRIMARY KEY,
         count INTEGER DEFAULT 0,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       )
     `);
 
+    // Create state tracking table that the projection system expects
     await this.database.query(`
-      CREATE TABLE IF NOT EXISTS projections.current_states (
+      CREATE TABLE IF NOT EXISTS projection_current_states (
         projection_name TEXT PRIMARY KEY,
         position DECIMAL NOT NULL DEFAULT 0,
         event_timestamp TIMESTAMPTZ,
@@ -53,22 +50,22 @@ class UserCountProjection extends Projection {
   }
 
   async cleanup(): Promise<void> {
-    await this.database.query('DROP TABLE IF EXISTS projections.user_counts CASCADE');
-    await this.database.query('DROP TABLE IF EXISTS projections.current_states CASCADE');
+    await this.database.query('DROP TABLE IF EXISTS test_user_counts CASCADE');
+    await this.database.query('DROP TABLE IF EXISTS projection_current_states CASCADE');
   }
 
   private async incrementUserCount(instanceID: string): Promise<void> {
     await this.database.query(`
-      INSERT INTO projections.user_counts (instance_id, count, updated_at)
+      INSERT INTO test_user_counts (instance_id, count, updated_at)
       VALUES ($1, 1, NOW())
       ON CONFLICT (instance_id)
-      DO UPDATE SET count = projections.user_counts.count + 1, updated_at = NOW()
+      DO UPDATE SET count = test_user_counts.count + 1, updated_at = NOW()
     `, [instanceID]);
   }
 
   private async decrementUserCount(instanceID: string): Promise<void> {
     await this.database.query(`
-      UPDATE projections.user_counts 
+      UPDATE test_user_counts 
       SET count = GREATEST(count - 1, 0), updated_at = NOW()
       WHERE instance_id = $1
     `, [instanceID]);
@@ -76,7 +73,7 @@ class UserCountProjection extends Projection {
 
   async getUserCount(instanceID: string): Promise<number> {
     const result = await this.database.query<{ count: number }>(`
-      SELECT count FROM projections.user_counts WHERE instance_id = $1
+      SELECT count FROM test_user_counts WHERE instance_id = $1
     `, [instanceID]);
     return result.rows[0]?.count || 0;
   }
