@@ -58,4 +58,7 @@ export const migrations = [
   { version: 35, name: 'Create projects projection table', filename: '002_20_create_projects_projection_table.sql' },
   { version: 36, name: 'Create project roles projection table', filename: '002_21_create_project_roles_projection_table.sql' },
   { version: 37, name: 'Create applications projection table', filename: '002_22_create_applications_projection_table.sql' },
+  { version: 38, name: 'Create instances projection table', filename: '002_23_create_instances_projection_table.sql' },
+  { version: 39, name: 'Create instance domains projection table', filename: '002_24_create_instance_domains_projection_table.sql' },
+  { version: 40, name: 'Create instance trusted domains projection table', filename: '002_25_create_instance_trusted_domains_projection_table.sql' },
 ];
