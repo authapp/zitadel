@@ -55,4 +55,6 @@ export const migrations = [
   { version: 32, name: 'Create notification config table', filename: '011_notification_config.sql' },
   { version: 33, name: 'Create orgs projection table', filename: '002_18_create_orgs_projection_table.sql' },
   { version: 34, name: 'Create org domains projection table', filename: '002_19_create_org_domains_projection_table.sql' },
+  { version: 35, name: 'Create projects projection table', filename: '002_20_create_projects_projection_table.sql' },
+  { version: 36, name: 'Create project roles projection table', filename: '002_21_create_project_roles_projection_table.sql' },
 ];

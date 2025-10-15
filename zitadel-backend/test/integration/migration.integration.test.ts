@@ -9,6 +9,7 @@
  * - Event-sourced migration tracking
  */
 
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { DatabasePool, DatabaseMigrator, DatabaseConfig } from '../../src/lib/database';
 import { TEST_DB_CONFIG } from './setup';
 
@@ -86,7 +87,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(34); // We have 34 migration steps (includes unique_constraints + notification_config + org projections)
+      expect(version).toBe(36); // We have 36 migration steps (includes unique_constraints + notification_config + org + project projections)
     });
   });
 
@@ -112,8 +113,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 34 records (one per migration step)
-      expect(migrations.length).toBe(34);
+      // Should still only have 36 records (one per migration step)
+      expect(migrations.length).toBe(36);
     });
   });
 
@@ -127,7 +128,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(34);
+      expect(migrations1.length).toBe(36);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +160,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(34);
+      expect(applied.length).toBe(36);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(34);
+      expect(applied[applied.length - 1].version).toBe(36);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
