@@ -53,4 +53,6 @@ export const migrations = [
   { version: 30, name: 'Alter projection states position type', filename: '002_17_alter_projection_states_position_type.sql' },
   { version: 31, name: 'Create unique constraints table', filename: '003_create_unique_constraints_table.sql' },
   { version: 32, name: 'Create notification config table', filename: '011_notification_config.sql' },
+  { version: 33, name: 'Create orgs projection table', filename: '002_18_create_orgs_projection_table.sql' },
+  { version: 34, name: 'Create org domains projection table', filename: '002_19_create_org_domains_projection_table.sql' },
 ];

@@ -86,7 +86,7 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(32); // We have 32 migration steps (includes unique_constraints + notification_config)
+      expect(version).toBe(34); // We have 34 migration steps (includes unique_constraints + notification_config + org projections)
     });
   });
 
@@ -112,8 +112,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 32 records (one per migration step)
-      expect(migrations.length).toBe(32);
+      // Should still only have 34 records (one per migration step)
+      expect(migrations.length).toBe(34);
     });
   });
 
@@ -127,7 +127,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(32);
+      expect(migrations1.length).toBe(34);
     });
 
     it('should skip already applied migrations', async () => {
@@ -159,9 +159,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(32);
+      expect(applied.length).toBe(34);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(32);
+      expect(applied[applied.length - 1].version).toBe(34);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
