@@ -343,7 +343,14 @@ export class ProjectionHandler {
         [this.config.name, this.config.instanceID]
       );
 
-      return result.rows.length > 0 && result.rows[0].instance_id === this.config.instanceID;
+      // Check if lock was acquired - handle both null and undefined for instanceID
+      if (result.rows.length === 0) return false;
+      
+      const lockInstanceID = result.rows[0].instance_id;
+      const configInstanceID = this.config.instanceID;
+      
+      // Both null/undefined or both equal
+      return (lockInstanceID == null && configInstanceID == null) || lockInstanceID === configInstanceID;
     } catch (error) {
       console.error(`Error acquiring lock for ${this.config.name}:`, error);
       return false;
@@ -355,10 +362,17 @@ export class ProjectionHandler {
    */
   private async releaseLock(): Promise<void> {
     try {
+      const whereClause = this.config.instanceID
+        ? 'WHERE projection_name = $1 AND instance_id = $2'
+        : 'WHERE projection_name = $1 AND instance_id IS NULL';
+      
+      const params = this.config.instanceID
+        ? [this.config.name, this.config.instanceID]
+        : [this.config.name];
+      
       await this.database.query(
-        `DELETE FROM projection_locks 
-         WHERE projection_name = $1 AND instance_id = $2`,
-        [this.config.name, this.config.instanceID]
+        `DELETE FROM projection_locks ${whereClause}`,
+        params
       );
     } catch (error) {
       console.error(`Error releasing lock for ${this.config.name}:`, error);
@@ -372,12 +386,20 @@ export class ProjectionHandler {
   // @ts-expect-error - Reserved for future lock renewal timer
   private async renewLock(): Promise<boolean> {
     try {
+      const whereClause = this.config.instanceID
+        ? 'WHERE projection_name = $1 AND instance_id = $2'
+        : 'WHERE projection_name = $1 AND instance_id IS NULL';
+      
+      const params = this.config.instanceID
+        ? [this.config.name, this.config.instanceID]
+        : [this.config.name];
+      
       const result = await this.database.query(
         `UPDATE projection_locks SET
           expires_at = NOW() + INTERVAL '${this.config.lockTTL} seconds'
-        WHERE projection_name = $1 AND instance_id = $2
+        ${whereClause}
         RETURNING instance_id`,
-        [this.config.name, this.config.instanceID]
+        params
       );
 
       return result.rows.length > 0;

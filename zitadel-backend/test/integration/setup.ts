@@ -114,10 +114,10 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     'instances_projection',
     'instance_domains_projection',
     'instance_trusted_domains_projection',
+    'sessions_projection',
     'projection_states',
     'projection_current_states',
     'projection_failed_events',
-    'projection_locks',
     'unique_constraints',
     'events', // Events table MUST be cleaned
   ];

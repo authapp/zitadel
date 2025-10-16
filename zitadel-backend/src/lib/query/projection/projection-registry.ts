@@ -328,10 +328,11 @@ export class ProjectionRegistry {
    * Initialize lock table
    */
   private async initLockTable(): Promise<void> {
+    // Try to create the table
     await this.database.query(`
       CREATE TABLE IF NOT EXISTS projection_locks (
         projection_name TEXT PRIMARY KEY,
-        instance_id TEXT NOT NULL,
+        instance_id TEXT,
         acquired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         expires_at TIMESTAMPTZ NOT NULL
       )
