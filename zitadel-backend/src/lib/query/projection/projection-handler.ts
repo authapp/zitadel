@@ -38,6 +38,7 @@ export class ProjectionHandler {
   private processingInterval?: NodeJS.Timeout;
   private lockAcquired: boolean = false;
   private errorCount: number = 0;
+  private processingPromise: Promise<void> | null = null;
 
   constructor(
     projection: Projection,
@@ -111,6 +112,15 @@ export class ProjectionHandler {
       this.processingInterval = undefined;
     }
 
+    // Wait for any in-flight processing to complete
+    if (this.processingPromise) {
+      try {
+        await this.processingPromise;
+      } catch (error) {
+        // Ignore errors during shutdown
+      }
+    }
+
     // Release lock
     if (this.lockAcquired) {
       await this.releaseLock();
@@ -153,9 +163,18 @@ export class ProjectionHandler {
         return;
       }
 
+      // Skip if already processing
+      if (this.processingPromise) {
+        return;
+      }
+
       try {
-        await this.processEvents();
+        // Track the processing promise so stop() can wait for it
+        this.processingPromise = this.processEvents();
+        await this.processingPromise;
+        this.processingPromise = null;
       } catch (error) {
+        this.processingPromise = null;
         this.errorCount++;
         console.error(`Error processing events for ${this.config.name}:`, error);
         

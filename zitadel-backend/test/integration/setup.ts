@@ -115,6 +115,7 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     'instance_domains_projection',
     'instance_trusted_domains_projection',
     'sessions_projection',
+    'login_names_projection',
     'projection_states',
     'projection_current_states',
     'projection_failed_events',

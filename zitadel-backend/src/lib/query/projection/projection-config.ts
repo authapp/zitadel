@@ -110,13 +110,17 @@ export interface ProjectionHandlerConfig {
 export function applyProjectionDefaults(
   config: ProjectionConfig
 ): ProjectionHandlerConfig {
+  // Use faster polling in test mode for better test performance
+  const isTestMode = process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID !== undefined;
+  const defaultInterval = isTestMode ? 100 : 1000; // 100ms in tests, 1s in production
+  
   return {
     name: config.name,
     tables: config.tables,
     eventTypes: config.eventTypes || [],
     aggregateTypes: config.aggregateTypes || [],
     batchSize: config.batchSize || 100,
-    interval: config.interval || 1000,
+    interval: config.interval || defaultInterval,
     maxRetries: config.maxRetries || 3,
     retryDelay: config.retryDelay || 5000,
     enableLocking: config.enableLocking !== false,

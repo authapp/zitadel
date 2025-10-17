@@ -79,8 +79,8 @@ export class OrgDomainProjection extends Projection {
       [
         event.aggregateID,
         data.domain,
-        false,
-        false,
+        data.isVerified || false,
+        data.isPrimary || false,
         data.validationType || 'dns',
         data.validationCode || null,
         event.createdAt,

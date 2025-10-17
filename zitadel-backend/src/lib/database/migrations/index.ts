@@ -62,4 +62,5 @@ export const migrations = [
   { version: 39, name: 'Create instance domains projection table', filename: '002_24_create_instance_domains_projection_table.sql' },
   { version: 40, name: 'Create instance trusted domains projection table', filename: '002_25_create_instance_trusted_domains_projection_table.sql' },
   { version: 41, name: 'Create sessions projection table', filename: '002_26_create_sessions_projection_table.sql' },
+  { version: 42, name: 'Create login names projection table', filename: '002_27_create_login_names_projection_table.sql' },
 ];

@@ -4,9 +4,9 @@
  * Tests the full flow: events -> projection -> queries
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { DatabasePool } from '../../src/lib/database';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
+import { createTestDatabase, closeTestDatabase } from './setup';
 import { DatabaseMigrator } from '../../src/lib/database/migrator';
 import { PostgresEventstore } from '../../src/lib/eventstore';
 import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
@@ -32,14 +32,6 @@ describe('Organization Projection Integration Tests', () => {
     pool = await createTestDatabase();
     const migrator = new DatabaseMigrator(pool);
     await migrator.migrate();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase(pool);
     
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
@@ -53,28 +45,39 @@ describe('Organization Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register org projection
+    // Register org projection with 100ms interval
     const orgConfig = createOrgProjectionConfig();
+    orgConfig.interval = 100;
     const orgProjection = createOrgProjection(eventstore, pool);
     registry.register(orgConfig, orgProjection);
     
-    // Register org domain projection
+    // Register org domain projection with 100ms interval
     const domainConfig = createOrgDomainProjectionConfig();
+    domainConfig.interval = 100;
     const domainProjection = createOrgDomainProjection(eventstore, pool);
     registry.register(domainConfig, domainProjection);
+    
+    // Start projections once for all tests
+    await Promise.all([
+      registry.start('org_projection'),
+      registry.start('org_domain_projection'),
+    ]);
     
     orgQueries = new OrgQueries(pool);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
+    // Stop all projections
     const names = registry.getNames();
     for (const name of names) {
       try {
         await registry.stop(name);
       } catch (e) {
-        // Ignore
+        // Ignore if already stopped
       }
     }
+    
+    await closeTestDatabase();
   });
 
   describe('Organization Events', () => {
@@ -93,14 +96,13 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await registry.start('org_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
       expect(org!.name).toBe('Test Organization');
       expect(org!.state).toBe(OrgState.ACTIVE);
-    }, 10000);
+    }, 5000);
 
     it('should process org.changed event', async () => {
       const orgID = generateSnowflakeId();
@@ -125,13 +127,12 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await registry.start('org_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
       expect(org!.name).toBe('Updated Name');
-    }, 10000);
+    }, 5000);
 
     it('should process org.deactivated event', async () => {
       const orgID = generateSnowflakeId();
@@ -156,13 +157,12 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await registry.start('org_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
       expect(org!.state).toBe(OrgState.INACTIVE);
-    }, 10000);
+    }, 5000);
 
     it('should process org.reactivated event', async () => {
       const orgID = generateSnowflakeId();
@@ -197,13 +197,12 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await registry.start('org_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
       expect(org!.state).toBe(OrgState.ACTIVE);
-    }, 10000);
+    }, 5000);
   });
 
   describe('Organization Domain Events', () => {
@@ -235,21 +234,15 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      // Start both projections at the same time
-      await Promise.all([
-        registry.start('org_projection'),
-        registry.start('org_domain_projection'),
-      ]);
-      
-      // Wait longer for both to process
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Wait for projections to process
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(1);
       expect(domains[0].domain).toBe('test.com');
       expect(domains[0].isVerified).toBe(false);
       expect(domains[0].isPrimary).toBe(false);
-    }, 12000);
+    }, 6000);
 
     it('should process org.domain.verified event', async () => {
       const orgID = generateSnowflakeId();
@@ -284,16 +277,12 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('org_projection'),
-        registry.start('org_domain_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(1);
       expect(domains[0].isVerified).toBe(true);
-    }, 12000);
+    }, 6000);
 
     it('should process org.domain.primary.set event', async () => {
       const orgID = generateSnowflakeId();
@@ -337,11 +326,7 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('org_projection'),
-        registry.start('org_domain_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(1);
@@ -349,7 +334,7 @@ describe('Organization Projection Integration Tests', () => {
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org!.primaryDomain).toBe('test.com');
-    }, 12000);
+    }, 6000);
 
     it('should process org.domain.removed event', async () => {
       const orgID = generateSnowflakeId();
@@ -384,15 +369,11 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('org_projection'),
-        registry.start('org_domain_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(0);
-    }, 12000);
+    }, 6000);
   });
 
   describe('Query Methods', () => {
@@ -429,17 +410,13 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('org_projection'),
-        registry.start('org_domain_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       const org = await orgQueries.getOrgByDomainGlobal('unique.com');
       expect(org).toBeDefined();
       expect(org!.id).toBe(orgID);
       expect(org!.name).toBe('Test Org');
-    }, 12000);
+    }, 6000);
 
     it('should search organizations', async () => {
       const org1ID = generateSnowflakeId();
@@ -466,12 +443,11 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await registry.start('org_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const result = await orgQueries.searchOrgs({ name: 'Alpha' });
       expect(result.total).toBeGreaterThanOrEqual(1);
       expect(result.orgs.some(o => o.name === 'Alpha Org')).toBe(true);
-    }, 10000);
+    }, 5000);
   });
 });
