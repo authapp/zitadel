@@ -55,6 +55,10 @@ export class OrgProjection extends Projection {
         await this.handleOrgRemoved(event);
         break;
       
+      case 'org.domain.primary.set':
+        await this.handleOrgDomainPrimarySet(event);
+        break;
+      
       default:
         // Unknown event type, ignore
         break;
@@ -148,6 +152,21 @@ export class OrgProjection extends Projection {
       ['removed', event.createdAt, event.aggregateVersion, event.aggregateID]
     );
   }
+
+  /**
+   * Handle org.domain.primary.set event
+   * Updates the primary_domain field in the org
+   */
+  private async handleOrgDomainPrimarySet(event: Event): Promise<void> {
+    const data = event.payload as any;
+    
+    await this.database.query(
+      `UPDATE orgs_projection
+       SET primary_domain = $1, updated_at = $2, sequence = $3
+       WHERE id = $4`,
+      [data.domain || null, event.createdAt, event.aggregateVersion, event.aggregateID]
+    );
+  }
 }
 
 /**
@@ -176,6 +195,7 @@ export function createOrgProjectionConfig(): ProjectionConfig {
       'org.reactivated',
       'org.removed',
       'org.deleted',  // Old event type
+      'org.domain.primary.set',  // Update primary domain
     ],
     aggregateTypes: ['org'],
     batchSize: 100,
