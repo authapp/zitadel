@@ -1,0 +1,256 @@
+/**
+ * IDP Projection - materializes identity provider events
+ * Handles all IDP types: OIDC, OAuth, LDAP, SAML, JWT, Azure, Google, Apple
+ */
+
+import { Projection } from '../projection/projection';
+import { Event } from '../../eventstore/types';
+
+export class IDPProjection extends Projection {
+  readonly name = 'idp_projection';
+  readonly tables = ['idps'];
+
+  async init(): Promise<void> {
+    // Create idps table
+    await this.query(
+      `CREATE TABLE IF NOT EXISTS projections.idps (
+        id TEXT NOT NULL,
+        instance_id TEXT NOT NULL,
+        creation_date TIMESTAMPTZ NOT NULL,
+        change_date TIMESTAMPTZ NOT NULL,
+        sequence BIGINT NOT NULL,
+        resource_owner TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type INTEGER NOT NULL,
+        state INTEGER NOT NULL DEFAULT 1,
+        styling_type INTEGER DEFAULT 0,
+        is_creation_allowed BOOLEAN DEFAULT true,
+        is_linking_allowed BOOLEAN DEFAULT true,
+        is_auto_creation BOOLEAN DEFAULT false,
+        is_auto_update BOOLEAN DEFAULT false,
+        config_data JSONB,
+        PRIMARY KEY (instance_id, id)
+      )`,
+      []
+    );
+
+    // Create indexes
+    await this.query(
+      `CREATE INDEX IF NOT EXISTS idx_idps_resource_owner 
+       ON projections.idps(resource_owner, instance_id)`,
+      []
+    );
+
+    await this.query(
+      `CREATE INDEX IF NOT EXISTS idx_idps_type 
+       ON projections.idps(type, instance_id)`,
+      []
+    );
+
+    await this.query(
+      `CREATE INDEX IF NOT EXISTS idx_idps_name 
+       ON projections.idps(name, instance_id)`,
+      []
+    );
+  }
+
+  async reduce(event: Event): Promise<void> {
+    switch (event.eventType) {
+      case 'idp.added':
+      case 'idp.oidc.added':
+      case 'idp.oauth.added':
+      case 'idp.ldap.added':
+      case 'idp.saml.added':
+      case 'idp.jwt.added':
+      case 'idp.azure.added':
+      case 'idp.google.added':
+      case 'idp.apple.added':
+        await this.handleIDPAdded(event);
+        break;
+
+      case 'idp.changed':
+      case 'idp.config.changed':
+      case 'idp.oidc.changed':
+      case 'idp.oauth.changed':
+      case 'idp.ldap.changed':
+      case 'idp.saml.changed':
+      case 'idp.jwt.changed':
+      case 'idp.azure.changed':
+      case 'idp.google.changed':
+      case 'idp.apple.changed':
+        await this.handleIDPChanged(event);
+        break;
+
+      case 'idp.removed':
+        await this.handleIDPRemoved(event);
+        break;
+
+      case 'instance.removed':
+        await this.handleInstanceRemoved(event);
+        break;
+
+      default:
+        // Unknown event type, ignore
+        break;
+    }
+  }
+
+  /**
+   * Handle IDP added events (all types)
+   */
+  private async handleIDPAdded(event: Event): Promise<void> {
+    const payload = event.payload || {};
+
+    // Determine IDP type from event
+    let type = 0; // UNSPECIFIED
+    if (event.eventType.includes('oidc')) type = 1;
+    else if (event.eventType.includes('oauth')) type = 2;
+    else if (event.eventType.includes('ldap')) type = 3;
+    else if (event.eventType.includes('saml')) type = 4;
+    else if (event.eventType.includes('jwt')) type = 5;
+    else if (event.eventType.includes('azure')) type = 6;
+    else if (event.eventType.includes('google')) type = 7;
+    else if (event.eventType.includes('apple')) type = 8;
+
+    await this.query(
+      `INSERT INTO projections.idps (
+        id, instance_id, creation_date, change_date, sequence, resource_owner,
+        name, type, state, styling_type, is_creation_allowed, is_linking_allowed,
+        is_auto_creation, is_auto_update, config_data
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
+        change_date = EXCLUDED.change_date,
+        sequence = EXCLUDED.sequence`,
+      [
+        event.aggregateID,
+        event.instanceID,
+        event.createdAt,
+        event.createdAt,
+        Math.floor(event.position.position),
+        event.owner,
+        payload.name || 'Unnamed IDP',
+        type,
+        1, // ACTIVE
+        payload.stylingType || 0,
+        payload.isCreationAllowed !== false,
+        payload.isLinkingAllowed !== false,
+        payload.isAutoCreation || false,
+        payload.isAutoUpdate || false,
+        JSON.stringify(payload),
+      ]
+    );
+  }
+
+  /**
+   * Handle IDP changed events
+   */
+  private async handleIDPChanged(event: Event): Promise<void> {
+    const payload = event.payload || {};
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (payload.name !== undefined) {
+      updates.push(`name = $${paramIndex++}`);
+      values.push(payload.name);
+    }
+
+    if (payload.isCreationAllowed !== undefined) {
+      updates.push(`is_creation_allowed = $${paramIndex++}`);
+      values.push(payload.isCreationAllowed);
+    }
+
+    if (payload.isLinkingAllowed !== undefined) {
+      updates.push(`is_linking_allowed = $${paramIndex++}`);
+      values.push(payload.isLinkingAllowed);
+    }
+
+    if (payload.isAutoCreation !== undefined) {
+      updates.push(`is_auto_creation = $${paramIndex++}`);
+      values.push(payload.isAutoCreation);
+    }
+
+    if (payload.isAutoUpdate !== undefined) {
+      updates.push(`is_auto_update = $${paramIndex++}`);
+      values.push(payload.isAutoUpdate);
+    }
+
+    // Always update these
+    updates.push(`config_data = $${paramIndex++}`);
+    values.push(JSON.stringify(payload));
+
+    updates.push(`change_date = $${paramIndex++}`);
+    values.push(event.createdAt);
+
+    updates.push(`sequence = $${paramIndex++}`);
+    values.push(Math.floor(event.position.position));
+
+    values.push(event.aggregateID);
+    values.push(event.instanceID);
+
+    if (updates.length > 0) {
+      await this.query(
+        `UPDATE projections.idps
+         SET ${updates.join(', ')}
+         WHERE id = $${paramIndex++} AND instance_id = $${paramIndex++}`,
+        values
+      );
+    }
+  }
+
+  /**
+   * Handle IDP removed event
+   */
+  private async handleIDPRemoved(event: Event): Promise<void> {
+    await this.query(
+      `DELETE FROM projections.idps WHERE id = $1 AND instance_id = $2`,
+      [event.aggregateID, event.instanceID]
+    );
+  }
+
+  /**
+   * Handle instance removed event
+   */
+  private async handleInstanceRemoved(event: Event): Promise<void> {
+    await this.query(
+      `DELETE FROM projections.idps WHERE instance_id = $1`,
+      [event.instanceID]
+    );
+  }
+}
+
+/**
+ * Create IDP projection configuration
+ */
+export function createIDPProjectionConfig() {
+  return {
+    name: 'idp_projection',
+    tables: ['idps'],
+    eventTypes: [
+      'idp.added',
+      'idp.changed',
+      'idp.removed',
+      'idp.oidc.added',
+      'idp.oidc.changed',
+      'idp.oauth.added',
+      'idp.oauth.changed',
+      'idp.ldap.added',
+      'idp.ldap.changed',
+      'idp.saml.added',
+      'idp.saml.changed',
+      'idp.jwt.added',
+      'idp.jwt.changed',
+      'idp.azure.added',
+      'idp.azure.changed',
+      'idp.google.added',
+      'idp.google.changed',
+      'idp.apple.added',
+      'idp.apple.changed',
+      'idp.config.changed',
+      'instance.removed',
+    ],
+    aggregateTypes: ['idp', 'instance'],
+    interval: 1000,
+    enableLocking: false,
+  };
+}

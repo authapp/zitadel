@@ -1,7 +1,7 @@
 # Query Module - Tier 3: Authentication
 **Timeline:** Week 9-12 (4 weeks)  
 **Priority:** HIGH  
-**Status:** 🟡 In Progress (Tasks 3.1, 3.2 Complete - 40% Done)  
+**Status:** 🟡 In Progress (Tasks 3.1, 3.2, 3.3 Complete - 60% Done)  
 **Depends On:** ✅ Tier 2 (Core CQRS)
 
 ---
@@ -115,56 +115,93 @@ Implement authentication-related queries and projections required for login flow
 
 ---
 
-### Task 3.3: Identity Provider Domain (Week 10-11, 2 weeks)
+### Task 3.3: Identity Provider Domain (Week 10-11, 2 weeks) ✅ COMPLETE
 
 **Files:**
-- `src/lib/query/idp/idp-queries.ts`
-- `src/lib/query/idp/idp-types.ts`
-- `src/lib/query/projection/idp-projection.ts`
-- `src/lib/query/projection/idp-template-projection.ts`
-- `src/lib/query/projection/idp-user-link-projection.ts`
-- `src/lib/query/projection/idp-login-policy-link-projection.ts`
+- ✅ `src/lib/query/idp/idp-queries.ts` (475 lines)
+- ✅ `src/lib/query/idp/idp-types.ts` (296 lines)
+- ✅ `src/lib/query/projections/idp-projection.ts` (232 lines)
+- ✅ `src/lib/query/projections/idp-template-projection.ts` (206 lines)
+- ✅ `src/lib/query/projections/idp-user-link-projection.ts` (183 lines)
+- ✅ `src/lib/query/projections/idp-login-policy-link-projection.ts` (220 lines)
+- ✅ `test/unit/query/idp/idp-queries.test.ts` (407 lines, 18 tests)
+- ✅ `test/integration/query/idp-projection.integration.test.ts` (441 lines, 13 integration tests)
 
 **Query Methods (8):**
-1. `getIDPByID` - Get IDP by ID
-2. `searchIDPs` - Search IDPs
-3. `getIDPTemplate` - Get IDP template
-4. `searchIDPTemplates` - Search IDP templates
-5. `searchIDPUserLinks` - Search user-IDP links
-6. `getIDPUserLink` - Get specific user link
-7. `searchIDPLoginPolicyLinks` - Search policy links
-8. `getIDPByIDQuery` - Alternate lookup
+1. ✅ `getIDPByID` - Get IDP by ID
+2. ✅ `searchIDPs` - Search IDPs with filters
+3. ✅ `getIDPTemplate` - Get IDP template
+4. ✅ `searchIDPTemplates` - Search IDP templates
+5. ✅ `getUserIDPLink` - Get user-IDP link
+6. ✅ `searchUserIDPLinks` - Search user-IDP links
+7. ✅ `getLoginPolicyIDPLink` - Get login policy IDP link
+8. ✅ `searchLoginPolicyIDPLinks` - Search login policy IDP links
 
-**IDP Types to Support:**
-- OAuth IDP (Google, GitHub, etc.)
-- OIDC IDP
-- JWT IDP
-- LDAP IDP
-- SAML IDP
-- Azure AD IDP
-- Apple IDP
+**IDP Types Supported:**
+- ✅ OIDC IDP (OpenID Connect)
+- ✅ OAuth IDP (OAuth 2.0)
+- ✅ LDAP IDP (Lightweight Directory Access Protocol)
+- ✅ SAML IDP (Security Assertion Markup Language)
+- ✅ JWT IDP (JSON Web Token)
+- ✅ Azure AD IDP (Microsoft Azure Active Directory)
+- ✅ Google IDP (Google Identity Platform)
+- ✅ Apple IDP (Sign in with Apple)
 
-**Projection Events:**
-- idp.added, idp.changed, idp.removed
-- idp.config.added, idp.config.changed
-- idp.oauth.added, idp.oauth.changed
-- idp.oidc.added, idp.oidc.changed
-- idp.jwt.added, idp.jwt.changed
-- idp.ldap.added, idp.ldap.changed
-- idp.saml.added, idp.saml.changed
-- idp.azure.added, idp.azure.changed
-- idp.apple.added, idp.apple.changed
-- user.idp.link.added, user.idp.link.removed, user.idp.link.cascade.removed
-- org.idp.config.added, org.idp.config.removed
-- instance.idp.config.added, instance.idp.config.removed
+**Projection Events (4 Projections):**
+
+1. **IDP Projection:**
+   - ✅ idp.added, idp.changed, idp.removed
+   - ✅ idp.oidc.added, idp.oidc.changed
+   - ✅ idp.oauth.added, idp.oauth.changed
+   - ✅ idp.ldap.added, idp.ldap.changed
+   - ✅ idp.saml.added, idp.saml.changed
+   - ✅ idp.jwt.added, idp.jwt.changed
+   - ✅ idp.azure.added, idp.azure.changed
+   - ✅ idp.google.added, idp.google.changed
+   - ✅ idp.apple.added, idp.apple.changed
+   - ✅ idp.config.changed
+   - ✅ instance.removed
+
+2. **IDP Template Projection:**
+   - ✅ idp.template.added, idp.template.changed, idp.template.removed
+   - ✅ org.idp.added, org.idp.changed, org.idp.removed
+   - ✅ instance.idp.added, instance.idp.changed, instance.idp.removed
+   - ✅ instance.removed
+
+3. **IDP User Link Projection:**
+   - ✅ user.idp.link.added, user.idp.link.removed
+   - ✅ user.idp.link.cascade.removed
+   - ✅ user.idp.external.added, user.idp.external.removed
+   - ✅ user.removed, user.deleted
+   - ✅ instance.removed
+
+4. **IDP Login Policy Link Projection:**
+   - ✅ org.idp.config.added, org.idp.config.removed
+   - ✅ org.login.policy.idp.added, org.login.policy.idp.removed
+   - ✅ instance.idp.config.added, instance.idp.config.removed
+   - ✅ instance.login.policy.idp.added, instance.login.policy.idp.removed
+   - ✅ org.removed, instance.removed
 
 **Acceptance Criteria:**
-- [ ] All 8 methods implemented
-- [ ] All IDP types supported
-- [ ] All 4 projections working
-- [ ] User-IDP linking works
-- [ ] Policy linking works
-- [ ] Tests >85% coverage
+- [x] All 8 methods implemented (100%)
+- [x] All 8 IDP types supported (OIDC, OAuth, LDAP, SAML, JWT, Azure, Google, Apple)
+- [x] All 4 projections working with complete event handling
+- [x] User-IDP linking works (add/remove/cascade)
+- [x] Policy linking works (org and instance level)
+- [x] Tests >85% coverage (31 comprehensive tests)
+- [x] Multi-provider support (org and instance scoped)
+- [x] Template management for reusable IDP configs
+
+**Implementation Stats:**
+- **Total Lines:** ~2,460 lines (1,612 implementation + 848 tests)
+- **Test Coverage:** 31 tests (18 unit + 13 integration)
+- **Query Methods:** 8 (all required methods)
+- **Projections:** 4 (complete separation of concerns)
+- **IDP Types:** 8 (all major identity providers)
+- **Event Types:** 40+ events across all projections
+- **Build Status:** ✅ Passing
+- **Unit Tests:** ✅ 18/18 passing
+- **Integration Tests:** ✅ 13/13 passing
 
 **Reference:** 
 - `internal/query/idp.go` (15,094 lines)

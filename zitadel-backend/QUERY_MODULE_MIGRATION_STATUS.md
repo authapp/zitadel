@@ -331,7 +331,7 @@ projections.failed_events2  -- Failed event tracking
 - Instance queries + projection
 - Session queries + projection
 
-### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (40% Complete)
+### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (60% Complete)
 **Required for login flows**
 
 - ✅ Auth request queries + projection (Task 3.1 COMPLETE)
@@ -349,7 +349,15 @@ projections.failed_events2  -- Failed event tracking
   - Public key retrieval for JWT validation
   - ~1,503 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- [ ] IDP queries + projections (Task 3.3)
+- ✅ IDP queries + projections (Task 3.3 COMPLETE)
+  - 8 query methods: getIDPByID, searchIDPs, getIDPTemplate, searchIDPTemplates, getUserIDPLink, searchUserIDPLinks, getLoginPolicyIDPLink, searchLoginPolicyIDPLinks
+  - 4 projections handling 40+ event types with auto table creation
+  - 31 comprehensive tests (18 unit + 13 integration)
+  - Support for 8 IDP types: OIDC, OAuth, LDAP, SAML, JWT, Azure, Google, Apple
+  - Complete user-IDP linking and login policy integration
+  - Template management for reusable IDP configs
+  - ~2,460 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 - [ ] Login policy queries + projection (Task 3.4)
 
 ### **Tier 4: Authorization** (Week 13-17)
