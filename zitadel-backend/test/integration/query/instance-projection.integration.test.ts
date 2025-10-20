@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
-import { createTestDatabase, closeTestDatabase } from './setup';
-import { DatabasePool } from '../../src/lib/database/pool';
-import { PostgresEventstore } from '../../src/lib/eventstore/postgres/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
-import { InstanceProjection, createInstanceProjectionConfig } from '../../src/lib/query/projections/instance-projection';
-import { InstanceDomainProjection, createInstanceDomainProjectionConfig } from '../../src/lib/query/projections/instance-domain-projection';
-import { InstanceQueries } from '../../src/lib/query/instance/instance-queries';
-import { Command } from '../../src/lib/eventstore';
-import { generateId } from '../../src/lib/id';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabasePool } from '../../../src/lib/database/pool';
+import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
+import { InstanceProjection, createInstanceProjectionConfig } from '../../../src/lib/query/projections/instance-projection';
+import { InstanceDomainProjection, createInstanceDomainProjectionConfig } from '../../../src/lib/query/projections/instance-domain-projection';
+import { InstanceQueries } from '../../../src/lib/query/instance/instance-queries';
+import { Command } from '../../../src/lib/eventstore';
+import { generateId } from '../../../src/lib/id';
 
 describe('Instance Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -16,7 +16,9 @@ describe('Instance Projection Integration Tests', () => {
   let instanceQueries: InstanceQueries;
 
   beforeAll(async () => {
+    // Setup database and run migrations (automatically provides clean state)
     pool = await createTestDatabase();
+    
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
@@ -30,24 +32,29 @@ describe('Instance Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register instance projection
+    // Register instance projection with fast polling
     const instanceConfig = createInstanceProjectionConfig();
+    instanceConfig.interval = 100; // Fast polling for tests
     const instanceProjection = new InstanceProjection(eventstore, pool);
     registry.register(instanceConfig, instanceProjection);
 
-    // Register instance domain projection
+    // Register instance domain projection with fast polling
     const domainConfig = createInstanceDomainProjectionConfig();
+    domainConfig.interval = 100; // Fast polling for tests
     const domainProjection = new InstanceDomainProjection(eventstore, pool);
     registry.register(domainConfig, domainProjection);
+    
+    // Start both projections once for all tests
+    await Promise.all([
+      registry.start('instance_projection'),
+      registry.start('instance_domain_projection'),
+    ]);
 
     instanceQueries = new InstanceQueries(pool);
   });
 
   afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  afterEach(async () => {
+    // Stop projections
     const names = registry.getNames();
     for (const name of names) {
       try {
@@ -56,7 +63,13 @@ describe('Instance Projection Integration Tests', () => {
         // Ignore
       }
     }
+    
+    await closeTestDatabase();
   });
+
+  // Helper to wait for projection to process (fast with 100ms polling)
+  const waitForProjection = (ms: number = 300) => 
+    new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Instance Events', () => {
     it('should process instance.added event', async () => {
@@ -84,8 +97,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -98,7 +110,7 @@ describe('Instance Projection Integration Tests', () => {
         loginDefaultOrg: true,
         actions: true,
       });
-    }, 10000);
+    }, 5000);
 
     it('should process instance.changed event', async () => {
       const instanceID = generateId();
@@ -137,8 +149,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -146,7 +157,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(instance!.name).toBe('Updated Name');
       expect(instance!.defaultOrgID).toBe(defaultOrgID);
       expect(instance!.defaultLanguage).toBe('de');
-    }, 10000);
+    }, 5000);
 
     it('should process instance.removed event', async () => {
       const instanceID = generateId();
@@ -181,14 +192,13 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
       expect(instance).toBeTruthy();
       expect(instance!.state).toBe('removed');
-    }, 10000);
+    }, 5000);
 
     it('should process instance.features.set event', async () => {
       const instanceID = generateId();
@@ -228,8 +238,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const features = await instanceQueries.getInstanceFeatures(instanceID);
       
@@ -237,7 +246,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(features!.loginDefaultOrg).toBe(true);
       expect(features!.tokenExchange).toBe(true);
       expect(features!.improvedPerformance).toEqual(['caching', 'indexing']);
-    }, 10000);
+    }, 5000);
   });
 
   describe('Instance Domain Events', () => {
@@ -276,9 +285,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -287,7 +294,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(instance!.domains[0].domain).toBe('example.com');
       expect(instance!.domains[0].isPrimary).toBe(true);
       expect(instance!.primaryDomain).toBe('example.com');
-    }, 10000);
+    }, 5000);
 
     it('should resolve instance by host', async () => {
       const instanceID = generateId();
@@ -325,16 +332,14 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByHost(domain);
       
       expect(instance).toBeTruthy();
       expect(instance!.id).toBe(instanceID);
       expect(instance!.name).toBe('Host Resolution Test');
-    }, 10000);
+    }, 5000);
 
     it('should process instance.domain.primary.set event', async () => {
       const instanceID = generateId();
@@ -393,9 +398,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -407,7 +410,7 @@ describe('Instance Projection Integration Tests', () => {
       const primaryDomains = instance!.domains.filter(d => d.isPrimary);
       expect(primaryDomains).toHaveLength(1);
       expect(primaryDomains[0].domain).toBe('second.com');
-    }, 10000);
+    }, 5000);
 
     it('should process instance.domain.removed event', async () => {
       const instanceID = generateId();
@@ -454,15 +457,13 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
       expect(instance).toBeTruthy();
       expect(instance!.domains).toHaveLength(0);
-    }, 10000);
+    }, 5000);
   });
 
   describe('Instance Trusted Domain Events', () => {
@@ -499,9 +500,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const result = await instanceQueries.searchInstanceTrustedDomains({
         instanceID,
@@ -509,7 +508,7 @@ describe('Instance Projection Integration Tests', () => {
       
       expect(result.total).toBe(1);
       expect(result.domains[0].domain).toBe('trusted.com');
-    }, 10000);
+    }, 5000);
 
     it('should process instance.trusted_domain.removed event', async () => {
       const instanceID = generateId();
@@ -555,16 +554,14 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const result = await instanceQueries.searchInstanceTrustedDomains({
         instanceID,
       });
       
       expect(result.total).toBe(0);
-    }, 10000);
+    }, 5000);
   });
 
   describe('Query Methods', () => {
@@ -588,14 +585,13 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const instance = await instanceQueries.getDefaultInstance();
       
       expect(instance).toBeTruthy();
       // Should get the first active instance
-    }, 10000);
+    }, 5000);
 
     it('should search instance domains', async () => {
       const instanceID = generateId();
@@ -644,9 +640,7 @@ describe('Instance Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('instance_projection');
-      await registry.start('instance_domain_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       // Search all domains for instance
       const allResult = await instanceQueries.searchInstanceDomains({
@@ -669,6 +663,6 @@ describe('Instance Projection Integration Tests', () => {
       });
       expect(generatedResult.total).toBe(1);
       expect(generatedResult.domains[0].domain).toBe('search2.com');
-    }, 10000);
+    }, 5000);
   });
 });

@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
-import { DatabasePool } from '../../src/lib/database/pool';
-import { PostgresEventstore } from '../../src/lib/eventstore/postgres/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
-import { LoginNameProjection, createLoginNameProjectionConfig } from '../../src/lib/query/projections/login-name-projection';
-import { UserProjection, createUserProjectionConfig } from '../../src/lib/query/projections/user-projection';
-import { createOrgProjection, createOrgProjectionConfig } from '../../src/lib/query/projections/org-projection';
-import { createOrgDomainProjection, createOrgDomainProjectionConfig } from '../../src/lib/query/projections/org-domain-projection';
-import { Command } from '../../src/lib/eventstore';
-import { generateId } from '../../src/lib/id';
-import { OrgQueries } from '../../src/lib/query/org/org-queries';
-import { UserQueries } from '../../src/lib/query/user/user-queries';
-import { LoginNameQueries } from '../../src/lib/query/login-name/login-name-queries';
+import { createTestDatabase, closeTestDatabase, cleanDatabase } from '../setup';
+import { DatabasePool } from '../../../src/lib/database/pool';
+import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
+import { LoginNameProjection, createLoginNameProjectionConfig } from '../../../src/lib/query/projections/login-name-projection';
+import { UserProjection, createUserProjectionConfig } from '../../../src/lib/query/projections/user-projection';
+import { createOrgProjection, createOrgProjectionConfig } from '../../../src/lib/query/projections/org-projection';
+import { createOrgDomainProjection, createOrgDomainProjectionConfig } from '../../../src/lib/query/projections/org-domain-projection';
+import { Command } from '../../../src/lib/eventstore';
+import { generateId } from '../../../src/lib/id';
+import { OrgQueries } from '../../../src/lib/query/org/org-queries';
+import { UserQueries } from '../../../src/lib/query/user/user-queries';
+import { LoginNameQueries } from '../../../src/lib/query/login-name/login-name-queries';
 
 describe('Login Name Projection Integration Tests', () => {
   let pool: DatabasePool;

@@ -32,11 +32,20 @@ export abstract class Projection {
   protected readonly eventstore: Eventstore;
   protected readonly database: DatabasePool;
   protected readonly stateTracker: CurrentStateTracker;
+  protected currentTx?: QueryExecutor;
 
   constructor(eventstore: Eventstore, database: DatabasePool) {
     this.eventstore = eventstore;
     this.database = database;
     this.stateTracker = new CurrentStateTracker(database);
+  }
+
+  /**
+   * Set the current transaction executor
+   * Used internally by ProjectionHandler to enable transaction-aware reduce operations
+   */
+  setTransaction(tx: QueryExecutor | undefined): void {
+    this.currentTx = tx;
   }
 
   /**
@@ -115,18 +124,28 @@ export abstract class Projection {
 
   /**
    * Set current position of the projection
+   * 
+   * @param position - The position to set
+   * @param positionOffset - The offset within the position (default: 0)
+   * @param eventTimestamp - Optional timestamp of the event
+   * @param instanceID - Optional instance ID
+   * @param aggregateType - Optional aggregate type (for exact deduplication)
+   * @param aggregateID - Optional aggregate ID (for exact deduplication)
+   * @param sequence - Optional sequence number (for exact deduplication)
    */
   async setCurrentPosition(
     position: number,
-    eventTimestamp: Date,
-    instanceID: string | undefined,
-    aggregateType: string,
-    aggregateID: string,
-    sequence: number
+    positionOffset: number = 0,
+    eventTimestamp?: Date | null,
+    instanceID?: string | null,
+    aggregateType?: string | null,
+    aggregateID?: string | null,
+    sequence?: number | null
   ): Promise<void> {
     await this.stateTracker.updatePosition(
       this.name,
       position,
+      positionOffset,
       eventTimestamp,
       instanceID,
       aggregateType,
@@ -177,8 +196,12 @@ export abstract class Projection {
 
   /**
    * Execute a database query
+   * Uses current transaction if set, otherwise uses database pool
    */
   protected async query(sql: string, params?: any[]): Promise<any> {
+    if (this.currentTx) {
+      return this.currentTx.query(sql, params);
+    }
     return this.database.query(sql, params);
   }
 

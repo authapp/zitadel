@@ -20,7 +20,7 @@ class SimpleProjection extends Projection {
 
   async init(): Promise<void> {
     // Create table if needed
-    await this.database.query(`
+    await this.query(`
       CREATE TABLE IF NOT EXISTS test_simple (
         id TEXT PRIMARY KEY,
         data TEXT
@@ -30,7 +30,7 @@ class SimpleProjection extends Projection {
 
   async cleanup(): Promise<void> {
     // Drop table
-    await this.database.query('DROP TABLE IF EXISTS test_simple CASCADE');
+    await this.query('DROP TABLE IF EXISTS test_simple CASCADE');
   }
 }
 

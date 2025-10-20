@@ -4,19 +4,19 @@
  * Tests end-to-end event → projection → query workflow for OIDC/SAML/API apps
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { DatabasePool } from '../../src/lib/database';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
-import { DatabaseMigrator } from '../../src/lib/database/migrator';
-import { PostgresEventstore } from '../../src/lib/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { DatabasePool } from '../../../src/lib/database';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabaseMigrator } from '../../../src/lib/database/migrator';
+import { PostgresEventstore } from '../../../src/lib/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
 import { 
   createAppProjection,
   createAppProjectionConfig,
-} from '../../src/lib/query/projections/app-projection';
-import { AppQueries } from '../../src/lib/query/app/app-queries';
-import { AppState, AppType } from '../../src/lib/query/app/app-types';
-import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
+} from '../../../src/lib/query/projections/app-projection';
+import { AppQueries } from '../../../src/lib/query/app/app-queries';
+import { AppState, AppType } from '../../../src/lib/query/app/app-types';
+import { generateId as generateSnowflakeId } from '../../../src/lib/id/snowflake';
 
 describe('Application Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -25,17 +25,10 @@ describe('Application Projection Integration Tests', () => {
   let appQueries: AppQueries;
 
   beforeAll(async () => {
+    // Setup database and run migrations (automatically provides clean state)
     pool = await createTestDatabase();
     const migrator = new DatabaseMigrator(pool);
     await migrator.migrate();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase(pool);
     
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
@@ -49,15 +42,20 @@ describe('Application Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register app projection
+    // Register app projection with fast polling
     const appConfig = createAppProjectionConfig();
+    appConfig.interval = 100; // Fast polling for tests
     const appProjection = createAppProjection(eventstore, pool);
     registry.register(appConfig, appProjection);
+    
+    // Start projection once for all tests
+    await registry.start('app_projection');
     
     appQueries = new AppQueries(pool);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
+    // Stop projections
     const names = registry.getNames();
     for (const name of names) {
       try {
@@ -66,7 +64,13 @@ describe('Application Projection Integration Tests', () => {
         // Ignore
       }
     }
+    
+    await closeTestDatabase();
   });
+
+  // Helper to wait for projection to process (fast with 100ms polling)
+  const waitForProjection = (ms: number = 300) => 
+    new Promise(resolve => setTimeout(resolve, ms));
 
   describe('OIDC Application Events', () => {
     it('should process project.application.oidc.added event', async () => {
@@ -94,8 +98,7 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAppByID(appID);
       
@@ -107,7 +110,7 @@ describe('Application Projection Integration Tests', () => {
       const oidcApp = app as any;
       expect(oidcApp.config.clientId).toBe('oidc-client-123');
       expect(oidcApp.config.redirectUris).toContain('https://example.com/callback');
-    }, 10000);
+    }, 5000);
 
     it('should get OIDC app by client ID', async () => {
       const projectID = generateSnowflakeId();
@@ -132,15 +135,14 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getOIDCAppByClientID(clientId);
       
       expect(app).toBeTruthy();
       expect(app!.config.clientId).toBe(clientId);
       expect(app!.type).toBe(AppType.OIDC);
-    }, 10000);
+    }, 5000);
   });
 
   describe('SAML Application Events', () => {
@@ -164,8 +166,7 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAppByID(appID);
       
@@ -175,7 +176,7 @@ describe('Application Projection Integration Tests', () => {
       
       const samlApp = app as any;
       expect(samlApp.config.entityId).toBe('https://example.com/saml/entity');
-    }, 10000);
+    }, 5000);
 
     it('should get SAML app by entity ID', async () => {
       const projectID = generateSnowflakeId();
@@ -198,15 +199,14 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getSAMLAppByEntityID(entityId);
       
       expect(app).toBeTruthy();
       expect(app!.config.entityId).toBe(entityId);
       expect(app!.type).toBe(AppType.SAML);
-    }, 10000);
+    }, 5000);
   });
 
   describe('API Application Events', () => {
@@ -231,8 +231,7 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAppByID(appID);
       
@@ -243,7 +242,7 @@ describe('Application Projection Integration Tests', () => {
       const apiApp = app as any;
       expect(apiApp.config.clientId).toBe('api-client-123');
       expect(apiApp.config.authMethodType).toBe('private_key_jwt');
-    }, 10000);
+    }, 5000);
 
     it('should get API app by client ID', async () => {
       const projectID = generateSnowflakeId();
@@ -266,21 +265,21 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAPIAppByClientID(clientId);
       
       expect(app).toBeTruthy();
       expect(app!.config.clientId).toBe(clientId);
       expect(app!.type).toBe(AppType.API);
-    }, 10000);
+    }, 5000);
   });
 
   describe('Application State Management', () => {
     it('should process application deactivation', async () => {
       const projectID = generateSnowflakeId();
       const appID = generateSnowflakeId();
+      const clientId = 'deactivate-client-' + generateSnowflakeId();
       
       await eventstore.push({
         eventType: 'project.application.oidc.added',
@@ -290,7 +289,7 @@ describe('Application Projection Integration Tests', () => {
           appId: appID,
           projectId: projectID,
           name: 'Test App',
-          clientId: 'client-123',
+          clientId: clientId,
           redirectUris: ['https://example.com/callback'],
           appType: 'web',
           authMethodType: 'basic',
@@ -310,18 +309,18 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAppByID(appID);
       
       expect(app).toBeTruthy();
       expect(app!.state).toBe(AppState.INACTIVE);
-    }, 10000);
+    }, 5000);
 
     it('should process application removal', async () => {
       const projectID = generateSnowflakeId();
       const appID = generateSnowflakeId();
+      const clientId = 'remove-client-' + generateSnowflakeId();
       
       await eventstore.push({
         eventType: 'project.application.oidc.added',
@@ -331,7 +330,7 @@ describe('Application Projection Integration Tests', () => {
           appId: appID,
           projectId: projectID,
           name: 'Test App',
-          clientId: 'client-123',
+          clientId: clientId,
           redirectUris: ['https://example.com/callback'],
           appType: 'web',
           authMethodType: 'basic',
@@ -351,13 +350,12 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const app = await appQueries.getAppByID(appID);
       
       expect(app).toBeNull();
-    }, 10000);
+    }, 5000);
   });
 
   describe('Search and Lookup Methods', () => {
@@ -384,17 +382,17 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const foundProjectId = await appQueries.getProjectByClientID(clientId);
       
       expect(foundProjectId).toBe(projectID);
-    }, 10000);
+    }, 5000);
 
     it('should check if app exists', async () => {
       const projectID = generateSnowflakeId();
       const appID = generateSnowflakeId();
+      const clientId = 'exists-client-' + generateSnowflakeId();
       
       await eventstore.push({
         eventType: 'project.application.oidc.added',
@@ -404,7 +402,7 @@ describe('Application Projection Integration Tests', () => {
           appId: appID,
           projectId: projectID,
           name: 'Test App',
-          clientId: 'client-123',
+          clientId: clientId,
           redirectUris: ['https://example.com/callback'],
           appType: 'web',
           authMethodType: 'basic',
@@ -414,14 +412,13 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
 
-      await registry.start('app_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const exists = await appQueries.existsApp(appID);
       const notExists = await appQueries.existsApp('nonexistent-id');
       
       expect(exists).toBe(true);
       expect(notExists).toBe(false);
-    }, 10000);
+    }, 5000);
   });
 });

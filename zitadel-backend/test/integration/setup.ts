@@ -56,9 +56,12 @@ let testPool: DatabasePool | null = null;
 
 /**
  * Create and initialize test database using source code modules
+ * Always provides a clean database with fresh schema and no data
  */
 export async function createTestDatabase(): Promise<DatabasePool> {
   if (testPool) {
+    // Clean all data from existing pool to provide fresh state
+    await cleanDatabase(testPool);
     return testPool;
   }
 
@@ -77,6 +80,9 @@ export async function createTestDatabase(): Promise<DatabasePool> {
 
   // Initialize schema using DatabaseMigrator
   await initializeSchemaWithMigrator(testPool);
+  
+  // Clean any existing data to ensure fresh start
+  await cleanDatabase(testPool);
 
   return testPool;
 }
@@ -102,6 +108,7 @@ async function initializeSchemaWithMigrator(pool: DatabasePool): Promise<void> {
 /**
  * Clean all test data from database
  * Truncates only tables that exist in the migration system
+ * Always provides a completely fresh database state
  */
 export async function cleanDatabase(pool: DatabasePool): Promise<void> {
   const tables = [
@@ -117,8 +124,8 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     'sessions_projection',
     'login_names_projection',
     'projection_states',
-    'projection_current_states',
     'projection_failed_events',
+    'projection_locks',  // Critical for projection tests
     'unique_constraints',
     'events', // Events table MUST be cleaned
   ];

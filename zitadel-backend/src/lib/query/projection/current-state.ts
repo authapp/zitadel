@@ -22,9 +22,10 @@ export interface CurrentState {
   position: number;
 
   /**
-   * Timestamp of last processed event
+   * Offset within the same position (for multiple events in same transaction)
+   * Required for exact deduplication - Zitadel Go v2 pattern
    */
-  eventTimestamp: Date;
+  positionOffset: number;
 
   /**
    * Last update timestamp
@@ -32,24 +33,29 @@ export interface CurrentState {
   lastUpdated: Date;
 
   /**
-   * Instance ID that owns the lock
+   * Timestamp of last processed event (optional - for enhanced tracking)
    */
-  instanceID: string;
+  eventTimestamp?: Date | null;
 
   /**
-   * Last processed aggregate type
+   * Instance ID that owns the lock (optional - for multi-instance tracking)
    */
-  aggregateType: string;
+  instanceID?: string | null;
 
   /**
-   * Last processed aggregate ID
+   * Last processed aggregate type (optional - for exact deduplication)
    */
-  aggregateID: string;
+  aggregateType?: string | null;
 
   /**
-   * Last processed sequence number
+   * Last processed aggregate ID (optional - for exact deduplication)
    */
-  sequence: number;
+  aggregateID?: string | null;
+
+  /**
+   * Last processed sequence number (optional - for exact deduplication)
+   */
+  sequence?: number | null;
 }
 
 /**
@@ -57,7 +63,7 @@ export interface CurrentState {
  */
 export class CurrentStateTracker {
   private readonly database: DatabasePool;
-  private readonly tableName = 'projection_current_states';
+  private readonly tableName = 'projection_states';
 
   constructor(database: DatabasePool) {
     this.database = database;
@@ -69,16 +75,17 @@ export class CurrentStateTracker {
   async getCurrentState(projectionName: string): Promise<CurrentState | null> {
     const result = await this.database.query(
       `SELECT 
-        projection_name as "projectionName",
+        name as "projectionName",
         position,
+        position_offset as "positionOffset",
         event_timestamp as "eventTimestamp",
-        last_updated as "lastUpdated",
+        updated_at as "lastUpdated",
         instance_id as "instanceID",
         aggregate_type as "aggregateType",
         aggregate_id as "aggregateID",
         sequence
       FROM ${this.tableName}
-      WHERE projection_name = $1`,
+      WHERE name = $1`,
       [projectionName]
     );
 
@@ -95,40 +102,44 @@ export class CurrentStateTracker {
   async updatePosition(
     projectionName: string,
     position: number,
-    eventTimestamp: Date,
-    instanceID: string | undefined,
-    aggregateType: string,
-    aggregateID: string,
-    sequence: number
+    positionOffset: number,
+    eventTimestamp?: Date | null,
+    instanceID?: string | null,
+    aggregateType?: string | null,
+    aggregateID?: string | null,
+    sequence?: number | null
   ): Promise<void> {
     await this.database.query(
       `INSERT INTO ${this.tableName} (
-        projection_name,
+        name,
         position,
+        position_offset,
         event_timestamp,
-        last_updated,
+        updated_at,
         instance_id,
         aggregate_type,
         aggregate_id,
         sequence
-      ) VALUES ($1, $2, $3, NOW(), $4, $5, $6, $7)
-      ON CONFLICT (projection_name)
+      ) VALUES ($1, $2, $3, $4, NOW(), $5, $6, $7, $8)
+      ON CONFLICT (name)
       DO UPDATE SET
         position = EXCLUDED.position,
-        event_timestamp = EXCLUDED.event_timestamp,
-        last_updated = NOW(),
-        instance_id = EXCLUDED.instance_id,
-        aggregate_type = EXCLUDED.aggregate_type,
-        aggregate_id = EXCLUDED.aggregate_id,
-        sequence = EXCLUDED.sequence`,
+        position_offset = EXCLUDED.position_offset,
+        event_timestamp = COALESCE(EXCLUDED.event_timestamp, ${this.tableName}.event_timestamp),
+        updated_at = NOW(),
+        instance_id = COALESCE(EXCLUDED.instance_id, ${this.tableName}.instance_id),
+        aggregate_type = COALESCE(EXCLUDED.aggregate_type, ${this.tableName}.aggregate_type),
+        aggregate_id = COALESCE(EXCLUDED.aggregate_id, ${this.tableName}.aggregate_id),
+        sequence = COALESCE(EXCLUDED.sequence, ${this.tableName}.sequence)`,
       [
         projectionName,
         position,
-        eventTimestamp,
-        instanceID,
-        aggregateType,
-        aggregateID,
-        sequence,
+        positionOffset,
+        eventTimestamp ?? null,
+        instanceID ?? null,
+        aggregateType ?? null,
+        aggregateID ?? null,
+        sequence ?? null,
       ]
     );
   }
@@ -138,7 +149,7 @@ export class CurrentStateTracker {
    */
   async getLastEventTimestamp(projectionName: string): Promise<Date | null> {
     const result = await this.database.query(
-      `SELECT event_timestamp FROM ${this.tableName} WHERE projection_name = $1`,
+      `SELECT event_timestamp FROM ${this.tableName} WHERE name = $1`,
       [projectionName]
     );
 
@@ -152,22 +163,29 @@ export class CurrentStateTracker {
   /**
    * Get all projection states
    */
-  async getAllStates(): Promise<CurrentState[]> {
+  async getAllProjectionStates(): Promise<CurrentState[]> {
     const result = await this.database.query(
       `SELECT 
-        projection_name as "projectionName",
+        name as "projectionName",
         position,
         event_timestamp as "eventTimestamp",
-        last_updated as "lastUpdated",
+        updated_at as "lastUpdated",
         instance_id as "instanceID",
         aggregate_type as "aggregateType",
         aggregate_id as "aggregateID",
         sequence
       FROM ${this.tableName}
-      ORDER BY projection_name`
+      ORDER BY name`
     );
 
     return result.rows as CurrentState[];
+  }
+
+  /**
+   * Alias for getAllProjectionStates for backwards compatibility
+   */
+  async getAllStates(): Promise<CurrentState[]> {
+    return this.getAllProjectionStates();
   }
 
   /**
@@ -175,7 +193,7 @@ export class CurrentStateTracker {
    */
   async deleteState(projectionName: string): Promise<void> {
     await this.database.query(
-      `DELETE FROM ${this.tableName} WHERE projection_name = $1`,
+      `DELETE FROM ${this.tableName} WHERE name = $1`,
       [projectionName]
     );
   }
@@ -197,25 +215,11 @@ export class CurrentStateTracker {
 
   /**
    * Initialize state table if not exists
+   * Note: The table is created by migrations (002_01, 002_50, 002_51)
+   * This method now only ensures the monitoring index exists
    */
   async init(): Promise<void> {
-    await this.database.query(`
-      CREATE TABLE IF NOT EXISTS ${this.tableName} (
-        projection_name TEXT PRIMARY KEY,
-        position DECIMAL NOT NULL DEFAULT 0,
-        event_timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        last_updated TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        instance_id TEXT,
-        aggregate_type TEXT NOT NULL DEFAULT '',
-        aggregate_id TEXT NOT NULL DEFAULT '',
-        sequence BIGINT NOT NULL DEFAULT 0
-      )
-    `);
-
-    // Create index on last_updated for monitoring
-    await this.database.query(`
-      CREATE INDEX IF NOT EXISTS idx_current_states_last_updated 
-      ON ${this.tableName} (last_updated DESC)
-    `);
+    // Index is created by migration 002_51 - no action needed
+    // Just ensure table exists (already created by migration 002_01)
   }
 }

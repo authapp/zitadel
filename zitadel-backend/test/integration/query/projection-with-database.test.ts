@@ -26,7 +26,7 @@ class UserCountProjection extends Projection {
 
   async init(): Promise<void> {
     // Create projection tables
-    await this.database.query(`
+    await this.query(`
       CREATE TABLE IF NOT EXISTS test_user_counts (
         instance_id TEXT PRIMARY KEY,
         count INTEGER DEFAULT 0,
@@ -34,28 +34,16 @@ class UserCountProjection extends Projection {
       )
     `);
 
-    // Create state tracking table that the projection system expects
-    await this.database.query(`
-      CREATE TABLE IF NOT EXISTS projection_current_states (
-        projection_name TEXT PRIMARY KEY,
-        position DECIMAL NOT NULL DEFAULT 0,
-        event_timestamp TIMESTAMPTZ,
-        last_updated TIMESTAMPTZ DEFAULT NOW(),
-        instance_id TEXT,
-        aggregate_type TEXT,
-        aggregate_id TEXT,
-        sequence BIGINT
-      )
-    `);
+    // State tracking table is created by migrations (projection_states)
+    // No need to create it here
   }
 
   async cleanup(): Promise<void> {
-    await this.database.query('DROP TABLE IF EXISTS test_user_counts CASCADE');
-    await this.database.query('DROP TABLE IF EXISTS projection_current_states CASCADE');
+    await this.query('DROP TABLE IF EXISTS test_user_counts CASCADE');
   }
 
   private async incrementUserCount(instanceID: string): Promise<void> {
-    await this.database.query(`
+    await this.query(`
       INSERT INTO test_user_counts (instance_id, count, updated_at)
       VALUES ($1, 1, NOW())
       ON CONFLICT (instance_id)
@@ -64,7 +52,7 @@ class UserCountProjection extends Projection {
   }
 
   private async decrementUserCount(instanceID: string): Promise<void> {
-    await this.database.query(`
+    await this.query(`
       UPDATE test_user_counts 
       SET count = GREATEST(count - 1, 0), updated_at = NOW()
       WHERE instance_id = $1
@@ -226,6 +214,7 @@ describe('Projection Integration with Database', () => {
 
       await projection.setCurrentPosition(
         100,
+        0, // positionOffset
         new Date(),
         'test-instance',
         'user',

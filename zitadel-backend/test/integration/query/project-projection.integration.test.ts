@@ -4,23 +4,23 @@
  * Tests end-to-end event → projection → query workflow
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { DatabasePool } from '../../src/lib/database';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
-import { DatabaseMigrator } from '../../src/lib/database/migrator';
-import { PostgresEventstore } from '../../src/lib/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { DatabasePool } from '../../../src/lib/database';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabaseMigrator } from '../../../src/lib/database/migrator';
+import { PostgresEventstore } from '../../../src/lib/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
 import { 
   createProjectProjection,
   createProjectProjectionConfig,
-} from '../../src/lib/query/projections/project-projection';
+} from '../../../src/lib/query/projections/project-projection';
 import {
   createProjectRoleProjection,
   createProjectRoleProjectionConfig,
-} from '../../src/lib/query/projections/project-role-projection';
-import { ProjectQueries } from '../../src/lib/query/project/project-queries';
-import { ProjectState } from '../../src/lib/query/project/project-types';
-import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
+} from '../../../src/lib/query/projections/project-role-projection';
+import { ProjectQueries } from '../../../src/lib/query/project/project-queries';
+import { ProjectState } from '../../../src/lib/query/project/project-types';
+import { generateId as generateSnowflakeId } from '../../../src/lib/id/snowflake';
 
 describe('Project Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -29,23 +29,18 @@ describe('Project Projection Integration Tests', () => {
   let projectQueries: ProjectQueries;
 
   beforeAll(async () => {
+    // Setup database and run migrations (automatically provides clean state)
     pool = await createTestDatabase();
     const migrator = new DatabaseMigrator(pool);
     await migrator.migrate();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase(pool);
     
+    // Create eventstore
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
     });
     
+    // Create projection registry
     registry = new ProjectionRegistry({
       eventstore,
       database: pool,
@@ -53,20 +48,29 @@ describe('Project Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register project projection
+    // Register project projection with fast polling
     const projectConfig = createProjectProjectionConfig();
+    projectConfig.interval = 100; // Fast polling for tests
     const projectProjection = createProjectProjection(eventstore, pool);
     registry.register(projectConfig, projectProjection);
     
-    // Register project role projection
+    // Register project role projection with fast polling
     const roleConfig = createProjectRoleProjectionConfig();
+    roleConfig.interval = 100; // Fast polling for tests
     const roleProjection = createProjectRoleProjection(eventstore, pool);
     registry.register(roleConfig, roleProjection);
+    
+    // Start projections once for all tests
+    await Promise.all([
+      registry.start('project_projection'),
+      registry.start('project_role_projection'),
+    ]);
     
     projectQueries = new ProjectQueries(pool);
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
+    // Stop projections
     const names = registry.getNames();
     for (const name of names) {
       try {
@@ -75,7 +79,13 @@ describe('Project Projection Integration Tests', () => {
         // Ignore
       }
     }
+    
+    await closeTestDatabase();
   });
+
+  // Helper to wait for projection to process (fast with 100ms polling)
+  const waitForProjection = (ms: number = 300) => 
+    new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Project Events', () => {
     it('should process project.added event', async () => {
@@ -98,11 +108,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
@@ -112,7 +118,7 @@ describe('Project Projection Integration Tests', () => {
       expect(project!.projectRoleCheck).toBe(false);
       expect(project!.hasProjectCheck).toBe(true);
       expect(project!.resourceOwner).toBe('org-123');
-    }, 12000);
+    }, 5000);
 
     it('should process project.changed event', async () => {
       const projectID = generateSnowflakeId();
@@ -138,16 +144,12 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
       expect(project!.name).toBe('Updated Name');
-    }, 12000);
+    }, 5000);
 
     it('should process project.deactivated event', async () => {
       const projectID = generateSnowflakeId();
@@ -173,16 +175,12 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
       expect(project!.state).toBe(ProjectState.INACTIVE);
-    }, 12000);
+    }, 5000);
 
     it('should process project.reactivated event', async () => {
       const projectID = generateSnowflakeId();
@@ -217,16 +215,12 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
       expect(project!.state).toBe(ProjectState.ACTIVE);
-    }, 12000);
+    }, 5000);
   });
 
   describe('Project Role Events', () => {
@@ -258,18 +252,14 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(1);
       expect(roles[0].roleKey).toBe('admin');
       expect(roles[0].displayName).toBe('Administrator');
       expect(roles[0].group).toBe('management');
-    }, 12000);
+    }, 5000);
 
     it('should process project.role.changed event', async () => {
       const projectID = generateSnowflakeId();
@@ -310,16 +300,12 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(1);
       expect(roles[0].displayName).toBe('Administrator');
-    }, 12000);
+    }, 5000);
 
     it('should process project.role.removed event', async () => {
       const projectID = generateSnowflakeId();
@@ -357,15 +343,11 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(0);
-    }, 12000);
+    }, 5000);
   });
 
   describe('Query Methods', () => {
@@ -402,11 +384,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const result = await projectQueries.getProjectWithRoles(projectID);
       expect(result).toBeDefined();
@@ -414,7 +392,7 @@ describe('Project Projection Integration Tests', () => {
       expect(result!.roles).toHaveLength(2);
       expect(result!.roles.map(r => r.roleKey)).toContain('admin');
       expect(result!.roles.map(r => r.roleKey)).toContain('viewer');
-    }, 12000);
+    }, 5000);
 
     it('should search projects', async () => {
       const project1ID = generateSnowflakeId();
@@ -441,15 +419,11 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await Promise.all([
-        registry.start('project_projection'),
-        registry.start('project_role_projection'),
-      ]);
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      await waitForProjection();
       
       const result = await projectQueries.searchProjects({ resourceOwner: 'org-123' });
       expect(result.projects.length).toBeGreaterThanOrEqual(2);
       expect(result.total).toBeGreaterThanOrEqual(2);
-    }, 12000);
+    }, 5000);
   });
 });

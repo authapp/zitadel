@@ -5,22 +5,22 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import { DatabasePool } from '../../src/lib/database';
-import { createTestDatabase, closeTestDatabase } from './setup';
-import { DatabaseMigrator } from '../../src/lib/database/migrator';
-import { PostgresEventstore } from '../../src/lib/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
+import { DatabasePool } from '../../../src/lib/database';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabaseMigrator } from '../../../src/lib/database/migrator';
+import { PostgresEventstore } from '../../../src/lib/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
 import { 
   createOrgProjection,
   createOrgProjectionConfig,
-} from '../../src/lib/query/projections/org-projection';
+} from '../../../src/lib/query/projections/org-projection';
 import {
   createOrgDomainProjection,
   createOrgDomainProjectionConfig,
-} from '../../src/lib/query/projections/org-domain-projection';
-import { OrgQueries } from '../../src/lib/query/org/org-queries';
-import { OrgState } from '../../src/lib/query/org/org-types';
-import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
+} from '../../../src/lib/query/projections/org-domain-projection';
+import { OrgQueries } from '../../../src/lib/query/org/org-queries';
+import { OrgState } from '../../../src/lib/query/org/org-types';
+import { generateId as generateSnowflakeId } from '../../../src/lib/id/snowflake';
 
 describe('Organization Projection Integration Tests', () => {
   let pool: DatabasePool;

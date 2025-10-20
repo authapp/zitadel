@@ -1,13 +1,13 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
-import { DatabasePool } from '../../src/lib/database/pool';
-import { PostgresEventstore } from '../../src/lib/eventstore/postgres/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
-import { SessionProjection, createSessionProjectionConfig } from '../../src/lib/query/projections/session-projection';
-import { SessionQueries } from '../../src/lib/query/session/session-queries';
-import { SessionState } from '../../src/lib/query/session/session-types';
-import { Command } from '../../src/lib/eventstore';
-import { generateId } from '../../src/lib/id';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabasePool } from '../../../src/lib/database/pool';
+import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
+import { SessionProjection, createSessionProjectionConfig } from '../../../src/lib/query/projections/session-projection';
+import { SessionQueries } from '../../../src/lib/query/session/session-queries';
+import { SessionState } from '../../../src/lib/query/session/session-types';
+import { Command } from '../../../src/lib/eventstore';
+import { generateId } from '../../../src/lib/id';
 
 describe('Session Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -16,7 +16,9 @@ describe('Session Projection Integration Tests', () => {
   let sessionQueries: SessionQueries;
 
   beforeAll(async () => {
+    // Setup database and run migrations (automatically provides clean state)
     pool = await createTestDatabase();
+    
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
@@ -30,24 +32,20 @@ describe('Session Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register session projection
+    // Register session projection with fast polling
     const sessionConfig = createSessionProjectionConfig();
+    sessionConfig.interval = 100; // Fast polling for tests
     const sessionProjection = new SessionProjection(eventstore, pool);
     registry.register(sessionConfig, sessionProjection);
+    
+    // Start projection once for all tests
+    await registry.start('session_projection');
 
     sessionQueries = new SessionQueries(pool);
   });
 
   afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase(pool);
-  });
-
-  afterEach(async () => {
-    // Stop all projections
+    // Stop projections
     const names = registry.getNames();
     for (const name of names) {
       try {
@@ -56,7 +54,13 @@ describe('Session Projection Integration Tests', () => {
         // Ignore if already stopped
       }
     }
+    
+    await closeTestDatabase();
   });
+
+  // Helper to wait for projection to process (fast with 100ms polling)
+  const waitForProjection = (ms: number = 300) => 
+    new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Session Events', () => {
     it('should process session.created event', async () => {
@@ -84,8 +88,7 @@ describe('Session Projection Integration Tests', () => {
 
       await eventstore.push(command);
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -99,7 +102,7 @@ describe('Session Projection Integration Tests', () => {
         origin: 'web',
         device: 'desktop',
       });
-    }, 10000);
+    }, 5000);
 
     it('should process session.updated event', async () => {
       const sessionID = generateId();
@@ -141,8 +144,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -150,7 +152,7 @@ describe('Session Projection Integration Tests', () => {
       expect(session!.userAgent).toBe('New Agent');
       expect(session!.clientIP).toBe('192.168.1.2');
       expect(session!.metadata).toEqual({ updated: 'true' });
-    }, 10000);
+    }, 5000);
 
     it('should process session.terminated event', async () => {
       const sessionID = generateId();
@@ -186,15 +188,14 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
       expect(session).toBeTruthy();
       expect(session!.state).toBe(SessionState.TERMINATED);
       expect(session!.terminatedAt).toBeTruthy();
-    }, 10000);
+    }, 5000);
 
     it('should process session.token.set event', async () => {
       const sessionID = generateId();
@@ -236,8 +237,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -246,7 +246,7 @@ describe('Session Projection Integration Tests', () => {
       expect(session!.tokens[0].tokenID).toBe(tokenID);
       expect(session!.tokens[0].token).toBe('secret-token-value');
       expect(session!.tokens[0].expiry.getTime()).toBeCloseTo(expiry.getTime(), -2);
-    }, 10000);
+    }, 5000);
 
     it('should process session.factor.set event', async () => {
       const sessionID = generateId();
@@ -289,8 +289,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -299,7 +298,7 @@ describe('Session Projection Integration Tests', () => {
       expect(session!.factors[0].type).toBe('password');
       expect(session!.factors[0].verified).toBe(true);
       expect(session!.factors[0].metadata.strength).toBe('strong');
-    }, 10000);
+    }, 5000);
 
     it('should process session.metadata.set event', async () => {
       const sessionID = generateId();
@@ -341,15 +340,14 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
       expect(session).toBeTruthy();
       expect(session!.metadata.initial).toBe('value');
       expect(session!.metadata.custom).toBe('metadata-value');
-    }, 10000);
+    }, 5000);
 
     it('should process session.metadata.deleted event', async () => {
       const sessionID = generateId();
@@ -391,15 +389,14 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
       expect(session).toBeTruthy();
       expect(session!.metadata.keep).toBe('this');
       expect(session!.metadata.delete).toBeUndefined();
-    }, 10000);
+    }, 5000);
   });
 
   describe('Query Methods', () => {
@@ -442,8 +439,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const result = await sessionQueries.searchSessions({
         instanceID,
@@ -458,7 +454,7 @@ describe('Session Projection Integration Tests', () => {
       const foundSession2 = result.sessions.find(s => s.id === session2ID);
       expect(foundSession1).toBeTruthy();
       expect(foundSession2).toBeTruthy();
-    }, 10000);
+    }, 5000);
 
     it('should get active sessions count', async () => {
       const instanceID = 'test-instance';
@@ -522,8 +518,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const result = await sessionQueries.getActiveSessionsCount({
         instanceID,
@@ -531,7 +526,7 @@ describe('Session Projection Integration Tests', () => {
       });
       
       expect(result.count).toBeGreaterThanOrEqual(2);
-    }, 10000);
+    }, 5000);
 
     it('should get user active sessions', async () => {
       const instanceID = 'test-instance';
@@ -572,8 +567,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const sessions = await sessionQueries.getUserActiveSessions(userID, instanceID);
       
@@ -582,7 +576,7 @@ describe('Session Projection Integration Tests', () => {
         expect(session.userID).toBe(userID);
         expect(session.state).toBe(SessionState.ACTIVE);
       });
-    }, 10000);
+    }, 5000);
 
     it('should check if session is active', async () => {
       const sessionID = generateId();
@@ -605,13 +599,12 @@ describe('Session Projection Integration Tests', () => {
 
       await eventstore.push(command);
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const isActive = await sessionQueries.isSessionActive(sessionID, instanceID);
       
       expect(isActive).toBe(true);
-    }, 10000);
+    }, 5000);
 
     it('should get session summary', async () => {
       const sessionID = generateId();
@@ -666,8 +659,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await registry.start('session_projection');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await waitForProjection();
 
       const summary = await sessionQueries.getSessionSummary(sessionID, instanceID);
       
@@ -676,6 +668,6 @@ describe('Session Projection Integration Tests', () => {
       expect(summary!.userID).toBe(userID);
       expect(summary!.verifiedFactors).toContain('password');
       expect(summary!.validTokenCount).toBe(1);
-    }, 10000);
+    }, 5000);
   });
 });

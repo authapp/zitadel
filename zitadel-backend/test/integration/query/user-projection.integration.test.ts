@@ -4,19 +4,19 @@
  * Tests the user projection using ProjectionRegistry system
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { DatabasePool } from '../../src/lib/database';
-import { createTestDatabase, closeTestDatabase, cleanDatabase } from './setup';
-import { DatabaseMigrator } from '../../src/lib/database/migrator';
-import { PostgresEventstore } from '../../src/lib/eventstore';
-import { ProjectionRegistry } from '../../src/lib/query/projection/projection-registry';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { DatabasePool } from '../../../src/lib/database';
+import { createTestDatabase, closeTestDatabase } from '../setup';
+import { DatabaseMigrator } from '../../../src/lib/database/migrator';
+import { PostgresEventstore } from '../../../src/lib/eventstore';
+import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
 import { 
   UserProjection, 
   createUserProjection,
   createUserProjectionConfig
-} from '../../src/lib/query/projections/user-projection';
-import { UserRepository } from '../../src/lib/repositories/user-repository';
-import { generateId as generateSnowflakeId } from '../../src/lib/id/snowflake';
+} from '../../../src/lib/query/projections/user-projection';
+import { UserRepository } from '../../../src/lib/repositories/user-repository';
+import { generateId as generateSnowflakeId } from '../../../src/lib/id/snowflake';
 
 describe('User Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -26,24 +26,18 @@ describe('User Projection Integration Tests', () => {
   let projection: UserProjection;
 
   beforeAll(async () => {
+    // Setup database and run migrations (automatically provides clean state)
     pool = await createTestDatabase();
     const migrator = new DatabaseMigrator(pool);
     await migrator.migrate();
-  });
-
-  afterAll(async () => {
-    await closeTestDatabase();
-  });
-
-  beforeEach(async () => {
-    await cleanDatabase(pool);
     
-    // Create fresh instances
+    // Create eventstore
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
     });
     
+    // Create projection registry
     registry = new ProjectionRegistry({
       eventstore,
       database: pool,
@@ -51,16 +45,23 @@ describe('User Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Create and register user projection with separate config
+    // Create and register user projection with fast polling interval
     const config = createUserProjectionConfig();
+    config.interval = 100; // Fast polling for tests
     projection = createUserProjection(eventstore, pool);
     registry.register(config, projection);
+    
+    // Start the projection once for all tests
+    await registry.start('user_projection');
+    
+    // Wait a bit for projection to fully start
+    await waitForProjection();
     
     userRepo = new UserRepository(pool);
   });
 
-  afterEach(async () => {
-    // Stop all projections
+  afterAll(async () => {
+    // Stop projections
     const names = registry.getNames();
     for (const name of names) {
       try {
@@ -69,11 +70,12 @@ describe('User Projection Integration Tests', () => {
         // Ignore errors if already stopped
       }
     }
+    
+    await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process
-  // Projections poll every 1s, so we wait longer to ensure processing
-  const waitForProjection = (ms: number = 4000) => 
+  // Helper to wait for projection to process (fast with 100ms polling)
+  const waitForProjection = (ms: number = 200) => 
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Projection Registration', () => {
@@ -90,8 +92,6 @@ describe('User Projection Integration Tests', () => {
 
   describe('Event Processing', () => {
     it('should process user.added event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       await eventstore.push({
         eventType: 'user.added',
@@ -121,8 +121,6 @@ describe('User Projection Integration Tests', () => {
     }, 10000);
 
     it('should process user.changed event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       // Create user
@@ -167,8 +165,6 @@ describe('User Projection Integration Tests', () => {
     }, 15000);
 
     it('should process user.email.changed event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       await eventstore.push({
@@ -207,8 +203,6 @@ describe('User Projection Integration Tests', () => {
     }, 15000);
 
     it('should process user.email.verified event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       await eventstore.push({
@@ -245,8 +239,6 @@ describe('User Projection Integration Tests', () => {
     }, 15000);
 
     it('should process user.deactivated event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       await eventstore.push({
@@ -284,8 +276,6 @@ describe('User Projection Integration Tests', () => {
     }, 15000);
 
     it('should process user.locked event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       await eventstore.push({
@@ -320,8 +310,6 @@ describe('User Projection Integration Tests', () => {
     }, 15000);
 
     it('should process user.removed event', async () => {
-      await registry.start('user_projection');
-      
       const userId = generateSnowflakeId();
       
       await eventstore.push({
@@ -359,8 +347,6 @@ describe('User Projection Integration Tests', () => {
 
   describe('Projection Health', () => {
     it('should report health status', async () => {
-      await registry.start('user_projection');
-      
       const health = await registry.getProjectionHealth('user_projection');
       
       expect(health).toBeDefined();
@@ -371,8 +357,6 @@ describe('User Projection Integration Tests', () => {
 
   describe('Batch Processing', () => {
     it('should process multiple user events', async () => {
-      await registry.start('user_projection');
-      
       const userIds: string[] = [];
       for (let i = 0; i < 5; i++) {
         const userId = generateSnowflakeId();
@@ -394,7 +378,7 @@ describe('User Projection Integration Tests', () => {
         });
       }
       
-      await waitForProjection(3000);
+      await waitForProjection();
       
       for (const userId of userIds) {
         const user = await userRepo.findById(userId);

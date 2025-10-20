@@ -157,7 +157,7 @@ export class FailedEventHandler {
       failedSequence: row.failedSequence,
       failureCount: row.failureCount,
       error: row.error,
-      event: JSON.parse(row.eventData),
+      event: typeof row.eventData === 'string' ? JSON.parse(row.eventData) : row.eventData,
       lastFailed: row.lastFailed,
       instanceID: row.instanceID,
     };
@@ -189,7 +189,7 @@ export class FailedEventHandler {
       failedSequence: row.failedSequence,
       failureCount: row.failureCount,
       error: row.error,
-      event: JSON.parse(row.eventData),
+      event: typeof row.eventData === 'string' ? JSON.parse(row.eventData) : row.eventData,
       lastFailed: row.lastFailed,
       instanceID: row.instanceID,
     }));
@@ -291,7 +291,7 @@ export class FailedEventHandler {
       failedSequence: row.failedSequence,
       failureCount: row.failureCount,
       error: row.error,
-      event: JSON.parse(row.eventData),
+      event: typeof row.eventData === 'string' ? JSON.parse(row.eventData) : row.eventData,
       lastFailed: row.lastFailed,
       instanceID: row.instanceID,
     }));

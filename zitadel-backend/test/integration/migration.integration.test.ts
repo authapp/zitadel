@@ -87,7 +87,9 @@ describe('Migration System Integration', () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      expect(version).toBe(42); // We have 42 migration steps (includes unique_constraints + notification_config + org + project + app + instance + session + login name projections)
+      // Consolidated projection_states migrations: removed 002_02, 002_03, 002_17, 002_50, 002_51
+      // All columns and indexes now in 002_01
+      expect(version).toBe(39); // Updated count after consolidation (39 migrations)
     });
   });
 
@@ -113,8 +115,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should still only have 42 records (one per migration step)
-      expect(migrations.length).toBe(42);
+      // Should still only have 39 records (one per migration step)
+      expect(migrations.length).toBe(39);
     });
   });
 
@@ -128,7 +130,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(42);
+      expect(migrations1.length).toBe(39);
     });
 
     it('should skip already applied migrations', async () => {
@@ -160,9 +162,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(42);
+      expect(applied.length).toBe(39);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(42);
+      expect(applied[applied.length - 1].version).toBe(39);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });
@@ -284,6 +286,64 @@ describe('Migration System Integration', () => {
       expect(columnNames).toContain('metadata_value');
       expect(columnNames).toContain('metadata_type');
       expect(columnNames).toContain('scope');
+    });
+
+    it('should create projection_states table with all required columns', async () => {
+      await migrator.migrate();
+
+      const columns = await pool.queryMany<{ column_name: string; is_nullable: string }>(
+        `SELECT column_name, is_nullable
+         FROM information_schema.columns 
+         WHERE table_name = 'projection_states'
+         ORDER BY ordinal_position`
+      );
+
+      const columnNames = columns.map(c => c.column_name);
+      
+      // Core tracking columns
+      expect(columnNames).toContain('name');
+      expect(columnNames).toContain('position');
+      expect(columnNames).toContain('position_offset');
+      
+      // Timestamp columns
+      expect(columnNames).toContain('last_processed_at');
+      expect(columnNames).toContain('created_at');
+      expect(columnNames).toContain('updated_at');
+      
+      // Status columns
+      expect(columnNames).toContain('status');
+      expect(columnNames).toContain('error_count');
+      expect(columnNames).toContain('last_error');
+      
+      // Enhanced tracking columns (nullable)
+      expect(columnNames).toContain('event_timestamp');
+      expect(columnNames).toContain('instance_id');
+      expect(columnNames).toContain('aggregate_type');
+      expect(columnNames).toContain('aggregate_id');
+      expect(columnNames).toContain('sequence');
+      
+      // Verify nullable fields
+      const nullableColumns = columns.filter(c => c.is_nullable === 'YES').map(c => c.column_name);
+      expect(nullableColumns).toContain('event_timestamp');
+      expect(nullableColumns).toContain('instance_id');
+      expect(nullableColumns).toContain('aggregate_type');
+      expect(nullableColumns).toContain('aggregate_id');
+      expect(nullableColumns).toContain('sequence');
+    });
+
+    it('should create all projection_states indexes', async () => {
+      await migrator.migrate();
+
+      const indexes = await pool.queryMany<{ indexname: string }>(
+        `SELECT indexname FROM pg_indexes 
+         WHERE tablename = 'projection_states'`
+      );
+
+      const indexNames = indexes.map(i => i.indexname);
+      expect(indexNames).toContain('idx_projection_states_status');
+      expect(indexNames).toContain('idx_projection_states_position');
+      expect(indexNames).toContain('idx_projection_states_position_offset');
+      expect(indexNames).toContain('idx_projection_states_updated_at');
     });
   });
 
