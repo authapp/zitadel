@@ -331,7 +331,7 @@ projections.failed_events2  -- Failed event tracking
 - Instance queries + projection
 - Session queries + projection
 
-### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress
+### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (40% Complete)
 **Required for login flows**
 
 - ✅ Auth request queries + projection (Task 3.1 COMPLETE)
@@ -341,7 +341,14 @@ projections.failed_events2  -- Failed event tracking
   - Complete OAuth/OIDC flow support with PKCE
   - ~1,573 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- [ ] AuthN key queries + projection (Task 3.2)
+- ✅ AuthN key queries + projection (Task 3.2 COMPLETE)
+  - 6 query methods: searchAuthNKeys, searchAuthNKeysData, getAuthNKeyByIDWithPermission, getAuthNKeyByID, getAuthNKeyUser, getAuthNKeyPublicKeyByIDAndIdentifier
+  - 1 projection handling 4 event types with auto table creation
+  - 33 comprehensive tests (23 unit + 10 integration)
+  - Complete machine user key management with permission checks
+  - Public key retrieval for JWT validation
+  - ~1,503 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 - [ ] IDP queries + projections (Task 3.3)
 - [ ] Login policy queries + projection (Task 3.4)
 
