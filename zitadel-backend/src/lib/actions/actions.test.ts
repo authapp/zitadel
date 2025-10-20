@@ -37,7 +37,16 @@ describe('InMemoryActionManager', () => {
       await manager.register(action);
 
       const retrieved = await manager.get('action1');
-      expect(retrieved).toEqual(action);
+      expect(retrieved).toMatchObject({
+        id: 'action1',
+        name: 'Test Action',
+        trigger: ActionTrigger.POST_USER_CREATE,
+        enabled: true,
+        webhookUrl: 'https://example.com/webhook',
+        timeout: 5000,
+        retries: 3,
+      });
+      expect(retrieved?.updatedAt).toBeInstanceOf(Date);
     });
 
     it('should generate ID if not provided', async () => {

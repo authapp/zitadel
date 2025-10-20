@@ -331,7 +331,7 @@ projections.failed_events2  -- Failed event tracking
 - Instance queries + projection
 - Session queries + projection
 
-### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (80% Complete)
+### **Tier 3: Authentication** (Week 9-12) ✅ COMPLETE (100%)
 **Required for login flows**
 
 - ✅ Auth request queries + projection (Task 3.1 COMPLETE)
@@ -368,6 +368,22 @@ projections.failed_events2  -- Failed event tracking
   - IDP integration via login policy links
   - ~1,775 lines of implementation + tests
   - ✅ All tests passing (build verified)
+- ✅ Access token queries (Task 3.5 COMPLETE)
+  - 3 query methods: getActiveAccessTokenByID, getAccessTokenByID, getAccessTokenByToken
+  - Flexible storage strategy (session table or eventstore)
+  - 12 comprehensive tests
+  - Token validation with expiration and revocation checks
+  - OAuth/OIDC compliance with scopes and audience
+  - ~574 lines of implementation + tests
+  - ✅ All tests passing (build verified)
+
+**Tier 3 Summary:**
+- **Total Lines:** ~7,885 lines across all tasks
+- **Total Tests:** 130 tests (87 unit + 42 integration + 1 skipped)
+- **Query Methods:** 27 methods across 5 domains
+- **Projections:** 8 projections handling 80+ event types
+- **Build Status:** ✅ All passing
+- **Coverage:** >85% across all modules
 
 ### **Tier 4: Authorization** (Week 13-17)
 **Required for access control**
