@@ -331,7 +331,7 @@ projections.failed_events2  -- Failed event tracking
 - Instance queries + projection
 - Session queries + projection
 
-### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (60% Complete)
+### **Tier 3: Authentication** (Week 9-12) 🟡 In Progress (80% Complete)
 **Required for login flows**
 
 - ✅ Auth request queries + projection (Task 3.1 COMPLETE)
@@ -358,7 +358,16 @@ projections.failed_events2  -- Failed event tracking
   - Template management for reusable IDP configs
   - ~2,460 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- [ ] Login policy queries + projection (Task 3.4)
+- ✅ Login policy queries + projection (Task 3.4 COMPLETE)
+  - 7 query methods: getActiveLoginPolicy, getLoginPolicy, getLoginPolicyByID, getDefaultLoginPolicy, searchLoginPolicies, getActiveIDPs, getSecondFactorsPolicy
+  - 1 projection with 2 tables handling 15 event types with auto table creation
+  - 27 comprehensive tests (16 unit + 11 integration)
+  - Complete authentication policy management with MFA support
+  - Policy inheritance (org→instance) implementation
+  - Second and multi-factor authentication configuration
+  - IDP integration via login policy links
+  - ~1,775 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 
 ### **Tier 4: Authorization** (Week 13-17)
 **Required for access control**
