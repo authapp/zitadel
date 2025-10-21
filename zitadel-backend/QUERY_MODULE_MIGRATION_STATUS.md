@@ -385,7 +385,7 @@ projections.failed_events2  -- Failed event tracking
 - **Build Status:** ✅ All passing
 - **Coverage:** >85% across all modules
 
-### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (40% Complete)
+### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (60% Complete)
 **Required for access control**
 
 - ✅ User grant queries + projection (Task 4.1 COMPLETE)
@@ -409,17 +409,27 @@ projections.failed_events2  -- Failed event tracking
   - Project/org joins for full grant details
   - ~1,411 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- 🔜 Member queries + projections (4 types)
+- ✅ Member queries + projections (Task 4.3 COMPLETE - 4 types)
+  - 8 query methods: 2 per member type (instance, org, project, project grant members)
+  - 4 projections handling 22 event types with auto table creation and 10 indexes
+  - 34 comprehensive tests (21 unit + 13 integration)
+  - Multi-scope membership: Instance (IAM), Org, Project, Project Grant
+  - Role-based access control at each scope
+  - Cascade deletion on user/org/project removal
+  - User info joins (name, email, avatar, etc.)
+  - Search and filter by user, role, email, username
+  - ~2,516 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 - 🔜 Permission queries
 - 🔜 Role queries
 
 **Tier 4 Progress So Far:**
-- **Total Lines:** ~2,878 lines (2 of 5 tasks)
-- **Total Tests:** 48 tests (30 unit + 18 integration)
-- **Query Methods:** 11 methods (user grant + project grant domains)
-- **Projections:** 2 projections handling 16 event types
+- **Total Lines:** ~5,394 lines (3 of 5 tasks)
+- **Total Tests:** 82 tests (51 unit + 31 integration)
+- **Query Methods:** 19 methods (user grant + project grant + member domains)
+- **Projections:** 6 projections handling 38 event types
 - **Build Status:** ✅ All passing
-- **Coverage:** >85% for both modules
+- **Coverage:** >85% across all modules
 
 ### **Tier 5: Advanced Features** (Week 18-27)
 **Nice to have, can be done incrementally**
