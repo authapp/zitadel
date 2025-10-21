@@ -55,6 +55,9 @@ describe('Permission Queries Integration Tests', () => {
   });
 
   beforeEach(async () => {
+    // Clear cache to prevent test interference
+    permissionQueries.cleanup();
+    
     await cleanupTestData();
   });
 
@@ -232,7 +235,7 @@ describe('Permission Queries Integration Tests', () => {
       expect(permissions.fromMembers.some(p => p.resource === 'zitadel.org')).toBe(true);
     });
 
-    it.skip('should get permissions from project membership', async () => {
+    it('should get permissions from project membership', async () => {
       await database.query(
         `INSERT INTO projections.project_members 
          (user_id, project_id, instance_id, roles, resource_owner, sequence, creation_date, change_date)
