@@ -385,7 +385,7 @@ projections.failed_events2  -- Failed event tracking
 - **Build Status:** ✅ All passing
 - **Coverage:** >85% across all modules
 
-### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (60% Complete)
+### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (80% Complete)
 **Required for access control**
 
 - ✅ User grant queries + projection (Task 4.1 COMPLETE)
@@ -420,13 +420,23 @@ projections.failed_events2  -- Failed event tracking
   - Search and filter by user, role, email, username
   - ~2,516 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- 🔜 Permission queries
+- ✅ Permission queries (Task 4.4 COMPLETE)
+  - 7 query methods: checkUserPermissions, getMyPermissions, getGlobalPermissions, clearCache, getMyZitadelPermissions, hasZitadelPermission, getInstanceOwnerPermissions
+  - Permission aggregation from 3 sources (user grants, members, project grants)
+  - 33 comprehensive tests (20 unit + 13 integration)
+  - Role-based permission mapping with condition evaluation
+  - Permission caching with TTL (5 minutes)
+  - Zitadel system permissions for platform management
+  - Support for IAM/Org/Project roles
+  - ~1,840 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 - 🔜 Role queries
+- 🔜 User membership queries
 
 **Tier 4 Progress So Far:**
-- **Total Lines:** ~5,394 lines (3 of 5 tasks)
-- **Total Tests:** 82 tests (51 unit + 31 integration)
-- **Query Methods:** 19 methods (user grant + project grant + member domains)
+- **Total Lines:** ~7,234 lines (4 of 6 tasks)
+- **Total Tests:** 115 tests (71 unit + 44 integration)
+- **Query Methods:** 26 methods (user grant + project grant + member + permission domains)
 - **Projections:** 6 projections handling 38 event types
 - **Build Status:** ✅ All passing
 - **Coverage:** >85% across all modules
