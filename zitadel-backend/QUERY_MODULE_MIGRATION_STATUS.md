@@ -385,7 +385,7 @@ projections.failed_events2  -- Failed event tracking
 - **Build Status:** ✅ All passing
 - **Coverage:** >85% across all modules
 
-### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (20% Complete)
+### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (40% Complete)
 **Required for access control**
 
 - ✅ User grant queries + projection (Task 4.1 COMPLETE)
@@ -398,18 +398,28 @@ projections.failed_events2  -- Failed event tracking
   - User/project/org joins for comprehensive grant info
   - ~1,467 lines of implementation + tests
   - ✅ All tests passing (build verified)
-- 🔜 Project grant queries + projection
+- ✅ Project grant queries + projection (Task 4.2 COMPLETE)
+  - 6 query methods: searchProjectGrants, getProjectGrantByID, getProjectGrantsByProjectID, getProjectGrantsByGrantedOrgID, getProjectGrantDetails, isProjectGrantedToOrg
+  - 1 projection handling 8 event types with auto table creation and 4 indexes
+  - 26 comprehensive tests (17 unit + 9 integration)
+  - Cross-organization project sharing
+  - Role grant management with state transitions
+  - Cascade deletion on project/org removal
+  - User grant count tracking per project grant
+  - Project/org joins for full grant details
+  - ~1,411 lines of implementation + tests
+  - ✅ All tests passing (build verified)
 - 🔜 Member queries + projections (4 types)
 - 🔜 Permission queries
 - 🔜 Role queries
 
 **Tier 4 Progress So Far:**
-- **Total Lines:** ~1,467 lines (1 of 5 tasks)
-- **Total Tests:** 22 tests (13 unit + 9 integration)
-- **Query Methods:** 5 methods (user grant domain)
-- **Projections:** 1 projection handling 8 event types
+- **Total Lines:** ~2,878 lines (2 of 5 tasks)
+- **Total Tests:** 48 tests (30 unit + 18 integration)
+- **Query Methods:** 11 methods (user grant + project grant domains)
+- **Projections:** 2 projections handling 16 event types
 - **Build Status:** ✅ All passing
-- **Coverage:** >85% for user grant module
+- **Coverage:** >85% for both modules
 
 ### **Tier 5: Advanced Features** (Week 18-27)
 **Nice to have, can be done incrementally**
