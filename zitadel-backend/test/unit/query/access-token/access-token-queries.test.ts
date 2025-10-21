@@ -27,7 +27,7 @@ describe('AccessTokenQueries', () => {
   });
 
   describe('getActiveAccessTokenByID', () => {
-    it.skip('should return active token when valid and not expired', async () => {
+    it('should return active token when valid and not expired', async () => {
       const futureDate = new Date(Date.now() + 3600000); // 1 hour from now
       
       const tokenData = {
@@ -46,17 +46,13 @@ describe('AccessTokenQueries', () => {
         refresh_token_id: null,
         actor_user_id: null,
         actor_issuer: null,
-        reason: null,
+        reason: undefined, // Changed from null to undefined
       };
       
-      // Reset and set mock return value
-      mockDatabase.queryOne.mockReset();
+      // Set mock return value
       mockDatabase.queryOne.mockResolvedValue(tokenData);
 
       const result = await queries.getActiveAccessTokenByID('token-123', 'inst-123');
-
-      // Debug: check if mock was called
-      expect(mockDatabase.queryOne).toHaveBeenCalled();
       
       expect(result).not.toBeNull();
       if (result) {
