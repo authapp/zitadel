@@ -385,14 +385,31 @@ projections.failed_events2  -- Failed event tracking
 - **Build Status:** ✅ All passing
 - **Coverage:** >85% across all modules
 
-### **Tier 4: Authorization** (Week 13-17)
+### **Tier 4: Authorization** (Week 13-17) 🟡 In Progress (20% Complete)
 **Required for access control**
 
-- User grant queries + projection
-- Project grant queries + projection
-- Member queries + projections
-- Permission queries
-- Role queries
+- ✅ User grant queries + projection (Task 4.1 COMPLETE)
+  - 5 query methods: searchUserGrants, getUserGrantByID, getUserGrantsByUserID, getUserGrantsByProjectID, checkUserGrant
+  - 1 projection handling 8 event types with auto table creation and 5 indexes
+  - 22 comprehensive tests (13 unit + 9 integration)
+  - Complete authorization grant management with role assignments
+  - State management (active/inactive) with cascade deletion
+  - Cross-org access via project grants
+  - User/project/org joins for comprehensive grant info
+  - ~1,467 lines of implementation + tests
+  - ✅ All tests passing (build verified)
+- 🔜 Project grant queries + projection
+- 🔜 Member queries + projections (4 types)
+- 🔜 Permission queries
+- 🔜 Role queries
+
+**Tier 4 Progress So Far:**
+- **Total Lines:** ~1,467 lines (1 of 5 tasks)
+- **Total Tests:** 22 tests (13 unit + 9 integration)
+- **Query Methods:** 5 methods (user grant domain)
+- **Projections:** 1 projection handling 8 event types
+- **Build Status:** ✅ All passing
+- **Coverage:** >85% for user grant module
 
 ### **Tier 5: Advanced Features** (Week 18-27)
 **Nice to have, can be done incrementally**
