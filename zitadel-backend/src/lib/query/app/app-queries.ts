@@ -31,11 +31,13 @@ export class AppQueries {
   /**
    * Get application by ID
    */
-  async getAppByID(appId: string): Promise<AnyApp | null> {
-    const result = await this.database.query<AppRow>(
-      'SELECT * FROM applications_projection WHERE id = $1',
-      [appId]
-    );
+  async getAppByID(appId: string, instanceID?: string): Promise<AnyApp | null> {
+    const query = instanceID
+      ? 'SELECT * FROM applications_projection WHERE instance_id = $1 AND id = $2'
+      : 'SELECT * FROM applications_projection WHERE id = $1';
+    const params = instanceID ? [instanceID, appId] : [appId];
+    
+    const result = await this.database.query<AppRow>(query, params);
 
     if (result.rows.length === 0) {
       return null;
@@ -47,10 +49,15 @@ export class AppQueries {
   /**
    * Search applications with filters
    */
-  async searchApps(filters: AppSearchFilters): Promise<AppSearchResult> {
+  async searchApps(filters: AppSearchFilters, instanceID?: string): Promise<AppSearchResult> {
     const conditions: string[] = [];
     const params: any[] = [];
     let paramIndex = 1;
+
+    if (instanceID) {
+      conditions.push(`instance_id = $${paramIndex++}`);
+      params.push(instanceID);
+    }
 
     if (filters.projectId) {
       conditions.push(`project_id = $${paramIndex++}`);
@@ -201,11 +208,13 @@ export class AppQueries {
   /**
    * Check if application exists
    */
-  async existsApp(appId: string): Promise<boolean> {
-    const result = await this.database.query<{ exists: boolean }>(
-      'SELECT EXISTS(SELECT 1 FROM applications_projection WHERE id = $1) as exists',
-      [appId]
-    );
+  async existsApp(appId: string, instanceID?: string): Promise<boolean> {
+    const query = instanceID
+      ? 'SELECT EXISTS(SELECT 1 FROM applications_projection WHERE instance_id = $1 AND id = $2) as exists'
+      : 'SELECT EXISTS(SELECT 1 FROM applications_projection WHERE id = $1) as exists';
+    const params = instanceID ? [instanceID, appId] : [appId];
+    
+    const result = await this.database.query<{ exists: boolean }>(query, params);
 
     return result.rows[0]?.exists || false;
   }
@@ -213,14 +222,15 @@ export class AppQueries {
   /**
    * Get project by OIDC client ID
    */
-  async getProjectByOIDCClientID(clientId: string): Promise<string | null> {
-    const result = await this.database.query<{ project_id: string }>(
-      `SELECT project_id FROM applications_projection 
-       WHERE client_id = $1 
-       AND app_type = 'oidc'
-       LIMIT 1`,
-      [clientId]
-    );
+  async getProjectByOIDCClientID(clientId: string, instanceID?: string): Promise<string | null> {
+    const query = instanceID
+      ? `SELECT project_id FROM applications_projection 
+         WHERE instance_id = $1 AND client_id = $2 AND app_type = 'oidc' LIMIT 1`
+      : `SELECT project_id FROM applications_projection 
+         WHERE client_id = $1 AND app_type = 'oidc' LIMIT 1`;
+    const params = instanceID ? [instanceID, clientId] : [clientId];
+    
+    const result = await this.database.query<{ project_id: string }>(query, params);
 
     return result.rows[0]?.project_id || null;
   }
@@ -228,14 +238,15 @@ export class AppQueries {
   /**
    * Get project by any client ID (OIDC or API)
    */
-  async getProjectByClientID(clientId: string): Promise<string | null> {
-    const result = await this.database.query<{ project_id: string }>(
-      `SELECT project_id FROM applications_projection 
-       WHERE client_id = $1 
-       AND app_type IN ('oidc', 'api')
-       LIMIT 1`,
-      [clientId]
-    );
+  async getProjectByClientID(clientId: string, instanceID?: string): Promise<string | null> {
+    const query = instanceID
+      ? `SELECT project_id FROM applications_projection 
+         WHERE instance_id = $1 AND client_id = $2 AND app_type IN ('oidc', 'api') LIMIT 1`
+      : `SELECT project_id FROM applications_projection 
+         WHERE client_id = $1 AND app_type IN ('oidc', 'api') LIMIT 1`;
+    const params = instanceID ? [instanceID, clientId] : [clientId];
+    
+    const result = await this.database.query<{ project_id: string }>(query, params);
 
     return result.rows[0]?.project_id || null;
   }
@@ -243,13 +254,13 @@ export class AppQueries {
   /**
    * Get API app by client ID
    */
-  async getAPIAppByClientID(clientId: string): Promise<APIApp | null> {
-    const result = await this.database.query<AppRow>(
-      `SELECT * FROM applications_projection 
-       WHERE client_id = $1 
-       AND app_type = 'api'`,
-      [clientId]
-    );
+  async getAPIAppByClientID(clientId: string, instanceID?: string): Promise<APIApp | null> {
+    const query = instanceID
+      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND client_id = $2 AND app_type = 'api'`
+      : `SELECT * FROM applications_projection WHERE client_id = $1 AND app_type = 'api'`;
+    const params = instanceID ? [instanceID, clientId] : [clientId];
+    
+    const result = await this.database.query<AppRow>(query, params);
 
     if (result.rows.length === 0) {
       return null;
@@ -261,13 +272,13 @@ export class AppQueries {
   /**
    * Get OIDC app by client ID
    */
-  async getOIDCAppByClientID(clientId: string): Promise<OIDCApp | null> {
-    const result = await this.database.query<AppRow>(
-      `SELECT * FROM applications_projection 
-       WHERE client_id = $1 
-       AND app_type = 'oidc'`,
-      [clientId]
-    );
+  async getOIDCAppByClientID(clientId: string, instanceID?: string): Promise<OIDCApp | null> {
+    const query = instanceID
+      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND client_id = $2 AND app_type = 'oidc'`
+      : `SELECT * FROM applications_projection WHERE client_id = $1 AND app_type = 'oidc'`;
+    const params = instanceID ? [instanceID, clientId] : [clientId];
+    
+    const result = await this.database.query<AppRow>(query, params);
 
     if (result.rows.length === 0) {
       return null;
@@ -279,13 +290,13 @@ export class AppQueries {
   /**
    * Get SAML app by entity ID
    */
-  async getSAMLAppByEntityID(entityId: string): Promise<SAMLApp | null> {
-    const result = await this.database.query<AppRow>(
-      `SELECT * FROM applications_projection 
-       WHERE entity_id = $1 
-       AND app_type = 'saml'`,
-      [entityId]
-    );
+  async getSAMLAppByEntityID(entityId: string, instanceID?: string): Promise<SAMLApp | null> {
+    const query = instanceID
+      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND entity_id = $2 AND app_type = 'saml'`
+      : `SELECT * FROM applications_projection WHERE entity_id = $1 AND app_type = 'saml'`;
+    const params = instanceID ? [instanceID, entityId] : [entityId];
+    
+    const result = await this.database.query<AppRow>(query, params);
 
     if (result.rows.length === 0) {
       return null;

@@ -3,7 +3,8 @@
 -- Date: 2025-10-15
 
 CREATE TABLE IF NOT EXISTS projects_projection (
-    id TEXT PRIMARY KEY,
+    id TEXT NOT NULL,
+    instance_id TEXT NOT NULL,
     name TEXT NOT NULL,
     resource_owner TEXT NOT NULL,
     state TEXT NOT NULL DEFAULT 'active',
@@ -13,20 +14,27 @@ CREATE TABLE IF NOT EXISTS projects_projection (
     private_labeling_setting TEXT NOT NULL DEFAULT 'unspecified',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    sequence BIGINT NOT NULL DEFAULT 0
+    change_date TIMESTAMP WITH TIME ZONE,
+    sequence BIGINT NOT NULL DEFAULT 0,
+    
+    -- Constraints
+    PRIMARY KEY (instance_id, id)
 );
 
+-- Index on instance_id for multi-tenant queries
+CREATE INDEX IF NOT EXISTS idx_projects_instance_id ON projects_projection(instance_id);
+
 -- Index on resource_owner for listing org projects
-CREATE INDEX IF NOT EXISTS idx_projects_resource_owner ON projects_projection(resource_owner);
+CREATE INDEX IF NOT EXISTS idx_projects_resource_owner ON projects_projection(instance_id, resource_owner);
 
 -- Index on state for filtering
-CREATE INDEX IF NOT EXISTS idx_projects_state ON projects_projection(state);
+CREATE INDEX IF NOT EXISTS idx_projects_state ON projects_projection(instance_id, state);
 
 -- Index on name for search
-CREATE INDEX IF NOT EXISTS idx_projects_name ON projects_projection(name);
+CREATE INDEX IF NOT EXISTS idx_projects_name ON projects_projection(instance_id, name);
 
 -- Index on created_at for sorting
-CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects_projection(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_created_at ON projects_projection(instance_id, created_at DESC);
 
 -- Full-text search index on name
 CREATE INDEX IF NOT EXISTS idx_projects_name_fts ON projects_projection USING gin(to_tsvector('english', name));

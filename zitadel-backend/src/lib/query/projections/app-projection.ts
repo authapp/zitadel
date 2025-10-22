@@ -89,15 +89,15 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `INSERT INTO applications_projection (
-        id, project_id, name, state, app_type,
+        id, instance_id, project_id, resource_owner, name, state, app_type,
         client_id, client_secret, redirect_uris, response_types, grant_types,
         oidc_app_type, auth_method_type, post_logout_redirect_uris,
         version, dev_mode, access_token_type,
         access_token_role_assertion, id_token_role_assertion, id_token_userinfo_assertion,
         clock_skew, additional_origins, skip_native_app_success_page,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
-      ON CONFLICT (id) DO UPDATE SET
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
         name = EXCLUDED.name,
         client_id = EXCLUDED.client_id,
         client_secret = EXCLUDED.client_secret,
@@ -117,10 +117,13 @@ export class AppProjection extends Projection {
         additional_origins = EXCLUDED.additional_origins,
         skip_native_app_success_page = EXCLUDED.skip_native_app_success_page,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
         payload.appId || event.aggregateID,
+        event.instanceID || 'default',
         payload.projectId || event.aggregateID,
+        event.owner || payload.projectId || event.aggregateID,
         payload.name,
         'active',
         'oidc',
@@ -143,6 +146,7 @@ export class AppProjection extends Projection {
         payload.skipNativeAppSuccessPage || false,
         event.createdAt,
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
       ]
     );
@@ -153,25 +157,27 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `UPDATE applications_projection SET
-        name = COALESCE($2, name),
-        redirect_uris = COALESCE($3, redirect_uris),
-        response_types = COALESCE($4, response_types),
-        grant_types = COALESCE($5, grant_types),
-        oidc_app_type = COALESCE($6, oidc_app_type),
-        auth_method_type = COALESCE($7, auth_method_type),
-        post_logout_redirect_uris = COALESCE($8, post_logout_redirect_uris),
-        dev_mode = COALESCE($9, dev_mode),
-        access_token_type = COALESCE($10, access_token_type),
-        access_token_role_assertion = COALESCE($11, access_token_role_assertion),
-        id_token_role_assertion = COALESCE($12, id_token_role_assertion),
-        id_token_userinfo_assertion = COALESCE($13, id_token_userinfo_assertion),
-        clock_skew = COALESCE($14, clock_skew),
-        additional_origins = COALESCE($15, additional_origins),
-        skip_native_app_success_page = COALESCE($16, skip_native_app_success_page),
-        updated_at = $17,
-        sequence = $18
-      WHERE id = $1 AND app_type = 'oidc'`,
+        name = COALESCE($3, name),
+        redirect_uris = COALESCE($4, redirect_uris),
+        response_types = COALESCE($5, response_types),
+        grant_types = COALESCE($6, grant_types),
+        oidc_app_type = COALESCE($7, oidc_app_type),
+        auth_method_type = COALESCE($8, auth_method_type),
+        post_logout_redirect_uris = COALESCE($9, post_logout_redirect_uris),
+        dev_mode = COALESCE($10, dev_mode),
+        access_token_type = COALESCE($11, access_token_type),
+        access_token_role_assertion = COALESCE($12, access_token_role_assertion),
+        id_token_role_assertion = COALESCE($13, id_token_role_assertion),
+        id_token_userinfo_assertion = COALESCE($14, id_token_userinfo_assertion),
+        clock_skew = COALESCE($15, clock_skew),
+        additional_origins = COALESCE($16, additional_origins),
+        skip_native_app_success_page = COALESCE($17, skip_native_app_success_page),
+        updated_at = $18,
+        change_date = $19,
+        sequence = $20
+      WHERE instance_id = $1 AND id = $2 AND app_type = 'oidc'`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
         payload.name,
         payload.redirectUris ? JSON.stringify(payload.redirectUris) : null,
@@ -189,6 +195,7 @@ export class AppProjection extends Projection {
         payload.additionalOrigins ? JSON.stringify(payload.additionalOrigins) : null,
         payload.skipNativeAppSuccessPage,
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
       ]
     );
@@ -199,13 +206,16 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `UPDATE applications_projection SET
-        client_secret = $2,
-        updated_at = $3,
-        sequence = $4
-      WHERE id = $1 AND app_type = 'oidc'`,
+        client_secret = $3,
+        updated_at = $4,
+        change_date = $5,
+        sequence = $6
+      WHERE instance_id = $1 AND id = $2 AND app_type = 'oidc'`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
         payload.clientSecret,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -217,12 +227,12 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `INSERT INTO applications_projection (
-        id, project_id, name, state, app_type,
+        id, instance_id, project_id, resource_owner, name, state, app_type,
         entity_id, metadata_url, metadata, acs_urls,
         single_logout_url, name_id_format, attribute_statements,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-      ON CONFLICT (id) DO UPDATE SET
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
         name = EXCLUDED.name,
         entity_id = EXCLUDED.entity_id,
         metadata_url = EXCLUDED.metadata_url,
@@ -232,10 +242,13 @@ export class AppProjection extends Projection {
         name_id_format = EXCLUDED.name_id_format,
         attribute_statements = EXCLUDED.attribute_statements,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
         payload.appId || event.aggregateID,
+        event.instanceID || 'default',
         payload.projectId || event.aggregateID,
+        event.owner || payload.projectId || event.aggregateID,
         payload.name,
         'active',
         'saml',
@@ -246,6 +259,7 @@ export class AppProjection extends Projection {
         payload.singleLogoutUrl || null,
         payload.nameIdFormat || null,
         payload.attributeStatements ? JSON.stringify(payload.attributeStatements) : null,
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
@@ -280,6 +294,7 @@ export class AppProjection extends Projection {
         payload.nameIdFormat,
         payload.attributeStatements ? JSON.stringify(payload.attributeStatements) : null,
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
       ]
     );
@@ -290,26 +305,30 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `INSERT INTO applications_projection (
-        id, project_id, name, state, app_type,
+        id, instance_id, project_id, resource_owner, name, state, app_type,
         client_id, client_secret, auth_method_type,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (id) DO UPDATE SET
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
         name = EXCLUDED.name,
         client_id = EXCLUDED.client_id,
         client_secret = EXCLUDED.client_secret,
         auth_method_type = EXCLUDED.auth_method_type,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
         payload.appId || event.aggregateID,
+        event.instanceID || 'default',
         payload.projectId || event.aggregateID,
+        event.owner || payload.projectId || event.aggregateID,
         payload.name,
         'active',
         'api',
         payload.clientId,
         payload.clientSecret || null,
         payload.authMethodType || 'basic',
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
@@ -322,15 +341,18 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `UPDATE applications_projection SET
-        name = COALESCE($2, name),
-        auth_method_type = COALESCE($3, auth_method_type),
-        updated_at = $4,
-        sequence = $5
-      WHERE id = $1 AND app_type = 'api'`,
+        name = COALESCE($3, name),
+        auth_method_type = COALESCE($4, auth_method_type),
+        updated_at = $5,
+        change_date = $6,
+        sequence = $7
+      WHERE instance_id = $1 AND id = $2 AND app_type = 'api'`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
         payload.name,
         payload.authMethodType,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -342,13 +364,16 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `UPDATE applications_projection SET
-        client_secret = $2,
-        updated_at = $3,
-        sequence = $4
-      WHERE id = $1 AND app_type = 'api'`,
+        client_secret = $3,
+        updated_at = $4,
+        change_date = $5,
+        sequence = $6
+      WHERE instance_id = $1 AND id = $2 AND app_type = 'api'`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
         payload.clientSecret,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -360,13 +385,16 @@ export class AppProjection extends Projection {
     
     await this.database.query(
       `UPDATE applications_projection SET
-        name = COALESCE($2, name),
-        updated_at = $3,
-        sequence = $4
-      WHERE id = $1`,
+        name = COALESCE($3, name),
+        updated_at = $4,
+        change_date = $5,
+        sequence = $6
+      WHERE instance_id = $1 AND id = $2`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
         payload.name,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -396,11 +424,14 @@ export class AppProjection extends Projection {
     await this.database.query(
       `UPDATE applications_projection SET
         state = 'active',
-        updated_at = $2,
-        sequence = $3
-      WHERE id = $1`,
+        updated_at = $3,
+        change_date = $4,
+        sequence = $5
+      WHERE instance_id = $1 AND id = $2`,
       [
+        event.instanceID || 'default',
         payload.appId || event.aggregateID,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -411,8 +442,8 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `DELETE FROM applications_projection WHERE id = $1`,
-      [payload.appId || event.aggregateID]
+      `DELETE FROM applications_projection WHERE instance_id = $1 AND id = $2`,
+      [event.instanceID || 'default', payload.appId || event.aggregateID]
     );
   }
 }

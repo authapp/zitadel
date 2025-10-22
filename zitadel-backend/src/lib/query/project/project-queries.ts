@@ -25,11 +25,13 @@ export class ProjectQueries {
   /**
    * Get project by ID
    */
-  async getProjectByID(projectID: string): Promise<Project | null> {
-    const result = await this.database.query(
-      'SELECT * FROM projects_projection WHERE id = $1 AND state != $2',
-      [projectID, 'removed']
-    );
+  async getProjectByID(projectID: string, instanceID?: string): Promise<Project | null> {
+    const query = instanceID
+      ? 'SELECT * FROM projects_projection WHERE instance_id = $1 AND id = $2 AND state != $3'
+      : 'SELECT * FROM projects_projection WHERE id = $1 AND state != $2';
+    const params = instanceID ? [instanceID, projectID, 'removed'] : [projectID, 'removed'];
+    
+    const result = await this.database.query(query, params);
 
     if (result.rows.length === 0) {
       return null;
@@ -41,10 +43,20 @@ export class ProjectQueries {
   /**
    * Search projects with filters
    */
-  async searchProjects(query: ProjectSearchQuery): Promise<ProjectSearchResult> {
-    const conditions: string[] = ['state != $1'];
-    const values: any[] = ['removed'];
-    let paramIndex = 2;
+  async searchProjects(query: ProjectSearchQuery, instanceID?: string): Promise<ProjectSearchResult> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (instanceID) {
+      conditions.push(`instance_id = $${paramIndex}`);
+      values.push(instanceID);
+      paramIndex++;
+    }
+
+    conditions.push(`state != $${paramIndex}`);
+    values.push('removed');
+    paramIndex++;
 
     if (query.name) {
       conditions.push(`name ILIKE $${paramIndex}`);

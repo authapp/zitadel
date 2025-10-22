@@ -494,19 +494,27 @@ export class LoginNameProjection extends Projection {
     loginName: string,
     domainName: string,
     isPrimary: boolean,
-    createdAt: Date
+    createdAt: Date,
+    changeDate?: Date,
+    sequence?: number
   ): Promise<void> {
+    // Phase 2: Include audit columns with defaults
+    const changeDateValue = changeDate || createdAt;
+    const sequenceValue = sequence || 0;
+    
     await this.database.query(
       `INSERT INTO login_names_projection (
         user_id, instance_id, resource_owner, login_name, domain_name,
-        is_primary, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        is_primary, created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       ON CONFLICT (instance_id, login_name) DO UPDATE SET
         user_id = EXCLUDED.user_id,
         resource_owner = EXCLUDED.resource_owner,
         domain_name = EXCLUDED.domain_name,
         is_primary = EXCLUDED.is_primary,
-        updated_at = EXCLUDED.updated_at`,
+        updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
+        sequence = EXCLUDED.sequence`,
       [
         userId,
         instanceId,
@@ -516,6 +524,8 @@ export class LoginNameProjection extends Projection {
         isPrimary,
         createdAt,
         createdAt,
+        changeDateValue,
+        sequenceValue,
       ]
     );
   }

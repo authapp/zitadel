@@ -68,12 +68,12 @@ export class ProjectProjection extends Projection {
 
     await this.database.query(
       `INSERT INTO projects_projection (
-        id, name, resource_owner, state, 
+        id, instance_id, name, resource_owner, state, 
         project_role_assertion, project_role_check, has_project_check,
         private_labeling_setting,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (id) DO UPDATE SET
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
         name = EXCLUDED.name,
         resource_owner = EXCLUDED.resource_owner,
         project_role_assertion = EXCLUDED.project_role_assertion,
@@ -81,9 +81,11 @@ export class ProjectProjection extends Projection {
         has_project_check = EXCLUDED.has_project_check,
         private_labeling_setting = EXCLUDED.private_labeling_setting,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = GREATEST(projects_projection.sequence, EXCLUDED.sequence)`,
       [
         event.aggregateID,
+        event.instanceID || 'default',
         data.name,
         event.owner,
         'active',
@@ -91,6 +93,7 @@ export class ProjectProjection extends Projection {
         data.projectRoleCheck || false,
         data.hasProjectCheck || false,
         data.privateLabelingSetting || 'unspecified',
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
@@ -135,14 +138,17 @@ export class ProjectProjection extends Projection {
 
     updates.push(`updated_at = $${paramIndex++}`);
     values.push(event.createdAt);
+    updates.push(`change_date = $${paramIndex++}`);
+    values.push(event.createdAt);
     updates.push(`sequence = $${paramIndex++}`);
     values.push(event.aggregateVersion);
+    values.push(event.instanceID || 'default');
     values.push(event.aggregateID);
 
     await this.database.query(
       `UPDATE projects_projection 
        SET ${updates.join(', ')}
-       WHERE id = $${paramIndex}`,
+       WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
       values
     );
   }
@@ -153,9 +159,9 @@ export class ProjectProjection extends Projection {
   private async handleProjectDeactivated(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE projects_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['inactive', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['inactive', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -165,9 +171,9 @@ export class ProjectProjection extends Projection {
   private async handleProjectReactivated(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE projects_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['active', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['active', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -177,9 +183,9 @@ export class ProjectProjection extends Projection {
   private async handleProjectRemoved(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE projects_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['removed', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['removed', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 }

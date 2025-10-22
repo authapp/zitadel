@@ -26,20 +26,25 @@ export class OrgQueries {
   /**
    * Get organization by ID
    */
-  async getOrgByID(orgID: string): Promise<Organization | null> {
-    const result = await this.database.query(
-      `SELECT 
-        id,
-        name,
-        state,
-        primary_domain as "primaryDomain",
-        created_at as "createdAt",
-        updated_at as "updatedAt",
-        sequence
-      FROM orgs_projection
-      WHERE id = $1 AND state != 'removed'`,
-      [orgID]
-    );
+  async getOrgByID(orgID: string, instanceID?: string): Promise<Organization | null> {
+    const query = instanceID
+      ? `SELECT 
+          id, instance_id as "instanceID", name, state,
+          primary_domain as "primaryDomain", resource_owner as "resourceOwner",
+          created_at as "createdAt", updated_at as "updatedAt",
+          change_date as "changeDate", sequence
+        FROM orgs_projection
+        WHERE instance_id = $1 AND id = $2 AND state != 'removed'`
+      : `SELECT 
+          id, instance_id as "instanceID", name, state,
+          primary_domain as "primaryDomain", resource_owner as "resourceOwner",
+          created_at as "createdAt", updated_at as "updatedAt",
+          change_date as "changeDate", sequence
+        FROM orgs_projection
+        WHERE id = $1 AND state != 'removed'`;
+    
+    const params = instanceID ? [instanceID, orgID] : [orgID];
+    const result = await this.database.query(query, params);
 
     if (result.rows.length === 0) {
       return null;

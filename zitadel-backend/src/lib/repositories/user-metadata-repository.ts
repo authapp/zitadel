@@ -54,9 +54,9 @@ export class UserMetadataRepository extends BaseRepository<UserMetadataRow> {
     // Check if metadata already exists and update it, otherwise insert
     const existing = await this.pool.queryOne<UserMetadataRow>(
       scope === null
-        ? `SELECT * FROM user_metadata WHERE user_id = $1 AND metadata_key = $2 AND scope IS NULL`
-        : `SELECT * FROM user_metadata WHERE user_id = $1 AND metadata_key = $2 AND scope = $3`,
-      scope === null ? [input.userId, input.key] : [input.userId, input.key, scope]
+        ? `SELECT * FROM user_metadata WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope IS NULL`
+        : `SELECT * FROM user_metadata WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope = $4`,
+      scope === null ? [input.instanceId, input.userId, input.key] : [input.instanceId, input.userId, input.key, scope]
     );
 
     if (existing) {
@@ -64,9 +64,9 @@ export class UserMetadataRepository extends BaseRepository<UserMetadataRow> {
       const result = await this.pool.queryOne<UserMetadataRow>(
         `UPDATE user_metadata 
          SET metadata_value = $1, metadata_type = $2, updated_at = NOW()
-         WHERE id = $3
+         WHERE instance_id = $3 AND id = $4
          RETURNING *`,
-        [JSON.stringify(input.value), input.type || 'custom', existing.id]
+        [JSON.stringify(input.value), input.type || 'custom', input.instanceId, existing.id]
       );
       return result!;
     }
@@ -152,7 +152,7 @@ export class UserMetadataRepository extends BaseRepository<UserMetadataRow> {
   /**
    * Update metadata entry
    */
-  async update(id: string, input: UpdateMetadataInput): Promise<UserMetadataRow | null> {
+  async update(id: string, instanceId: string, input: UpdateMetadataInput): Promise<UserMetadataRow | null> {
     const setClauses: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
@@ -175,16 +175,21 @@ export class UserMetadataRepository extends BaseRepository<UserMetadataRow> {
     }
 
     if (setClauses.length === 0) {
-      return this.findById(id);
+      // No updates, return existing
+      return this.pool.queryOne<UserMetadataRow>(
+        `SELECT * FROM user_metadata WHERE instance_id = $1 AND id = $2`,
+        [instanceId, id]
+      );
     }
 
     setClauses.push(`updated_at = NOW()`);
+    values.push(instanceId);
     values.push(id);
 
     return this.pool.queryOne<UserMetadataRow>(
       `UPDATE user_metadata 
        SET ${setClauses.join(', ')}
-       WHERE id = $${paramIndex}
+       WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}
        RETURNING *`,
       values
     );
@@ -207,10 +212,10 @@ export class UserMetadataRepository extends BaseRepository<UserMetadataRow> {
   /**
    * Delete metadata entry by ID
    */
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, instanceId: string): Promise<boolean> {
     const result = await this.pool.query(
-      `DELETE FROM user_metadata WHERE id = $1`,
-      [id]
+      `DELETE FROM user_metadata WHERE instance_id = $1 AND id = $2`,
+      [instanceId, id]
     );
     return (result.rowCount ?? 0) > 0;
   }

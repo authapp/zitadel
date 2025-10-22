@@ -73,13 +73,16 @@ export class OrgProjection extends Projection {
     
     await this.database.query(
       `INSERT INTO orgs_projection (
-        id, name, state, created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (id) DO NOTHING`,
+        id, instance_id, name, state, resource_owner, created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (instance_id, id) DO NOTHING`,
       [
         event.aggregateID,
+        event.instanceID || 'default',
         data.name || 'Unnamed Organization',
         'active',
+        event.owner || event.aggregateID, // resource_owner is usually the org itself
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
@@ -105,13 +108,17 @@ export class OrgProjection extends Projection {
       updates.push(`updated_at = $${paramIndex++}`);
       values.push(event.createdAt);
       
+      updates.push(`change_date = $${paramIndex++}`);
+      values.push(event.createdAt);
+      
       updates.push(`sequence = $${paramIndex++}`);
       values.push(event.aggregateVersion);
       
+      values.push(event.instanceID || 'default');
       values.push(event.aggregateID);
       
       await this.database.query(
-        `UPDATE orgs_projection SET ${updates.join(', ')} WHERE id = $${paramIndex}`,
+        `UPDATE orgs_projection SET ${updates.join(', ')} WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
         values
       );
     }
@@ -123,9 +130,9 @@ export class OrgProjection extends Projection {
   private async handleOrgDeactivated(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE orgs_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['inactive', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['inactive', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -135,9 +142,9 @@ export class OrgProjection extends Projection {
   private async handleOrgReactivated(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE orgs_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['active', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['active', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -147,9 +154,9 @@ export class OrgProjection extends Projection {
   private async handleOrgRemoved(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE orgs_projection 
-       SET state = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      ['removed', event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET state = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      ['removed', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -162,9 +169,9 @@ export class OrgProjection extends Projection {
     
     await this.database.query(
       `UPDATE orgs_projection
-       SET primary_domain = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
-      [data.domain || null, event.createdAt, event.aggregateVersion, event.aggregateID]
+       SET primary_domain = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
+      [data.domain || null, event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
     );
   }
 }

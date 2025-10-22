@@ -60,4 +60,8 @@ export const migrations = [
   { version: 37, name: 'Create instance trusted domains projection table', filename: '002_25_create_instance_trusted_domains_projection_table.sql' },
   { version: 38, name: 'Create sessions projection table', filename: '002_26_create_sessions_projection_table.sql' },
   { version: 39, name: 'Create login names projection table', filename: '002_27_create_login_names_projection_table.sql' },
+  { version: 40, name: 'Update users projection for multi-tenant (Phase 2)', filename: '002_28_update_users_projection_multi_tenant.sql' },
+  { version: 41, name: 'Update user metadata for multi-tenant (Phase 2)', filename: '002_29_update_user_metadata_multi_tenant.sql' },
+  { version: 42, name: 'Restore user FK constraints with composite keys (Phase 2)', filename: '002_30_restore_user_fk_constraints.sql' },
+  { version: 43, name: 'Update login names projection for multi-tenant (Phase 2)', filename: '002_31_update_login_names_projection_multi_tenant.sql' },
 ];
