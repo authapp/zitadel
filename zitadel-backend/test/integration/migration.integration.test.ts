@@ -89,8 +89,9 @@ describe('Migration System Integration', () => {
       const version = await migrator.currentVersion();
       // Consolidated projection_states migrations: removed 002_02, 002_03, 002_17, 002_50, 002_51
       // All columns and indexes now in 002_01
-      // Phase 2 migrations: 002_28 (users), 002_29 (user_metadata), 002_30 (restore FKs), 002_31 (login_names), 002_32 (org_domains), 002_33 (project_roles), 002_34 (instances), 002_35 (instance_domains), 002_36 (instance_trusted_domains), 002_37 (sessions)
-      expect(version).toBe(49); // Updated count: 39 original + 10 Phase 2 migrations
+      // Phase 2 migrations: 002_28 through 002_42 (15 migrations)
+      // Phase 3 new tables: 002_43 (user_auth_methods), 002_44 (personal_access_tokens), 002_45 (encryption_keys), 002_46 (lockout_policies)
+      expect(version).toBe(58); // Updated count: 39 original + 15 Phase 2 + 4 Phase 3
     });
   });
 
@@ -116,8 +117,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should have 49 records (one per migration step, including Phase 2 migrations)
-      expect(migrations.length).toBe(49);
+      // Should have 58 records (one per migration step, including Phase 2 and Phase 3)
+      expect(migrations.length).toBe(58);
     });
   });
 
@@ -131,7 +132,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(49);
+      expect(migrations1.length).toBe(58);
     });
 
     it('should skip already applied migrations', async () => {
@@ -163,9 +164,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(49);
+      expect(applied.length).toBe(58);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(49);
+      expect(applied[applied.length - 1].version).toBe(58);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

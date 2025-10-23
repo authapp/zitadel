@@ -70,4 +70,13 @@ export const migrations = [
   { version: 47, name: 'Update instance domains projection for multi-tenant (Phase 2)', filename: '002_35_update_instance_domains_projection_multi_tenant.sql' },
   { version: 48, name: 'Update instance trusted domains projection for multi-tenant (Phase 2)', filename: '002_36_update_instance_trusted_domains_projection_multi_tenant.sql' },
   { version: 49, name: 'Update sessions projection for multi-tenant (Phase 2)', filename: '002_37_update_sessions_projection_multi_tenant.sql' },
+  { version: 50, name: 'Update user addresses for multi-tenant (Phase 2)', filename: '002_38_update_user_addresses_multi_tenant.sql' },
+  { version: 51, name: 'Update notification providers for multi-tenant (Phase 2)', filename: '002_39_update_notification_providers_multi_tenant.sql' },
+  { version: 52, name: 'Update email configs for multi-tenant (Phase 2)', filename: '002_40_update_email_configs_multi_tenant.sql' },
+  { version: 53, name: 'Update SMS configs for multi-tenant (Phase 2)', filename: '002_41_update_sms_configs_multi_tenant.sql' },
+  { version: 54, name: 'Update notification config changes for multi-tenant (Phase 2)', filename: '002_42_update_notification_config_changes_multi_tenant.sql' },
+  { version: 55, name: 'Create user auth methods projection (Phase 3)', filename: '002_43_create_user_auth_methods_projection_table.sql' },
+  { version: 56, name: 'Create personal access tokens projection (Phase 3)', filename: '002_44_create_personal_access_tokens_projection_table.sql' },
+  { version: 57, name: 'Create encryption keys table (Phase 3)', filename: '002_45_create_encryption_keys_table.sql' },
+  { version: 58, name: 'Create lockout policies projection (Phase 3)', filename: '002_46_create_lockout_policies_projection_table.sql' },
 ];
