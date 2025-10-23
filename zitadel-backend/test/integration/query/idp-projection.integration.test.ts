@@ -40,19 +40,19 @@ describe('IDP Projection Integration Tests', () => {
     
     // Register all 4 IDP projections
     const idpConfig = createIDPProjectionConfig();
-    idpConfig.interval = 100;
+    idpConfig.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(idpConfig, new IDPProjection(eventstore, pool));
 
     const templateConfig = createIDPTemplateProjectionConfig();
-    templateConfig.interval = 100;
+    templateConfig.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(templateConfig, new IDPTemplateProjection(eventstore, pool));
 
     const userLinkConfig = createIDPUserLinkProjectionConfig();
-    userLinkConfig.interval = 100;
+    userLinkConfig.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(userLinkConfig, new IDPUserLinkProjection(eventstore, pool));
 
     const policyLinkConfig = createIDPLoginPolicyLinkProjectionConfig();
-    policyLinkConfig.interval = 100;
+    policyLinkConfig.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(policyLinkConfig, new IDPLoginPolicyLinkProjection(eventstore, pool));
     
     // Start all projections
@@ -77,7 +77,7 @@ describe('IDP Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('IDP Projection', () => {

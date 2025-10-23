@@ -15,14 +15,12 @@ import {
   createUserProjection,
   createUserProjectionConfig
 } from '../../../src/lib/query/projections/user-projection';
-import { UserRepository } from '../../../src/lib/repositories/user-repository';
 import { generateId as generateSnowflakeId } from '../../../src/lib/id/snowflake';
 
 describe('User Projection Integration Tests', () => {
   let pool: DatabasePool;
   let eventstore: PostgresEventstore;
   let registry: ProjectionRegistry;
-  let userRepo: UserRepository;
   let projection: UserProjection;
 
   beforeAll(async () => {
@@ -47,7 +45,7 @@ describe('User Projection Integration Tests', () => {
     
     // Create and register user projection with fast polling interval
     const config = createUserProjectionConfig();
-    config.interval = 100; // Fast polling for tests
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     projection = createUserProjection(eventstore, pool);
     registry.register(config, projection);
     
@@ -56,8 +54,6 @@ describe('User Projection Integration Tests', () => {
     
     // Wait a bit for projection to fully start
     await waitForProjection();
-    
-    userRepo = new UserRepository(pool);
   });
 
   afterAll(async () => {
@@ -74,8 +70,8 @@ describe('User Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process (fast with 100ms polling)
-  const waitForProjection = (ms: number = 200) => 
+  // Helper to wait for projection to process (optimized)
+  const waitForProjection = (ms: number = 100) => // Optimized: 100ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Projection Registration', () => {
@@ -111,13 +107,13 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user).toBeDefined();
-      expect(user!.username).toBe('testuser');
-      expect(user!.email).toBe('test@example.com');
-      expect(user!.first_name).toBe('Test');
-      expect(user!.last_name).toBe('User');
-      expect(user!.state).toBe('active');
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result).toBeDefined();
+      expect(result!.username).toBe('testuser');
+      expect(result!.email).toBe('test@example.com');
+      expect(result!.first_name).toBe('Test');
+      expect(result!.last_name).toBe('User');
+      expect(result!.state).toBe('active');
     }, 10000);
 
     it('should process user.changed event', async () => {
@@ -157,11 +153,11 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user).toBeDefined();
-      expect(user!.email).toBe('new@example.com');
-      expect(user!.first_name).toBe('New');
-      expect(user!.last_name).toBe('Name'); // Unchanged
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result).toBeDefined();
+      expect(result!.email).toBe('new@example.com');
+      expect(result!.first_name).toBe('New');
+      expect(result!.last_name).toBe('Name'); // Unchanged
     }, 15000);
 
     it('should process user.email.changed event', async () => {
@@ -196,10 +192,10 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user).toBeDefined();
-      expect(user!.email).toBe('newemail@example.com');
-      expect(user!.email_verified).toBe(false); // Reset on change
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result).toBeDefined();
+      expect(result!.email).toBe('newemail@example.com');
+      expect(result!.email_verified).toBe(false); // Reset on change
     }, 15000);
 
     it('should process user.email.verified event', async () => {
@@ -232,10 +228,10 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user).toBeDefined();
-      expect(user!.email_verified).toBe(true);
-      expect(user!.email_verified_at).toBeDefined();
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result).toBeDefined();
+      expect(result!.email_verified).toBe(true);
+      expect(result!.email_verified_at).toBeDefined();
     }, 15000);
 
     it('should process user.deactivated event', async () => {
@@ -256,8 +252,8 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      let user = await userRepo.findById(userId);
-      expect(user!.state).toBe('active');
+      let result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result!.state).toBe('active');
       
       await eventstore.push({
         eventType: 'user.deactivated',
@@ -271,8 +267,8 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      user = await userRepo.findById(userId);
-      expect(user!.state).toBe('inactive');
+      result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result!.state).toBe('inactive');
     }, 15000);
 
     it('should process user.locked event', async () => {
@@ -305,8 +301,8 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user!.state).toBe('locked');
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result!.state).toBe('locked');
     }, 15000);
 
     it('should process user.removed event', async () => {
@@ -339,9 +335,9 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      const user = await userRepo.findById(userId);
-      expect(user!.state).toBe('inactive');
-      expect(user!.deleted_at).toBeDefined();
+      const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+      expect(result!.state).toBe('inactive');
+      expect(result!.deleted_at).toBeDefined();
     }, 15000);
   });
 
@@ -381,8 +377,8 @@ describe('User Projection Integration Tests', () => {
       await waitForProjection();
       
       for (const userId of userIds) {
-        const user = await userRepo.findById(userId);
-        expect(user).toBeDefined();
+        const result = await pool.queryOne('SELECT * FROM users_projection WHERE id = $1', [userId]);
+        expect(result).toBeDefined();
       }
     }, 15000);
   });

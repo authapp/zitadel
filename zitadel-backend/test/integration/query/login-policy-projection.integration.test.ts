@@ -37,7 +37,7 @@ describe('Login Policy Projection Integration Tests', () => {
     
     // Register login policy projection
     const config = createLoginPolicyProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new LoginPolicyProjection(eventstore, pool));
     
     await registry.start('login_policy_projection');
@@ -58,7 +58,7 @@ describe('Login Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Login Policy Management', () => {

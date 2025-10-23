@@ -41,7 +41,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
     
     // Register domain/label policy projection
     const config = createDomainLabelPolicyProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new DomainLabelPolicyProjection(eventstore, pool));
     
     await registry.start('domain_label_policy_projection');
@@ -63,7 +63,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 1500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Domain Policy', () => {

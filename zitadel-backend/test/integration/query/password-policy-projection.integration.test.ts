@@ -40,7 +40,7 @@ describe('Password Policy Projection Integration Tests', () => {
     
     // Register password policy projection
     const config = createPasswordPolicyProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new PasswordPolicyProjection(eventstore, pool));
     
     await registry.start('password_policy_projection');
@@ -62,7 +62,7 @@ describe('Password Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 1500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Password Complexity Policy', () => {

@@ -32,7 +32,6 @@
 
 import { DatabasePool, DatabaseConfig } from '../../src/lib/database';
 import { DatabaseMigrator } from '../../src/lib/database/migrator';
-import { UserRepository } from '../../src/lib/repositories/user-repository';
 import type { QueryResultRow } from 'pg';
 
 /**
@@ -161,26 +160,6 @@ export async function closeTestDatabase(): Promise<void> {
   }
 }
 
-/**
- * Get UserRepository instance for testing
- * Provides type-safe repository access in tests
- */
-export function getUserRepository(pool: DatabasePool): UserRepository {
-  return new UserRepository(pool);
-}
-
-/**
- * Get all repositories for testing
- * Extend this as more repositories are added
- */
-export function getRepositories(pool: DatabasePool) {
-  return {
-    users: new UserRepository(pool),
-    // Add more repositories here as they're implemented
-    // orgs: new OrgRepository(pool),
-    // projects: new ProjectRepository(pool),
-  };
-}
 
 /**
  * Execute query using DatabasePool.queryMany()

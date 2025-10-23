@@ -40,7 +40,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     
     // Register projection
     const config = createMailOIDCProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new MailOIDCProjection(eventstore, pool));
     
     await registry.start('mail_oidc_projection');
@@ -63,7 +63,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 1500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Mail Template', () => {

@@ -26,10 +26,6 @@ export * from './aggregates/project-aggregate';
 // Policies
 export * from './policies';
 
-// Services
-export * from './services/password-service';
-export * from './services/domain-service';
-
 // Mappers
 export * from './mappers/object-details-mapper';
 export * from './mappers/entity-mapper';

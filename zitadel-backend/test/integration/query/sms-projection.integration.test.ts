@@ -38,7 +38,7 @@ describe('SMS Projection Integration Tests', () => {
     await registry.init();
     
     const config = createSMSProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new SMSProjection(eventstore, pool));
     
     await registry.start('sms_projection');
@@ -57,7 +57,7 @@ describe('SMS Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 1500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Twilio SMS Config', () => {

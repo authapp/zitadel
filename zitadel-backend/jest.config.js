@@ -56,6 +56,8 @@ module.exports = {
       testRunner: 'jest-circus/runner',
       // Longer timeout for integration tests (in milliseconds)
       testTimeout: 30000,
+      // Enable detailed timing output
+      verbose: true,
     },
   ],
 };

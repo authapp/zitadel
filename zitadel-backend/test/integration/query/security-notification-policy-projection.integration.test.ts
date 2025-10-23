@@ -44,7 +44,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     
     // Register projection
     const config = createSecurityNotificationPolicyProjectionConfig();
-    config.interval = 100;
+    config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new SecurityNotificationPolicyProjection(eventstore, pool));
     
     await registry.start('security_notification_policy_projection');
@@ -69,7 +69,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 1500) => 
+  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
   describe('Lockout Policy', () => {

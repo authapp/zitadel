@@ -45,22 +45,22 @@ describe('Login Name Projection Integration Tests', () => {
     
     // Register all projections once
     const userConfig = createUserProjectionConfig();
-    userConfig.interval = 100;
+    userConfig.interval = 50; // Optimized: 50ms for faster projection detection
     const userProjection = new UserProjection(eventstore, pool);
     registry.register(userConfig, userProjection);
     
     const orgConfig = createOrgProjectionConfig();
-    orgConfig.interval = 100;
+    orgConfig.interval = 50; // Optimized: 50ms for faster projection detection
     const orgProjection = createOrgProjection(eventstore, pool);
     registry.register(orgConfig, orgProjection);
     
     const orgDomainConfig = createOrgDomainProjectionConfig();
-    orgDomainConfig.interval = 100;
+    orgDomainConfig.interval = 50; // Optimized: 50ms for faster projection detection
     const orgDomainProjection = createOrgDomainProjection(eventstore, pool);
     registry.register(orgDomainConfig, orgDomainProjection);
     
     const loginNameConfig = createLoginNameProjectionConfig();
-    loginNameConfig.interval = 100;
+    loginNameConfig.interval = 50; // Optimized: 50ms for faster projection detection
     const loginNameProjection = new LoginNameProjection(eventstore, pool);
     registry.register(loginNameConfig, loginNameProjection);
     
@@ -96,11 +96,12 @@ describe('Login Name Projection Integration Tests', () => {
 
   /**
    * Helper: Poll until a condition is met or timeout
+   * Optimized: Reduced defaults for faster test execution
    */
   async function waitUntil(
     condition: () => Promise<boolean>,
-    timeout: number = 5000,
-    pollInterval: number = 100
+    timeout: number = 3000, // Optimized: 3s default (was 5s)
+    pollInterval: number = 50 // Optimized: 50ms (was 100ms)
   ): Promise<boolean> {
     const startTime = Date.now();
     
@@ -192,7 +193,7 @@ describe('Login Name Projection Integration Tests', () => {
     const userMaterialized = await waitUntil(async () => {
       const user = await userQueries.getUserByID(userId, 'test-instance');
       return user !== null;
-    }, 20000); // Increased timeout to 20 seconds for tests later in the suite
+    }, 5000); // Optimized: 5s timeout (was 20s)
     
     if (!userMaterialized) {
       throw new Error(`User ${userId} was not materialized in time`);
@@ -218,7 +219,7 @@ describe('Login Name Projection Integration Tests', () => {
       const loginNamesMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000); // 15 second timeout
+      }, 5000); // Optimized: 5s timeout (was 15s) // 15 second timeout
       
       if (!loginNamesMaterialized) {
         // Debug: Check what login names exist for this user
@@ -266,7 +267,7 @@ describe('Login Name Projection Integration Tests', () => {
       const initialLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${oldUsername}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(initialLoginNameMaterialized).toBe(true);
       
@@ -295,7 +296,7 @@ describe('Login Name Projection Integration Tests', () => {
         return newLoginName !== null && 
                newLoginName.userId === userId && 
                oldLoginNameCheck === null;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(loginNameProjectionUpdated).toBe(true);
       
@@ -339,7 +340,7 @@ describe('Login Name Projection Integration Tests', () => {
       const initialLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(initialLoginNameMaterialized).toBe(true);
       
@@ -366,7 +367,7 @@ describe('Login Name Projection Integration Tests', () => {
       const loginNamesRemoved = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
         return loginName === null;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(loginNamesRemoved).toBe(true);
       
@@ -400,7 +401,7 @@ describe('Login Name Projection Integration Tests', () => {
       const initialLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(initialLoginNameMaterialized).toBe(true);
       
@@ -427,7 +428,7 @@ describe('Login Name Projection Integration Tests', () => {
       const allLoginNamesRemoved = await waitUntil(async () => {
         const loginNames = await loginNameQueries.getLoginNamesByUserID(userId, 'test-instance');
         return loginNames.length === 0;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(allLoginNamesRemoved).toBe(true);
       
@@ -464,7 +465,7 @@ describe('Login Name Projection Integration Tests', () => {
       const firstDomainLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domain1}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(firstDomainLoginNameMaterialized).toBe(true);
       
@@ -493,7 +494,7 @@ describe('Login Name Projection Integration Tests', () => {
       const secondDomainMaterialized = await waitUntil(async () => {
         const domains = await orgQueries.getOrgDomainsByID(orgId);
         return domains.some(d => d.domain === domain2 && d.isVerified);
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(secondDomainMaterialized).toBe(true);
       
@@ -501,7 +502,7 @@ describe('Login Name Projection Integration Tests', () => {
       const secondDomainLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domain2}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(secondDomainLoginNameMaterialized).toBe(true);
       
@@ -556,7 +557,7 @@ describe('Login Name Projection Integration Tests', () => {
       const domainMaterialized = await waitUntil(async () => {
         const domains = await orgQueries.getOrgDomainsByID(orgId);
         return domains.some(d => d.domain === unverifiedDomain && !d.isVerified);
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       expect(domainMaterialized).toBe(true);
 
       // Create user - login names should only be created for verified domain
@@ -610,7 +611,7 @@ describe('Login Name Projection Integration Tests', () => {
       const user1LoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username1}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === user1Id;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
 
       expect(user1LoginNameMaterialized).toBe(true);
 
@@ -621,7 +622,7 @@ describe('Login Name Projection Integration Tests', () => {
       const user2LoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username2}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === user2Id;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
 
       expect(user2LoginNameMaterialized).toBe(true);
 
@@ -685,7 +686,7 @@ describe('Login Name Projection Integration Tests', () => {
       const initialLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(initialLoginNameMaterialized).toBe(true);
       
@@ -706,7 +707,7 @@ describe('Login Name Projection Integration Tests', () => {
       const userEmailUpdated = await waitUntil(async () => {
         const user = await userQueries.getUserByID(userId, 'test-instance');
         return user !== null && user.email === newEmail;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(userEmailUpdated).toBe(true);
       
@@ -747,7 +748,7 @@ describe('Login Name Projection Integration Tests', () => {
       const firstDomainLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domain1}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(firstDomainLoginNameMaterialized).toBe(true);
       
@@ -775,7 +776,7 @@ describe('Login Name Projection Integration Tests', () => {
       const secondDomainLoginNameMaterialized = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${domain2}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(secondDomainLoginNameMaterialized).toBe(true);
       
@@ -797,7 +798,7 @@ describe('Login Name Projection Integration Tests', () => {
         const ln1 = await loginNameQueries.getLoginName(`${username}@${domain1}`, 'test-instance');
         const ln2 = await loginNameQueries.getLoginName(`${username}@${domain2}`, 'test-instance');
         return ln1 !== null && !ln1.isPrimary && ln2 !== null && ln2.isPrimary;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(primaryFlagsUpdated).toBe(true);
       
@@ -862,7 +863,7 @@ describe('Login Name Projection Integration Tests', () => {
       const instanceDomainLoginNameCreated = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${instanceDomain}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(instanceDomainLoginNameCreated).toBe(true);
       
@@ -919,7 +920,7 @@ describe('Login Name Projection Integration Tests', () => {
       const firstInstanceDomainCreated = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${instanceDomain1}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(firstInstanceDomainCreated).toBe(true);
       
@@ -942,7 +943,7 @@ describe('Login Name Projection Integration Tests', () => {
       const secondInstanceDomainCreated = await waitUntil(async () => {
         const loginName = await loginNameQueries.getLoginName(`${username}@${instanceDomain2}`, 'test-instance');
         return loginName !== null && loginName.userId === userId;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(secondInstanceDomainCreated).toBe(true);
       
@@ -969,7 +970,7 @@ describe('Login Name Projection Integration Tests', () => {
       const primaryFlagUpdated = await waitUntil(async () => {
         const ln2 = await loginNameQueries.getLoginName(`${username}@${instanceDomain2}`, 'test-instance');
         return ln2 !== null && ln2.isPrimary === true;
-      }, 15000);
+      }, 5000); // Optimized: 5s timeout (was 15s)
       
       expect(primaryFlagUpdated).toBe(true);
       
