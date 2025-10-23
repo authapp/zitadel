@@ -91,7 +91,8 @@ describe('Migration System Integration', () => {
       // All columns and indexes now in 002_01
       // Phase 2 migrations: 002_28 through 002_42 (15 migrations)
       // Phase 3 new tables: 002_43 (user_auth_methods), 002_44 (personal_access_tokens), 002_45 (encryption_keys), 002_46 (lockout_policies)
-      expect(version).toBe(58); // Updated count: 39 original + 15 Phase 2 + 4 Phase 3
+      // Infrastructure: 002_47 (failed_events), 002_48 (fix failed_events columns), 002_49 (add id column)
+      expect(version).toBe(61); // Updated count: 39 original + 15 Phase 2 + 4 Phase 3 + 3 infrastructure
     });
   });
 
@@ -117,8 +118,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should have 58 records (one per migration step, including Phase 2 and Phase 3)
-      expect(migrations.length).toBe(58);
+      // Should have 61 records (one per migration step, including Phase 2, Phase 3, and infrastructure)
+      expect(migrations.length).toBe(61);
     });
   });
 
@@ -132,7 +133,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(58);
+      expect(migrations1.length).toBe(61);
     });
 
     it('should skip already applied migrations', async () => {
@@ -164,9 +165,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(58);
+      expect(applied.length).toBe(61);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(58);
+      expect(applied[applied.length - 1].version).toBe(61);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

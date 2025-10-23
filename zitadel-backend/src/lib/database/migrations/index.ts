@@ -79,4 +79,7 @@ export const migrations = [
   { version: 56, name: 'Create personal access tokens projection (Phase 3)', filename: '002_44_create_personal_access_tokens_projection_table.sql' },
   { version: 57, name: 'Create encryption keys table (Phase 3)', filename: '002_45_create_encryption_keys_table.sql' },
   { version: 58, name: 'Create lockout policies projection (Phase 3)', filename: '002_46_create_lockout_policies_projection_table.sql' },
+  { version: 59, name: 'Create projection failed events table (Infrastructure)', filename: '002_47_create_projection_failed_events_table.sql' },
+  { version: 60, name: 'Fix projection failed events columns (Infrastructure)', filename: '002_48_fix_projection_failed_events_columns.sql' },
+  { version: 61, name: 'Add id to projection failed events (Infrastructure)', filename: '002_49_add_id_to_failed_events.sql' },
 ];

@@ -1,0 +1,112 @@
+/**
+ * Lockout Policy Projection
+ * Tracks account lockout policies for failed authentication attempts
+ */
+
+import { Event } from '../../eventstore/types';
+import { Projection } from '../projection/projection';
+
+export class LockoutPolicyProjection extends Projection {
+  readonly name = 'lockout_policy_projection';
+  readonly tables = ['lockout_policies_projection'];
+
+  async init(): Promise<void> {
+    // Table created by migration 002_46
+  }
+
+  async reduce(event: Event): Promise<void> {
+    switch (event.eventType) {
+      case 'org.lockout.policy.added':
+      case 'instance.lockout.policy.added':
+        await this.handleLockoutPolicyAdded(event);
+        break;
+      case 'org.lockout.policy.changed':
+      case 'instance.lockout.policy.changed':
+        await this.handleLockoutPolicyChanged(event);
+        break;
+      case 'org.lockout.policy.removed':
+      case 'instance.lockout.policy.removed':
+        await this.handleLockoutPolicyRemoved(event);
+        break;
+    }
+  }
+
+  private async handleLockoutPolicyAdded(event: Event): Promise<void> {
+    const data = event.payload as any;
+    const isInstance = event.eventType.startsWith('instance.');
+    
+    await this.database.query(
+      `INSERT INTO lockout_policies_projection (
+        id, instance_id, resource_owner, max_password_attempts, max_otp_attempts,
+        show_failure, is_default, created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
+        max_password_attempts = EXCLUDED.max_password_attempts,
+        max_otp_attempts = EXCLUDED.max_otp_attempts,
+        show_failure = EXCLUDED.show_failure,
+        updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
+        sequence = GREATEST(lockout_policies_projection.sequence, EXCLUDED.sequence)`,
+      [
+        data.id || event.aggregateID,
+        event.instanceID || 'default',
+        event.owner,
+        data.maxPasswordAttempts || 5,
+        data.maxOtpAttempts || 5,
+        data.showFailure !== false,
+        isInstance,
+        event.createdAt,
+        event.createdAt,
+        event.createdAt,
+        event.aggregateVersion,
+      ]
+    );
+  }
+
+  private async handleLockoutPolicyChanged(event: Event): Promise<void> {
+    const data = event.payload as any;
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (data.maxPasswordAttempts !== undefined) {
+      updates.push(`max_password_attempts = $${paramIndex++}`);
+      values.push(data.maxPasswordAttempts);
+    }
+    if (data.maxOtpAttempts !== undefined) {
+      updates.push(`max_otp_attempts = $${paramIndex++}`);
+      values.push(data.maxOtpAttempts);
+    }
+    if (data.showFailure !== undefined) {
+      updates.push(`show_failure = $${paramIndex++}`);
+      values.push(data.showFailure);
+    }
+
+    if (updates.length > 0) {
+      updates.push(`updated_at = $${paramIndex++}`);
+      values.push(event.createdAt);
+      updates.push(`change_date = $${paramIndex++}`);
+      values.push(event.createdAt);
+      updates.push(`sequence = $${paramIndex++}`);
+      values.push(event.aggregateVersion);
+
+      values.push(event.instanceID || 'default');
+      values.push(data.id || event.aggregateID);
+
+      await this.database.query(
+        `UPDATE lockout_policies_projection SET ${updates.join(', ')} 
+         WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
+        values
+      );
+    }
+  }
+
+  private async handleLockoutPolicyRemoved(event: Event): Promise<void> {
+    const data = event.payload as any;
+    await this.database.query(
+      `DELETE FROM lockout_policies_projection 
+       WHERE instance_id = $1 AND id = $2`,
+      [event.instanceID || 'default', data.id || event.aggregateID]
+    );
+  }
+}

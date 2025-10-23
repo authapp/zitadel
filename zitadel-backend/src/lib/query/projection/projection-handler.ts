@@ -467,20 +467,22 @@ export class ProjectionHandler {
   }
 
   /**
-   * Record failed event within transaction
+   * Record failed event in transaction for retry
    */
   private async recordFailedEventInTx(
-    tx: QueryExecutor,
+    tx: any,
     event: Event,
     error: Error
   ): Promise<void> {
-    const eventID = `${this.config.name}:${event.position.position}`;
+    // Convert position to bigint (multiply by 1000000 to preserve microsecond precision)
+    const failedSequence = Math.floor(event.position.position * 1000000);
+    const eventID = `${this.config.name}:${failedSequence}`;
 
     // Check if this event has failed before
     const existing = await tx.query(
       `SELECT failure_count FROM projection_failed_events 
        WHERE projection_name = $1 AND failed_sequence = $2`,
-      [this.config.name, event.position.position]
+      [this.config.name, failedSequence]
     );
 
     if (existing.rows.length > 0) {
@@ -491,7 +493,7 @@ export class ProjectionHandler {
              error = $1,
              last_failed = NOW()
          WHERE projection_name = $2 AND failed_sequence = $3`,
-        [error.message, this.config.name, event.position.position]
+        [error.message, this.config.name, failedSequence]
       );
     } else {
       // Insert new failed event
@@ -503,7 +505,7 @@ export class ProjectionHandler {
         [
           eventID,
           this.config.name,
-          event.position.position,
+          failedSequence,
           error.message,
           JSON.stringify(event, (_key, value) =>
             typeof value === 'bigint' ? value.toString() : value
