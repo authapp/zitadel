@@ -120,14 +120,14 @@ describe('Login Name Projection Integration Tests', () => {
    * Polls to ensure projections have materialized the data
    */
   async function createOrgWithDomain(orgId: string, domainName: string): Promise<void> {
-    // Push org.added event
+    // Push org.added event with unique name
     await eventstore.push({
       instanceID: 'test-instance',
       aggregateType: 'org',
       aggregateID: orgId,
       eventType: 'org.added',
       payload: {
-        name: 'Test Org',
+        name: `Test-Org-${orgId}`, // Unique org name
       },
       creator: 'system',
       owner: orgId,
@@ -137,13 +137,16 @@ describe('Login Name Projection Integration Tests', () => {
     const orgMaterialized = await waitUntil(async () => {
       const org = await orgQueries.getOrgByID(orgId);
       return org !== null;
-    });
+    }, 5000);
     
     if (!orgMaterialized) {
       throw new Error(`Org ${orgId} was not materialized in time`);
     }
     
-    // Push org.domain.added event
+    // Small delay to ensure org projection is fully committed before adding domain
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Push org.domain.added event (unverified, not primary)
     await eventstore.push({
       instanceID: 'test-instance',
       aggregateType: 'org',
@@ -151,21 +154,65 @@ describe('Login Name Projection Integration Tests', () => {
       eventType: 'org.domain.added',
       payload: {
         domain: domainName,
-        isVerified: true,
-        isPrimary: true,
       },
       creator: 'system',
       owner: orgId,
     });
     
-    // Wait until domain is materialized
-    const domainMaterialized = await waitUntil(async () => {
+    // Wait for domain to be added
+    const domainAdded = await waitUntil(async () => {
       const domains = await orgQueries.getOrgDomainsByID(orgId);
-      return domains.some(d => d.domain === domainName && d.isVerified);
+      return domains.some(d => d.domain === domainName);
+    }, 5000);
+    
+    if (!domainAdded) {
+      throw new Error(`Domain ${domainName} was not added in time`);
+    }
+    
+    // Push org.domain.verified event
+    await eventstore.push({
+      instanceID: 'test-instance',
+      aggregateType: 'org',
+      aggregateID: orgId,
+      eventType: 'org.domain.verified',
+      payload: {
+        domain: domainName,
+      },
+      creator: 'system',
+      owner: orgId,
     });
     
+    // Wait for domain to be verified
+    const domainVerified = await waitUntil(async () => {
+      const domains = await orgQueries.getOrgDomainsByID(orgId);
+      return domains.some(d => d.domain === domainName && d.isVerified);
+    }, 5000);
+    
+    if (!domainVerified) {
+      throw new Error(`Domain ${domainName} was not verified in time`);
+    }
+    
+    // Push org.domain.primary.set event
+    await eventstore.push({
+      instanceID: 'test-instance',
+      aggregateType: 'org',
+      aggregateID: orgId,
+      eventType: 'org.domain.primary.set',
+      payload: {
+        domain: domainName,
+      },
+      creator: 'system',
+      owner: orgId,
+    });
+    
+    // Wait until domain is primary
+    const domainMaterialized = await waitUntil(async () => {
+      const domains = await orgQueries.getOrgDomainsByID(orgId);
+      return domains.some(d => d.domain === domainName && d.isVerified && d.isPrimary);
+    }, 5000);
+    
     if (!domainMaterialized) {
-      throw new Error(`Domain ${domainName} was not materialized in time`);
+      throw new Error(`Domain ${domainName} was not materialized as primary in time`);
     }
   }
 
@@ -833,9 +880,10 @@ describe('Login Name Projection Integration Tests', () => {
       const userId = generateId();
       const instanceDomain = 'instance.example.com';
       const username = 'instanceuser';
+      const orgDomain = `org-${orgId}.example.com`;  // Unique domain per test
 
       // Create org with verified domain first
-      await createOrgWithDomain(orgId, 'org.example.com');
+      await createOrgWithDomain(orgId, orgDomain);
       
       // Create user in the org
       await createUser(userId, orgId, username);
@@ -877,7 +925,7 @@ describe('Login Name Projection Integration Tests', () => {
       // Verify user now has login names for both org domain and instance domain
       const allLoginNames = await loginNameQueries.getLoginNamesByUserID(userId, 'test-instance');
       
-      const hasOrgDomainLoginName = allLoginNames.some(ln => ln.domainName === 'org.example.com');
+      const hasOrgDomainLoginName = allLoginNames.some(ln => ln.domainName === orgDomain);
       const hasInstanceDomainLoginName = allLoginNames.some(ln => ln.domainName === instanceDomain);
       
       expect(hasOrgDomainLoginName).toBe(true);
@@ -894,9 +942,10 @@ describe('Login Name Projection Integration Tests', () => {
       const instanceDomain1 = 'instance1.example.com';
       const instanceDomain2 = 'instance2.example.com';
       const username = 'instanceprimaryuser';
+      const orgDomain = `org-${orgId}.example.com`;  // Unique domain per test
 
       // Create org with verified domain
-      await createOrgWithDomain(orgId, 'org.example.com');
+      await createOrgWithDomain(orgId, orgDomain);
       
       // Create user
       await createUser(userId, orgId, username);

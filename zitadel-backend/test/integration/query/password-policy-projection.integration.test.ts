@@ -67,9 +67,12 @@ describe('Password Policy Projection Integration Tests', () => {
 
   describe('Password Complexity Policy', () => {
     it('should return built-in default when no policies exist', async () => {
-      const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(TEST_INSTANCE_ID);
+      // Use unique instanceID to ensure no policies exist for it
+      const uniqueInstanceID = generateId();
+      const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(uniqueInstanceID);
 
       expect(policy.id).toBe('built-in-default');
+      expect(policy.instanceID).toBe(uniqueInstanceID);
       expect(policy.minLength).toBe(8);
       expect(policy.hasUppercase).toBe(true);
       expect(policy.hasLowercase).toBe(true);
@@ -237,9 +240,12 @@ describe('Password Policy Projection Integration Tests', () => {
 
   describe('Password Age Policy', () => {
     it('should return built-in default when no policies exist', async () => {
-      const policy = await ageQueries.getDefaultPasswordAgePolicy(TEST_INSTANCE_ID);
+      // Use unique instanceID to ensure no policies exist for it
+      const uniqueInstanceID = generateId();
+      const policy = await ageQueries.getDefaultPasswordAgePolicy(uniqueInstanceID);
 
       expect(policy.id).toBe('built-in-default');
+      expect(policy.instanceID).toBe(uniqueInstanceID);
       expect(policy.maxAgeDays).toBe(0); // No expiration
       expect(policy.expireWarnDays).toBe(0);
     });
