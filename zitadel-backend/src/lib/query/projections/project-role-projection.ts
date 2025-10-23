@@ -62,19 +62,22 @@ export class ProjectRoleProjection extends Projection {
 
     await this.database.query(
       `INSERT INTO project_roles_projection (
-        project_id, role_key, display_name, role_group,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      ON CONFLICT (project_id, role_key) DO UPDATE SET
+        instance_id, project_id, role_key, display_name, role_group,
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (instance_id, project_id, role_key) DO UPDATE SET
         display_name = EXCLUDED.display_name,
         role_group = EXCLUDED.role_group,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = GREATEST(project_roles_projection.sequence, EXCLUDED.sequence)`,
       [
+        event.instanceID,
         event.aggregateID,
         data.roleKey,
         data.displayName || data.roleKey,
         data.group || null,
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
@@ -112,15 +115,18 @@ export class ProjectRoleProjection extends Projection {
 
     updates.push(`updated_at = $${paramIndex++}`);
     values.push(event.createdAt);
+    updates.push(`change_date = $${paramIndex++}`);
+    values.push(event.createdAt);
     updates.push(`sequence = $${paramIndex++}`);
     values.push(event.aggregateVersion);
+    values.push(event.instanceID);
     values.push(event.aggregateID);
     values.push(data.roleKey);
 
     await this.database.query(
       `UPDATE project_roles_projection 
        SET ${updates.join(', ')}
-       WHERE project_id = $${paramIndex} AND role_key = $${paramIndex + 1}`,
+       WHERE instance_id = $${paramIndex} AND project_id = $${paramIndex + 1} AND role_key = $${paramIndex + 2}`,
       values
     );
   }
@@ -138,8 +144,8 @@ export class ProjectRoleProjection extends Projection {
 
     await this.database.query(
       `DELETE FROM project_roles_projection 
-       WHERE project_id = $1 AND role_key = $2`,
-      [event.aggregateID, data.roleKey]
+       WHERE instance_id = $1 AND project_id = $2 AND role_key = $3`,
+      [event.instanceID, event.aggregateID, data.roleKey]
     );
   }
 }

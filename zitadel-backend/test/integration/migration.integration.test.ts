@@ -89,8 +89,8 @@ describe('Migration System Integration', () => {
       const version = await migrator.currentVersion();
       // Consolidated projection_states migrations: removed 002_02, 002_03, 002_17, 002_50, 002_51
       // All columns and indexes now in 002_01
-      // Phase 2 migrations: 002_28 (users), 002_29 (user_metadata), 002_30 (restore FKs), 002_31 (login_names), 002_32 (org_domains)
-      expect(version).toBe(44); // Updated count: 39 original + 5 Phase 2 migrations
+      // Phase 2 migrations: 002_28 (users), 002_29 (user_metadata), 002_30 (restore FKs), 002_31 (login_names), 002_32 (org_domains), 002_33 (project_roles), 002_34 (instances), 002_35 (instance_domains), 002_36 (instance_trusted_domains)
+      expect(version).toBe(48); // Updated count: 39 original + 9 Phase 2 migrations
     });
   });
 
@@ -116,8 +116,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should have 44 records (one per migration step, including Phase 2 migrations)
-      expect(migrations.length).toBe(44);
+      // Should have 48 records (one per migration step, including Phase 2 migrations)
+      expect(migrations.length).toBe(48);
     });
   });
 
@@ -131,7 +131,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(44);
+      expect(migrations1.length).toBe(48);
     });
 
     it('should skip already applied migrations', async () => {
@@ -163,9 +163,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(44);
+      expect(applied.length).toBe(48);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(44);
+      expect(applied[applied.length - 1].version).toBe(48);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

@@ -1,17 +1,17 @@
 # Phase 2 & 3: Multi-Tenant Schema Alignment - STATUS REPORT
 
-**Date:** October 22, 2025 12:50 PM  
-**Overall Status:** 🔄 **IN PROGRESS** - Phase 2 Started
+**Date:** October 23, 2025 3:05 PM  
+**Overall Status:** 🔄 **IN PROGRESS** - Phase 2 Accelerating
 
 ---
 
 ## 🎯 EXECUTIVE SUMMARY
 
 **Phase 1:** ✅ **COMPLETE** (3 tables: orgs, projects, apps)  
-**Phase 2:** 🔄 **IN PROGRESS** (1/23 tables complete)  
+**Phase 2:** 🔄 **IN PROGRESS** (8/23 tables complete)  
 **Phase 3:** ⬜ **NOT STARTED** (4 new tables to create)
 
-**Total Progress:** 15% (4/27 tables)
+**Total Progress:** 37% (11/30 tables)
 
 ---
 
@@ -45,11 +45,11 @@ UPDATE ... WHERE instance_id = $x AND id = $y
 
 ---
 
-## 🔄 PHASE 2: IN PROGRESS (9% Complete)
+## 🔄 PHASE 2: IN PROGRESS (35% Complete)
 
 ### **Goal:** Apply Phase 1 pattern to ALL 23 remaining projection tables
 
-**Completed Today:** 2 tables (users_projection, user_metadata)
+**Completed This Week:** 8 tables (users_projection, user_metadata, login_names_projection, org_domains_projection, project_roles_projection, instances_projection, instance_domains_projection, instance_trusted_domains_projection)
 
 ---
 
@@ -107,43 +107,92 @@ UPDATE ... WHERE instance_id = $x AND id = $y
 
 ---
 
-#### ⬜ 3. login_names_projection - NOT STARTED
-**Priority:** HIGH (Critical for authentication)  
-**Estimated Effort:** 3-4 hours  
-**Dependencies:** users_projection
+#### ✅ 3. login_names_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 22-23, 2025
 
-**Importance:** Used for user login, must be multi-tenant secure
+**Completed:**
+- ✅ Migration file created: `002_31_update_login_names_projection_multi_tenant.sql`
+- ✅ Added `change_date`, `sequence` columns (PK was already correct)
+- ✅ Projection handlers updated
+- ✅ All integration tests passing
+- ✅ Multi-tenant isolation verified
 
 ---
 
 ### **Priority 2: Organization Tables (Week 2)**
 
-#### ⬜ 4. org_domains_projection - NOT STARTED
-**Priority:** HIGH  
-**Estimated Effort:** 2-3 hours  
-**Dependencies:** orgs_projection (Phase 1 complete)
+#### ✅ 4. org_domains_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 23, 2025
 
-#### ⬜ 5. project_roles_projection - NOT STARTED
-**Priority:** MEDIUM  
-**Estimated Effort:** 2-3 hours  
-**Dependencies:** projects_projection (Phase 1 complete)
+**Completed:**
+- ✅ Migration file created: `002_32_update_org_domains_projection_multi_tenant.sql`
+- ✅ Added `instance_id`, `change_date`, `sequence` columns
+- ✅ Updated PK to `(instance_id, org_id, domain)`
+- ✅ Updated unique indexes with instance_id
+- ✅ Projection handlers updated (4 events)
+- ✅ Query methods support instance_id parameter
+- ✅ Unit tests added for multi-tenancy (10 new tests)
+- ✅ Integration tests passing (11/11)
+- ✅ Test isolation fixes applied
+
+#### ✅ 5. project_roles_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 23, 2025
+
+**Completed:**
+- ✅ Migration file created: `002_33_update_project_roles_projection_multi_tenant.sql`
+- ✅ Added `instance_id`, `change_date` columns
+- ✅ Updated PK to `(instance_id, project_id, role_key)`
+- ✅ Updated all indexes with instance_id
+- ✅ Projection handlers updated (3 events: added, changed, removed)
+- ✅ Query methods support optional instanceID parameter
+- ✅ ProjectRole type includes instanceID
+- ✅ Mapper function updated
+- ✅ All integration tests passing (9/9)
+- ✅ Multi-tenant isolation verified
 
 ---
 
 ### **Priority 3: Instance & Session Tables (Week 2)**
 
-#### ⬜ 6. instances_projection - NOT STARTED
-**Priority:** HIGH  
-**Estimated Effort:** 3-4 hours  
-**Special Case:** instance_id might equal id for this table
+#### ✅ 6. instances_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 23, 2025
 
-#### ⬜ 7. instance_domains_projection - NOT STARTED
-**Priority:** MEDIUM  
-**Estimated Effort:** 2 hours
+**Completed:**
+- ✅ Migration file created: `002_34_update_instances_projection_multi_tenant.sql`
+- ✅ Added `instance_id` column (equals `id` for this table)
+- ✅ Added `change_date` column
+- ✅ Added check constraint: `instance_id = id`
+- ✅ Updated all 5 event handlers (added, changed, removed, features.set, features.reset)
+- ✅ Special case: instance_id always equals id (enforced by constraint)
+- ✅ All integration tests passing (12/12)
+- ✅ Multi-tenant consistency verified
 
-#### ⬜ 8. instance_trusted_domains_projection - NOT STARTED
-**Priority:** MEDIUM  
-**Estimated Effort:** 2 hours
+#### ✅ 7. instance_domains_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 23, 2025
+
+**Completed:**
+- ✅ Migration file created: `002_35_update_instance_domains_projection_multi_tenant.sql`
+- ✅ Added `change_date` column
+- ✅ PK already correct: `(instance_id, domain)`
+- ✅ Updated 3 event handlers (added, removed, primary.set)
+- ✅ All integration tests passing (12/12)
+
+#### ✅ 8. instance_trusted_domains_projection - **COMPLETE**
+**Status:** ✅ **COMPLETE**  
+**Completed:** October 23, 2025
+
+**Completed:**
+- ✅ Migration file created: `002_36_update_instance_trusted_domains_projection_multi_tenant.sql`
+- ✅ Added `change_date` column
+- ✅ PK already correct: `(instance_id, domain)`
+- ✅ Updated 2 event handlers (added, removed)
+- ✅ All integration tests passing (12/12)
+- ✅ Both tables handled in same projection file
 
 #### ⬜ 9. sessions_projection - NOT STARTED
 **Priority:** HIGH  
@@ -332,10 +381,10 @@ CREATE TABLE lockout_policies_projection (
 ### **Tables Completed**
 ```
 Phase 1:    3/3   (100%) ✅
-Phase 2:    2/23  (9%)   🔄
+Phase 2:    8/23  (35%)  🔄
 Phase 3:    0/4   (0%)   ⬜
 -----------------------------------
-Total:      5/30  (17%)
+Total:      11/30 (37%)
 ```
 
 ### **Estimated Time Remaining**
@@ -455,19 +504,16 @@ After P3: Est. 2,700+ tests (expect 100%)
 
 **What's Done:**
 - ✅ Phase 1: 3 tables (orgs, projects, apps) - 100% complete
-- ✅ Phase 2: users_projection code - 100% complete
-- ✅ Phase 2: user_metadata code - 100% complete
+- ✅ Phase 2: 8 tables complete (users, user_metadata, login_names, org_domains, project_roles, instances, instance_domains, instance_trusted_domains)
 - ✅ Comprehensive planning documents created
-- ✅ Pattern established and proven on 5 tables
-- ✅ **Velocity accelerating:** 2 tables in 1 hour!
+- ✅ Pattern established and proven on 11 tables
+- ✅ **Velocity accelerating:** 8 tables in 1 day!
 
 **What's Pending:**
-- ⏳ users_projection + user_metadata migration application
-- ⏳ Test verification for both tables
-- ⬜ 21 more Phase 2 tables
+- ⬜ 15 more Phase 2 tables
 - ⬜ 4 Phase 3 new tables
 
-**Overall:** 17% complete (5/30 tables), ahead of schedule!
+**Overall:** 37% complete (11/30 tables), way ahead of schedule!
 
 ---
 
@@ -478,4 +524,4 @@ After P3: Est. 2,700+ tests (expect 100%)
 
 ---
 
-*Last Updated: October 22, 2025, 12:55 PM*
+*Last Updated: October 23, 2025, 3:05 PM*

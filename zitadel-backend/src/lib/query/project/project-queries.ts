@@ -112,16 +112,18 @@ export class ProjectQueries {
   /**
    * Get project with all its roles
    */
-  async getProjectWithRoles(projectID: string): Promise<ProjectWithRoles | null> {
-    const project = await this.getProjectByID(projectID);
+  async getProjectWithRoles(projectID: string, instanceID?: string): Promise<ProjectWithRoles | null> {
+    const project = await this.getProjectByID(projectID, instanceID);
     if (!project) {
       return null;
     }
 
-    const rolesResult = await this.database.query(
-      'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key',
-      [projectID]
-    );
+    const query = instanceID
+      ? 'SELECT * FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
+      : 'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key';
+    const params = instanceID ? [instanceID, projectID] : [projectID];
+    
+    const rolesResult = await this.database.query(query, params);
 
     return {
       project,
@@ -132,10 +134,18 @@ export class ProjectQueries {
   /**
    * Search project roles
    */
-  async searchProjectRoles(query: ProjectRoleSearchQuery): Promise<ProjectRoleSearchResult> {
-    const conditions: string[] = ['project_id = $1'];
-    const values: any[] = [query.projectId];
-    let paramIndex = 2;
+  async searchProjectRoles(query: ProjectRoleSearchQuery, instanceID?: string): Promise<ProjectRoleSearchResult> {
+    const conditions: string[] = [];
+    const values: any[] = [];
+    let paramIndex = 1;
+
+    if (instanceID) {
+      conditions.push(`instance_id = $${paramIndex++}`);
+      values.push(instanceID);
+    }
+
+    conditions.push(`project_id = $${paramIndex++}`);
+    values.push(query.projectId);
 
     if (query.roleKey) {
       conditions.push(`role_key ILIKE $${paramIndex}`);
@@ -185,11 +195,13 @@ export class ProjectQueries {
   /**
    * Get all roles for a project
    */
-  async getProjectRoles(projectID: string): Promise<ProjectRole[]> {
-    const result = await this.database.query(
-      'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key',
-      [projectID]
-    );
+  async getProjectRoles(projectID: string, instanceID?: string): Promise<ProjectRole[]> {
+    const query = instanceID
+      ? 'SELECT * FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
+      : 'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key';
+    const params = instanceID ? [instanceID, projectID] : [projectID];
+    
+    const result = await this.database.query(query, params);
 
     return result.rows.map(row => this.mapToProjectRole(row));
   }
@@ -197,11 +209,13 @@ export class ProjectQueries {
   /**
    * Check if a role exists in a project
    */
-  async hasProjectRole(projectID: string, roleKey: string): Promise<boolean> {
-    const result = await this.database.query(
-      'SELECT 1 FROM project_roles_projection WHERE project_id = $1 AND role_key = $2',
-      [projectID, roleKey]
-    );
+  async hasProjectRole(projectID: string, roleKey: string, instanceID?: string): Promise<boolean> {
+    const query = instanceID
+      ? 'SELECT 1 FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 AND role_key = $3'
+      : 'SELECT 1 FROM project_roles_projection WHERE project_id = $1 AND role_key = $2';
+    const params = instanceID ? [instanceID, projectID, roleKey] : [projectID, roleKey];
+    
+    const result = await this.database.query(query, params);
 
     return result.rows.length > 0;
   }
@@ -256,6 +270,7 @@ export class ProjectQueries {
    */
   private mapToProjectRole(row: any): ProjectRole {
     return {
+      instanceID: row.instance_id || undefined,
       projectId: row.project_id,
       roleKey: row.role_key,
       displayName: row.display_name,

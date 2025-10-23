@@ -34,6 +34,7 @@ export interface Project {
  * Project role read model
  */
 export interface ProjectRole {
+  instanceID?: string;
   projectId: string;
   roleKey: string;
   displayName: string;

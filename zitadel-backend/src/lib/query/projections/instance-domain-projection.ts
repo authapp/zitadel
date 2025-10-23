@@ -45,18 +45,20 @@ export class InstanceDomainProjection extends Projection {
     await this.database.query(
       `INSERT INTO instance_domains_projection (
         instance_id, domain, is_primary, is_generated,
-        created_at, updated_at, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       ON CONFLICT (instance_id, domain) DO UPDATE SET
         is_primary = EXCLUDED.is_primary,
         is_generated = EXCLUDED.is_generated,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
         event.instanceID,
         payload.domain,
         payload.isPrimary || false,
         payload.isGenerated || false,
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
@@ -85,10 +87,12 @@ export class InstanceDomainProjection extends Projection {
       `UPDATE instance_domains_projection SET
         is_primary = false,
         updated_at = $2,
-        sequence = $3
+        change_date = $3,
+        sequence = $4
       WHERE instance_id = $1 AND is_primary = true`,
       [
         event.instanceID,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -99,11 +103,13 @@ export class InstanceDomainProjection extends Projection {
       `UPDATE instance_domains_projection SET
         is_primary = true,
         updated_at = $3,
-        sequence = $4
+        change_date = $4,
+        sequence = $5
       WHERE instance_id = $1 AND domain = $2`,
       [
         event.instanceID,
         payload.domain,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
@@ -115,14 +121,16 @@ export class InstanceDomainProjection extends Projection {
     
     await this.database.query(
       `INSERT INTO instance_trusted_domains_projection (
-        instance_id, domain, created_at, sequence
-      ) VALUES ($1, $2, $3, $4)
+        instance_id, domain, created_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (instance_id, domain) DO UPDATE SET
         created_at = EXCLUDED.created_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
         event.instanceID,
         payload.domain,
+        event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
       ]
