@@ -65,6 +65,55 @@ describe('OrgQueries', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should filter by instanceID when provided', async () => {
+      const mockOrg = {
+        id: 'org-123',
+        instanceID: 'instance-456',  // SQL returns AS "instanceID"
+        name: 'Test Org',
+        state: 'active',
+        primaryDomain: 'test.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        sequence: 1,
+      };
+
+      mockDatabase.query.mockResolvedValue({
+        rows: [mockOrg],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgByID('org-123', 'instance-456');
+
+      expect(result).toBeDefined();
+      expect(result?.id).toBe('org-123');
+      expect(result?.instanceID).toBe('instance-456');
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['instance-456', 'org-123']
+      );
+    });
+
+    it('should return null when org exists but wrong instanceID', async () => {
+      mockDatabase.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgByID('org-123', 'wrong-instance');
+
+      expect(result).toBeNull();
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['wrong-instance', 'org-123']
+      );
+    });
   });
 
   describe('getOrgByDomainGlobal', () => {
@@ -109,6 +158,55 @@ describe('OrgQueries', () => {
       const result = await orgQueries.getOrgByDomainGlobal('nonexistent.com');
 
       expect(result).toBeNull();
+    });
+
+    it('should filter JOIN by instanceID when provided', async () => {
+      const mockOrg = {
+        id: 'org-123',
+        instanceID: 'instance-456',  // SQL returns AS "instanceID"
+        name: 'Test Org',
+        state: 'active',
+        primaryDomain: 'test.com',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        sequence: 1,
+      };
+
+      mockDatabase.query.mockResolvedValue({
+        rows: [mockOrg],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgByDomainGlobal('test.com', 'instance-456');
+
+      expect(result).toBeDefined();
+      expect(result?.id).toBe('org-123');
+      expect(result?.instanceID).toBe('instance-456');
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('o.instance_id = $1'),
+        ['instance-456', 'test.com']
+      );
+    });
+
+    it('should return null for domain in wrong instance', async () => {
+      mockDatabase.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgByDomainGlobal('test.com', 'wrong-instance');
+
+      expect(result).toBeNull();
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['wrong-instance', 'test.com']
+      );
     });
   });
 
@@ -256,6 +354,72 @@ describe('OrgQueries', () => {
         expect.arrayContaining([10, 20])
       );
     });
+
+    it('should filter by instanceID when provided', async () => {
+      mockDatabase.query
+        .mockResolvedValueOnce({
+          rows: [{ count: '1' }],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        })
+        .mockResolvedValueOnce({
+          rows: [
+            {
+              id: 'org-1',
+              instanceID: 'instance-456',  // SQL returns AS "instanceID"
+              name: 'Instance Org',
+              state: 'active',
+              primaryDomain: 'test.com',
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              sequence: 1,
+            },
+          ],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        });
+
+      const result = await orgQueries.searchOrgs({ instanceID: 'instance-456' });
+
+      expect(result.total).toBe(1);
+      expect(result.orgs).toHaveLength(1);
+      expect(result.orgs[0].instanceID).toBe('instance-456');
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        expect.arrayContaining(['instance-456'])
+      );
+    });
+
+    it('should return empty result for wrong instanceID', async () => {
+      mockDatabase.query
+        .mockResolvedValueOnce({
+          rows: [{ count: '0' }],
+          rowCount: 1,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        })
+        .mockResolvedValueOnce({
+          rows: [],
+          rowCount: 0,
+          command: 'SELECT',
+          oid: 0,
+          fields: [],
+        });
+
+      const result = await orgQueries.searchOrgs({ instanceID: 'wrong-instance' });
+
+      expect(result.total).toBe(0);
+      expect(result.orgs).toHaveLength(0);
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        expect.arrayContaining(['wrong-instance'])
+      );
+    });
   });
 
   describe('getOrgDomainsByID', () => {
@@ -314,6 +478,59 @@ describe('OrgQueries', () => {
       const result = await orgQueries.getOrgDomainsByID('org-123');
 
       expect(result).toEqual([]);
+    });
+
+    it('should filter domains by instanceID when provided', async () => {
+      const mockDomains = [
+        {
+          instanceID: 'instance-456',  // SQL returns AS "instanceID"
+          orgID: 'org-123',
+          domain: 'test.com',
+          isVerified: true,
+          isPrimary: true,
+          validationType: 'dns',
+          validationCode: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          sequence: 1,
+        },
+      ];
+
+      mockDatabase.query.mockResolvedValue({
+        rows: mockDomains,
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgDomainsByID('org-123', 'instance-456');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].instanceID).toBe('instance-456');
+      expect(result[0].domain).toBe('test.com');
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id = $1'),
+        ['instance-456', 'org-123']
+      );
+    });
+
+    it('should return empty array for wrong instanceID', async () => {
+      mockDatabase.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getOrgDomainsByID('org-123', 'wrong-instance');
+
+      expect(result).toEqual([]);
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['wrong-instance', 'org-123']
+      );
     });
   });
 
@@ -434,7 +651,7 @@ describe('OrgQueries', () => {
     });
   });
 
-  describe('getPrimaryDomain', () => {
+  describe('getPrimaryDomainByOrgID', () => {
     it('should return primary domain when exists', async () => {
       const mockDomain = {
         orgID: 'org-123',
@@ -456,7 +673,7 @@ describe('OrgQueries', () => {
         fields: [],
       });
 
-      const result = await orgQueries.getPrimaryDomain('org-123');
+      const result = await orgQueries.getPrimaryDomainByOrgID('org-123');
 
       expect(result).toBeDefined();
       expect(result?.domain).toBe('primary.com');
@@ -472,9 +689,61 @@ describe('OrgQueries', () => {
         fields: [],
       });
 
-      const result = await orgQueries.getPrimaryDomain('org-123');
+      const result = await orgQueries.getPrimaryDomainByOrgID('org-123');
 
       expect(result).toBeNull();
+    });
+
+    it('should filter by instanceID when provided', async () => {
+      const mockDomain = {
+        instanceID: 'instance-456',  // SQL returns AS "instanceID"
+        orgID: 'org-123',
+        domain: 'primary.com',
+        isVerified: true,
+        isPrimary: true,
+        validationType: 'dns',
+        validationCode: null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        sequence: 1,
+      };
+
+      mockDatabase.query.mockResolvedValue({
+        rows: [mockDomain],
+        rowCount: 1,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getPrimaryDomainByOrgID('org-123', 'instance-456');
+
+      expect(result).toBeDefined();
+      expect(result?.instanceID).toBe('instance-456');
+      expect(result?.domain).toBe('primary.com');
+      expect(result?.isPrimary).toBe(true);
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['instance-456', 'org-123']
+      );
+    });
+
+    it('should return null for wrong instanceID', async () => {
+      mockDatabase.query.mockResolvedValue({
+        rows: [],
+        rowCount: 0,
+        command: 'SELECT',
+        oid: 0,
+        fields: [],
+      });
+
+      const result = await orgQueries.getPrimaryDomainByOrgID('org-123', 'wrong-instance');
+
+      expect(result).toBeNull();
+      expect(mockDatabase.query).toHaveBeenCalledWith(
+        expect.stringContaining('instance_id'),
+        ['wrong-instance', 'org-123']
+      );
     });
   });
 

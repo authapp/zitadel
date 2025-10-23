@@ -29,6 +29,7 @@ export enum DomainVerificationState {
  */
 export interface Organization {
   id: string;
+  instanceID?: string; // Multi-tenant instance identifier
   name: string;
   state: OrgState;
   primaryDomain?: string;
@@ -41,6 +42,7 @@ export interface Organization {
  * Organization domain read model
  */
 export interface OrganizationDomain {
+  instanceID?: string; // Multi-tenant instance identifier
   orgID: string;
   domain: string;
   isVerified: boolean;
@@ -63,6 +65,7 @@ export interface OrganizationWithDomains extends Organization {
  * Organization search query
  */
 export interface OrgSearchQuery {
+  instanceID?: string; // Filter by instance
   name?: string;
   domain?: string;
   state?: OrgState;
@@ -74,6 +77,7 @@ export interface OrgSearchQuery {
  * Organization domain search query
  */
 export interface OrgDomainSearchQuery {
+  instanceID?: string; // Filter by instance
   orgID?: string;
   domain?: string;
   isVerified?: boolean;

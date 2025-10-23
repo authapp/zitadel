@@ -64,4 +64,5 @@ export const migrations = [
   { version: 41, name: 'Update user metadata for multi-tenant (Phase 2)', filename: '002_29_update_user_metadata_multi_tenant.sql' },
   { version: 42, name: 'Restore user FK constraints with composite keys (Phase 2)', filename: '002_30_restore_user_fk_constraints.sql' },
   { version: 43, name: 'Update login names projection for multi-tenant (Phase 2)', filename: '002_31_update_login_names_projection_multi_tenant.sql' },
+  { version: 44, name: 'Update org domains projection for multi-tenant (Phase 2)', filename: '002_32_update_org_domains_projection_multi_tenant.sql' },
 ];
