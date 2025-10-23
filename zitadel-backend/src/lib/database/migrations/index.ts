@@ -69,4 +69,5 @@ export const migrations = [
   { version: 46, name: 'Update instances projection for multi-tenant (Phase 2)', filename: '002_34_update_instances_projection_multi_tenant.sql' },
   { version: 47, name: 'Update instance domains projection for multi-tenant (Phase 2)', filename: '002_35_update_instance_domains_projection_multi_tenant.sql' },
   { version: 48, name: 'Update instance trusted domains projection for multi-tenant (Phase 2)', filename: '002_36_update_instance_trusted_domains_projection_multi_tenant.sql' },
+  { version: 49, name: 'Update sessions projection for multi-tenant (Phase 2)', filename: '002_37_update_sessions_projection_multi_tenant.sql' },
 ];

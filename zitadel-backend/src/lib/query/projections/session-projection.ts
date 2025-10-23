@@ -59,14 +59,15 @@ export class SessionProjection extends Projection {
     await this.database.query(
       `INSERT INTO sessions_projection (
         id, instance_id, state, user_id, user_agent, client_ip,
-        created_at, updated_at, sequence, metadata, tokens, factors
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-      ON CONFLICT (id) DO UPDATE SET
+        created_at, updated_at, change_date, sequence, metadata, tokens, factors
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      ON CONFLICT (instance_id, id) DO UPDATE SET
         state = EXCLUDED.state,
         user_id = EXCLUDED.user_id,
         user_agent = EXCLUDED.user_agent,
         client_ip = EXCLUDED.client_ip,
         updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence,
         metadata = EXCLUDED.metadata`,
       [
@@ -76,6 +77,7 @@ export class SessionProjection extends Projection {
         payload.userID || null,
         payload.userAgent || null,
         payload.clientIP || null,
+        event.createdAt,
         event.createdAt,
         event.createdAt,
         Math.floor(event.position.position),
@@ -93,9 +95,9 @@ export class SessionProjection extends Projection {
     const payload = event.payload || {};
     
     // Build update parts dynamically
-    const updates: string[] = ['updated_at = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
-    let paramIndex = 3;
+    const updates: string[] = ['updated_at = $1', 'change_date = $2', 'sequence = $3'];
+    const values: any[] = [event.createdAt, event.createdAt, Math.floor(event.position.position)];
+    let paramIndex = 4;
     
     if (payload.userAgent !== undefined) {
       updates.push(`user_agent = $${paramIndex++}`);
@@ -112,12 +114,13 @@ export class SessionProjection extends Projection {
       values.push(JSON.stringify(payload.metadata));
     }
     
+    values.push(event.instanceID);
     values.push(event.aggregateID);
     
     await this.database.query(
       `UPDATE sessions_projection 
        SET ${updates.join(', ')} 
-       WHERE id = $${paramIndex}`,
+       WHERE instance_id = $${paramIndex} AND id = $${paramIndex + 1}`,
       values
     );
   }
@@ -128,13 +131,15 @@ export class SessionProjection extends Projection {
   private async handleSessionTerminated(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE sessions_projection 
-       SET state = $1, terminated_at = $2, updated_at = $3, sequence = $4
-       WHERE id = $5`,
+       SET state = $1, terminated_at = $2, updated_at = $3, change_date = $4, sequence = $5
+       WHERE instance_id = $6 AND id = $7`,
       [
         'terminated',
         event.createdAt,
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
+        event.instanceID,
         event.aggregateID,
       ]
     );
@@ -152,8 +157,8 @@ export class SessionProjection extends Projection {
     
     // Get current tokens, add new one
     const result = await this.database.queryOne(
-      'SELECT tokens FROM sessions_projection WHERE id = $1',
-      [event.aggregateID]
+      'SELECT tokens FROM sessions_projection WHERE instance_id = $1 AND id = $2',
+      [event.instanceID, event.aggregateID]
     );
     
     if (!result) return;
@@ -179,12 +184,14 @@ export class SessionProjection extends Projection {
     
     await this.database.query(
       `UPDATE sessions_projection 
-       SET tokens = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
+       SET tokens = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
       [
         JSON.stringify(tokens),
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
+        event.instanceID,
         event.aggregateID,
       ]
     );
@@ -202,8 +209,8 @@ export class SessionProjection extends Projection {
     
     // Get current factors, add/update one
     const result = await this.database.queryOne(
-      'SELECT factors FROM sessions_projection WHERE id = $1',
-      [event.aggregateID]
+      'SELECT factors FROM sessions_projection WHERE instance_id = $1 AND id = $2',
+      [event.instanceID, event.aggregateID]
     );
     
     if (!result) return;
@@ -230,12 +237,14 @@ export class SessionProjection extends Projection {
     
     await this.database.query(
       `UPDATE sessions_projection 
-       SET factors = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
+       SET factors = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
       [
         JSON.stringify(factors),
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
+        event.instanceID,
         event.aggregateID,
       ]
     );
@@ -251,8 +260,8 @@ export class SessionProjection extends Projection {
     
     // Get current metadata, update key
     const result = await this.database.queryOne(
-      'SELECT metadata FROM sessions_projection WHERE id = $1',
-      [event.aggregateID]
+      'SELECT metadata FROM sessions_projection WHERE instance_id = $1 AND id = $2',
+      [event.instanceID, event.aggregateID]
     );
     
     if (!result) return;
@@ -270,12 +279,14 @@ export class SessionProjection extends Projection {
     
     await this.database.query(
       `UPDATE sessions_projection 
-       SET metadata = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
+       SET metadata = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
       [
         JSON.stringify(metadata),
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
+        event.instanceID,
         event.aggregateID,
       ]
     );
@@ -291,8 +302,8 @@ export class SessionProjection extends Projection {
     
     // Get current metadata, delete key
     const result = await this.database.queryOne(
-      'SELECT metadata FROM sessions_projection WHERE id = $1',
-      [event.aggregateID]
+      'SELECT metadata FROM sessions_projection WHERE instance_id = $1 AND id = $2',
+      [event.instanceID, event.aggregateID]
     );
     
     if (!result) return;
@@ -310,12 +321,14 @@ export class SessionProjection extends Projection {
     
     await this.database.query(
       `UPDATE sessions_projection 
-       SET metadata = $1, updated_at = $2, sequence = $3
-       WHERE id = $4`,
+       SET metadata = $1, updated_at = $2, change_date = $3, sequence = $4
+       WHERE instance_id = $5 AND id = $6`,
       [
         JSON.stringify(metadata),
         event.createdAt,
+        event.createdAt,
         Math.floor(event.position.position),
+        event.instanceID,
         event.aggregateID,
       ]
     );
