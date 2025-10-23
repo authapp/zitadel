@@ -183,12 +183,12 @@ describe('Password Policy Projection Integration Tests', () => {
       const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(instanceID);
 
       // Test valid password
-      const validResult = complexityQueries.validatePassword('MyP@ssw0rd123', policy);
+      const validResult = await complexityQueries.validatePassword('MyP@ssw0rd123', policy);
       expect(validResult.valid).toBe(true);
       expect(validResult.errors).toHaveLength(0);
 
       // Test invalid password (too short)
-      const invalidResult = complexityQueries.validatePassword('Short1!', policy);
+      const invalidResult = await complexityQueries.validatePassword('Short1!', policy);
       expect(invalidResult.valid).toBe(false);
       expect(invalidResult.errors.length).toBeGreaterThan(0);
     });

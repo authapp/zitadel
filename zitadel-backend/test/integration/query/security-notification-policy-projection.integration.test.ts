@@ -3,12 +3,13 @@
  * Tests lockout, privacy, notification, and security policies with real database and projections
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { createTestDatabase, closeTestDatabase } from '../setup';
 import { DatabasePool } from '../../../src/lib/database';
 import { PostgresEventstore } from '../../../src/lib/eventstore/postgres/eventstore';
 import { ProjectionRegistry } from '../../../src/lib/query/projection/projection-registry';
 import { SecurityNotificationPolicyProjection, createSecurityNotificationPolicyProjectionConfig } from '../../../src/lib/query/projections/security-notification-policy-projection';
+import { LockoutPolicyProjection } from '../../../src/lib/query/projections/lockout-policy-projection';
 import { LockoutPolicyQueries } from '../../../src/lib/query/policy/lockout-policy-queries';
 import { PrivacyPolicyQueries } from '../../../src/lib/query/policy/privacy-policy-queries';
 import { NotificationPolicyQueries } from '../../../src/lib/query/policy/notification-policy-queries';
@@ -42,12 +43,22 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register projection
+    // Register projections
     const config = createSecurityNotificationPolicyProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, new SecurityNotificationPolicyProjection(eventstore, pool));
     
+    // Also register lockout policy projection since this test suite tests lockout policies
+    const lockoutConfig = {
+      name: 'lockout_policy_projection',
+      tables: ['lockout_policies_projection'],
+      eventTypes: ['instance.lockout.policy.added', 'instance.lockout.policy.changed', 'org.lockout.policy.added', 'org.lockout.policy.changed', 'org.removed'],
+      interval: 50,
+    };
+    registry.register(lockoutConfig, new LockoutPolicyProjection(eventstore, pool));
+    
     await registry.start('security_notification_policy_projection');
+    await registry.start('lockout_policy_projection');
 
     // Initialize query classes
     lockoutQueries = new LockoutPolicyQueries(pool);
@@ -69,6 +80,16 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
+  beforeEach(async () => {
+    // Clean up test data between tests to prevent interference
+    await pool.query('DELETE FROM lockout_policies_projection WHERE instance_id = $1', [TEST_INSTANCE_ID]);
+    await pool.query('DELETE FROM projections.privacy_policies WHERE instance_id = $1', [TEST_INSTANCE_ID]);
+    await pool.query('DELETE FROM projections.notification_policies WHERE instance_id = $1', [TEST_INSTANCE_ID]);
+    await pool.query('DELETE FROM projections.security_policies WHERE instance_id = $1', [TEST_INSTANCE_ID]);
+    // Wait a bit for cleanup to complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+  });
+
   const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
     new Promise(resolve => setTimeout(resolve, ms));
 
@@ -84,7 +105,8 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should process instance.lockout.policy.added event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
+      const policyID = generateId();
       
       await eventstore.push({
         instanceID,
@@ -92,6 +114,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         aggregateID: instanceID,
         eventType: 'instance.lockout.policy.added',
         payload: {
+          id: policyID,
           maxPasswordAttempts: 15,
           maxOTPAttempts: 10,
           showFailures: false,
@@ -112,16 +135,18 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should retrieve org-specific policy over instance default', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       const orgID = generateId();
       
       // Instance policy
+      const instancePolicyID = generateId();
       await eventstore.push({
         instanceID,
         aggregateType: 'instance',
         aggregateID: instanceID,
         eventType: 'instance.lockout.policy.added',
         payload: {
+          id: instancePolicyID,
           maxPasswordAttempts: 10,
           maxOTPAttempts: 5,
           showFailures: true,
@@ -133,15 +158,17 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
       await waitForProjection();
 
       // Org-specific policy
+      const orgPolicyID = generateId();
       await eventstore.push({
         instanceID,
         aggregateType: 'org',
         aggregateID: orgID,
         eventType: 'org.lockout.policy.added',
         payload: {
+          id: orgPolicyID,
           maxPasswordAttempts: 3,
           maxOTPAttempts: 2,
-          showFailures: true,
+          showFailures: false,
         },
         creator: 'admin',
         owner: orgID,
@@ -158,7 +185,8 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should update lockout policy on changed event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
+      const policyID = generateId();
       
       await eventstore.push({
         instanceID,
@@ -166,6 +194,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         aggregateID: instanceID,
         eventType: 'instance.lockout.policy.added',
         payload: {
+          id: policyID,
           maxPasswordAttempts: 5,
           maxOTPAttempts: 3,
           showFailures: false,
@@ -183,6 +212,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         aggregateID: instanceID,
         eventType: 'instance.lockout.policy.changed',
         payload: {
+          id: policyID,
           maxPasswordAttempts: 20,
           showFailures: true,
         },
@@ -211,7 +241,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should process instance.privacy.policy.added event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       
       await eventstore.push({
         instanceID,
@@ -240,7 +270,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should retrieve org-specific privacy policy', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       const orgID = generateId();
       
       // Instance policy
@@ -298,7 +328,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should process instance.notification.policy.added event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       
       await eventstore.push({
         instanceID,
@@ -321,7 +351,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should retrieve org-specific notification policy', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       const orgID = generateId();
       
       // Instance policy
@@ -373,7 +403,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should process instance.security.policy.added event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       
       await eventstore.push({
         instanceID,
@@ -399,7 +429,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     });
 
     it('should update security policy on changed event', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       
       await eventstore.push({
         instanceID,
@@ -443,7 +473,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
 
   describe('Policy Inheritance', () => {
     it('should demonstrate 3-level inheritance for all policies', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       const orgID = generateId();
       
       // Level 1: Built-in defaults
@@ -454,12 +484,13 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
       expect(privacy.docsLink).toBe('https://zitadel.com/docs');
 
       // Level 2: Instance policies
+      const lockoutPolicyID = generateId();
       await eventstore.push({
         instanceID,
         aggregateType: 'instance',
         aggregateID: instanceID,
         eventType: 'instance.lockout.policy.added',
-        payload: { maxPasswordAttempts: 8, maxOTPAttempts: 4, showFailures: true },
+        payload: { id: lockoutPolicyID, maxPasswordAttempts: 8, maxOTPAttempts: 5, showFailures: true },
         creator: 'admin',
         owner: instanceID,
       });
@@ -483,12 +514,13 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
       expect(privacy.tosLink).toBe('https://instance.com/tos');
 
       // Level 3: Org policies
+      const orgLockoutPolicyID = generateId();
       await eventstore.push({
         instanceID,
         aggregateType: 'org',
         aggregateID: orgID,
         eventType: 'org.lockout.policy.added',
-        payload: { maxPasswordAttempts: 5, maxOTPAttempts: 3, showFailures: false },
+        payload: { id: orgLockoutPolicyID, maxPasswordAttempts: 3, maxOTPAttempts: 2, showFailures: false },
         creator: 'admin',
         owner: orgID,
       });
@@ -506,7 +538,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
       await waitForProjection();
 
       lockout = await lockoutQueries.getLockoutPolicy(instanceID, orgID);
-      expect(lockout.maxPasswordAttempts).toBe(5);
+      expect(lockout.maxPasswordAttempts).toBe(3); // Org policy overrides instance policy
       expect(lockout.organizationID).toBe(orgID);
 
       privacy = await privacyQueries.getPrivacyPolicy(instanceID, orgID);
@@ -517,16 +549,17 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
 
   describe('Cleanup Events', () => {
     it('should delete org policies when org is removed', async () => {
-      const instanceID = generateId();
+      const instanceID = TEST_INSTANCE_ID;
       const orgID = generateId();
       
       // Create org policies
+      const lockoutID = generateId();
       await eventstore.push({
         instanceID,
         aggregateType: 'org',
         aggregateID: orgID,
         eventType: 'org.lockout.policy.added',
-        payload: { maxPasswordAttempts: 3, maxOTPAttempts: 2, showFailures: true },
+        payload: { id: lockoutID, maxPasswordAttempts: 3, maxOTPAttempts: 2, showFailures: true },
         creator: 'admin',
         owner: orgID,
       });

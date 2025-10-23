@@ -42,6 +42,7 @@ export const DEFAULT_PASSWORD_COMPLEXITY: Partial<PasswordComplexityPolicy> = {
  */
 export interface PasswordValidationResult {
   valid: boolean;
+  isValid: boolean; // Alias for valid (for consistency)
   errors: string[];
 }
 

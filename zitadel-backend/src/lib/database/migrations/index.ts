@@ -82,4 +82,5 @@ export const migrations = [
   { version: 59, name: 'Create projection failed events table (Infrastructure)', filename: '002_47_create_projection_failed_events_table.sql' },
   { version: 60, name: 'Fix projection failed events columns (Infrastructure)', filename: '002_48_fix_projection_failed_events_columns.sql' },
   { version: 61, name: 'Add id to projection failed events (Infrastructure)', filename: '002_49_add_id_to_failed_events.sql' },
+  { version: 62, name: 'Create quotas table (Resource Management)', filename: '002_50_create_quotas_table.sql' },
 ];

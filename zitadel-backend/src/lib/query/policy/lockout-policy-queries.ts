@@ -44,15 +44,16 @@ export class LockoutPolicyQueries {
       SELECT 
         id,
         instance_id,
-        creation_date,
+        created_at as creation_date,
+        updated_at,
         change_date,
         sequence,
         max_password_attempts,
         max_otp_attempts,
-        show_failures,
+        show_failure as show_failures,
         is_default,
         resource_owner
-      FROM projections.lockout_policies
+      FROM lockout_policies_projection
       WHERE instance_id = $1 AND is_default = true
       LIMIT 1
     `;
@@ -82,17 +83,18 @@ export class LockoutPolicyQueries {
       SELECT 
         id,
         instance_id,
-        organization_id,
-        creation_date,
+        resource_owner as organization_id,
+        created_at as creation_date,
+        updated_at,
         change_date,
         sequence,
         max_password_attempts,
         max_otp_attempts,
-        show_failures,
+        show_failure as show_failures,
         is_default,
         resource_owner
-      FROM projections.lockout_policies
-      WHERE instance_id = $1 AND organization_id = $2 AND is_default = false
+      FROM lockout_policies_projection
+      WHERE instance_id = $1 AND resource_owner = $2 AND is_default = false
       LIMIT 1
     `;
 
@@ -125,21 +127,57 @@ export class LockoutPolicyQueries {
   }
 
   /**
+   * Check if user should be locked out based on password attempts
+   * 
+   * @param attemptCount - Current number of failed password attempts
+   * @param policy - Lockout policy to check against
+   * @returns True if user should be locked out
+   */
+  shouldLockoutPassword(attemptCount: number, policy: LockoutPolicy): boolean {
+    return attemptCount >= policy.maxPasswordAttempts;
+  }
+
+  /**
+   * Check if user should be locked out based on OTP attempts
+   * 
+   * @param attemptCount - Current number of failed OTP attempts
+   * @param policy - Lockout policy to check against
+   * @returns True if user should be locked out
+   */
+  shouldLockoutOTP(attemptCount: number, policy: LockoutPolicy): boolean {
+    return attemptCount >= policy.maxOTPAttempts;
+  }
+
+  /**
+   * Check if failure details should be shown to user
+   * 
+   * @param policy - Lockout policy
+   * @returns True if failure details should be shown
+   */
+  shouldShowFailureDetails(policy: LockoutPolicy): boolean {
+    return policy.showFailures;
+  }
+
+  /**
    * Map database result to LockoutPolicy
    */
   private mapToPolicy(row: any): LockoutPolicy {
+    // Handle PostgreSQL boolean that might come as 't'/'f' strings or true/false
+    const isDefault = row.is_default === true || row.is_default === 't' || row.is_default === 'true';
+    
     return {
       id: row.id,
       instanceID: row.instance_id,
-      organizationID: row.organization_id || undefined,
+      // For org policies (is_default=false), resource_owner is the org ID
+      organizationID: isDefault ? undefined : row.resource_owner,
       creationDate: row.creation_date,
       changeDate: row.change_date,
       sequence: Number(row.sequence),
       resourceOwner: row.resource_owner,
       maxPasswordAttempts: Number(row.max_password_attempts),
       maxOTPAttempts: Number(row.max_otp_attempts),
-      showFailures: row.show_failures,
-      isDefault: row.is_default,
+      showFailures: row.show_failures === true || row.show_failures === 't' || row.show_failures === 'true',
+      isDefault: isDefault,
     };
   }
 }

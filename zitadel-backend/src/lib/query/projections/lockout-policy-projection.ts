@@ -28,6 +28,9 @@ export class LockoutPolicyProjection extends Projection {
       case 'instance.lockout.policy.removed':
         await this.handleLockoutPolicyRemoved(event);
         break;
+      case 'org.removed':
+        await this.handleOrgRemoved(event);
+        break;
     }
   }
 
@@ -52,8 +55,8 @@ export class LockoutPolicyProjection extends Projection {
         event.instanceID || 'default',
         event.owner,
         data.maxPasswordAttempts || 5,
-        data.maxOtpAttempts || 5,
-        data.showFailure !== false,
+        data.maxOTPAttempts || data.maxOtpAttempts || 5,  // Support both naming conventions
+        data.showFailures !== undefined ? data.showFailures : (data.showFailure !== false),  // Support both field names
         isInstance,
         event.createdAt,
         event.createdAt,
@@ -73,13 +76,13 @@ export class LockoutPolicyProjection extends Projection {
       updates.push(`max_password_attempts = $${paramIndex++}`);
       values.push(data.maxPasswordAttempts);
     }
-    if (data.maxOtpAttempts !== undefined) {
+    if (data.maxOTPAttempts !== undefined || data.maxOtpAttempts !== undefined) {
       updates.push(`max_otp_attempts = $${paramIndex++}`);
-      values.push(data.maxOtpAttempts);
+      values.push(data.maxOTPAttempts || data.maxOtpAttempts);
     }
-    if (data.showFailure !== undefined) {
+    if (data.showFailures !== undefined || data.showFailure !== undefined) {
       updates.push(`show_failure = $${paramIndex++}`);
-      values.push(data.showFailure);
+      values.push(data.showFailures !== undefined ? data.showFailures : data.showFailure);
     }
 
     if (updates.length > 0) {
@@ -107,6 +110,15 @@ export class LockoutPolicyProjection extends Projection {
       `DELETE FROM lockout_policies_projection 
        WHERE instance_id = $1 AND id = $2`,
       [event.instanceID || 'default', data.id || event.aggregateID]
+    );
+  }
+
+  private async handleOrgRemoved(event: Event): Promise<void> {
+    // Delete all policies for the removed organization
+    await this.database.query(
+      `DELETE FROM lockout_policies_projection 
+       WHERE instance_id = $1 AND resource_owner = $2 AND is_default = false`,
+      [event.instanceID || 'default', event.aggregateID]
     );
   }
 }

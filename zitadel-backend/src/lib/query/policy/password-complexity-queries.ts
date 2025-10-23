@@ -123,13 +123,13 @@ export class PasswordComplexityQueries {
    * @param policy - Password complexity policy
    * @returns Validation result
    */
-  validatePassword(
+  async validatePassword(
     password: string,
     policy: PasswordComplexityPolicy
-  ): PasswordValidationResult {
+  ): Promise<PasswordValidationResult> {
     const errors: string[] = [];
 
-    if (password.length < policy.minLength) {
+    if (!password || password.length < policy.minLength) {
       errors.push(`Password must be at least ${policy.minLength} characters long`);
     }
 
@@ -146,12 +146,31 @@ export class PasswordComplexityQueries {
     }
 
     if (policy.hasSymbol && !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      errors.push('Password must contain at least one special character');
+      errors.push('Password must contain at least one symbol');
     }
 
     return {
-      valid: errors.length === 0,
+      isValid: errors.length === 0,
+      valid: errors.length === 0, // Keep for backward compatibility
       errors,
+    };
+  }
+
+  /**
+   * Get password complexity requirements from a policy (for UI display)
+   * 
+   * @param policy - Password complexity policy
+   * @returns Password complexity requirements
+   */
+  getPasswordRequirements(
+    policy: PasswordComplexityPolicy
+  ): PasswordComplexityRequirements {
+    return {
+      minLength: policy.minLength,
+      requireUppercase: policy.hasUppercase,
+      requireLowercase: policy.hasLowercase,
+      requireNumber: policy.hasNumber,
+      requireSymbol: policy.hasSymbol,
     };
   }
 
@@ -167,14 +186,37 @@ export class PasswordComplexityQueries {
     organizationID?: string
   ): Promise<PasswordComplexityRequirements> {
     const policy = await this.getPasswordComplexityPolicy(instanceID, organizationID);
+    return this.getPasswordRequirements(policy);
+  }
 
-    return {
-      minLength: policy.minLength,
-      requireUppercase: policy.hasUppercase,
-      requireLowercase: policy.hasLowercase,
-      requireNumber: policy.hasNumber,
-      requireSymbol: policy.hasSymbol,
-    };
+  /**
+   * Get human-readable description of password requirements
+   * 
+   * @param policy - Password complexity policy
+   * @returns Description string
+   */
+  getPasswordRequirementsDescription(policy: PasswordComplexityPolicy): string {
+    const requirements: string[] = [];
+
+    requirements.push(`at least ${policy.minLength} characters`);
+
+    if (policy.hasUppercase) {
+      requirements.push('an uppercase letter');
+    }
+
+    if (policy.hasLowercase) {
+      requirements.push('a lowercase letter');
+    }
+
+    if (policy.hasNumber) {
+      requirements.push('a number');
+    }
+
+    if (policy.hasSymbol) {
+      requirements.push('a special character');
+    }
+
+    return `Password must contain ${requirements.join(', ')}.`;
   }
 
   /**

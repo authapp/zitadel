@@ -98,6 +98,16 @@ export class PasswordPolicyProjection extends Projection {
         await this.handleAgePolicyChanged(event);
         break;
 
+      case 'org.password.complexity.policy.removed':
+      case 'instance.password.complexity.policy.removed':
+        await this.handleComplexityPolicyRemoved(event);
+        break;
+
+      case 'org.password.age.policy.removed':
+      case 'instance.password.age.policy.removed':
+        await this.handleAgePolicyRemoved(event);
+        break;
+
       case 'org.removed':
         await this.handleOrgRemoved(event);
         break;
@@ -115,7 +125,7 @@ export class PasswordPolicyProjection extends Projection {
   private async handleComplexityPolicyAdded(event: Event): Promise<void> {
     const payload = event.payload || {};
     const isDefault = event.eventType.includes('instance.');
-    const policyID = event.aggregateID;
+    const policyID = payload.id || event.aggregateID;  // Use payload.id for instance policies
     const organizationID = isDefault ? null : event.owner;
 
     await this.query(
@@ -151,7 +161,7 @@ export class PasswordPolicyProjection extends Projection {
 
   private async handleComplexityPolicyChanged(event: Event): Promise<void> {
     const payload = event.payload || {};
-    const policyID = event.aggregateID;
+    const policyID = payload.id || event.aggregateID;  // Use payload.id for instance policies
 
     await this.query(
       `UPDATE projections.password_complexity_policies SET
@@ -180,7 +190,7 @@ export class PasswordPolicyProjection extends Projection {
   private async handleAgePolicyAdded(event: Event): Promise<void> {
     const payload = event.payload || {};
     const isDefault = event.eventType.includes('instance.');
-    const policyID = event.aggregateID;
+    const policyID = payload.id || event.aggregateID;  // Use payload.id for instance policies
     const organizationID = isDefault ? null : event.owner;
 
     await this.query(
@@ -210,7 +220,7 @@ export class PasswordPolicyProjection extends Projection {
 
   private async handleAgePolicyChanged(event: Event): Promise<void> {
     const payload = event.payload || {};
-    const policyID = event.aggregateID;
+    const policyID = payload.id || event.aggregateID;  // Use payload.id for instance policies
 
     await this.query(
       `UPDATE projections.password_age_policies SET
@@ -227,6 +237,28 @@ export class PasswordPolicyProjection extends Projection {
         event.instanceID,
         policyID,
       ]
+    );
+  }
+
+  private async handleComplexityPolicyRemoved(event: Event): Promise<void> {
+    const payload = event.payload || {};
+    const policyID = payload.id || event.aggregateID;
+
+    await this.query(
+      `DELETE FROM projections.password_complexity_policies 
+       WHERE instance_id = $1 AND id = $2`,
+      [event.instanceID, policyID]
+    );
+  }
+
+  private async handleAgePolicyRemoved(event: Event): Promise<void> {
+    const payload = event.payload || {};
+    const policyID = payload.id || event.aggregateID;
+
+    await this.query(
+      `DELETE FROM projections.password_age_policies 
+       WHERE instance_id = $1 AND id = $2`,
+      [event.instanceID, policyID]
     );
   }
 
@@ -269,12 +301,16 @@ export function createPasswordPolicyProjectionConfig() {
     eventTypes: [
       'org.password.complexity.policy.added',
       'org.password.complexity.policy.changed',
+      'org.password.complexity.policy.removed',
       'instance.password.complexity.policy.added',
       'instance.password.complexity.policy.changed',
+      'instance.password.complexity.policy.removed',
       'org.password.age.policy.added',
       'org.password.age.policy.changed',
+      'org.password.age.policy.removed',
       'instance.password.age.policy.added',
       'instance.password.age.policy.changed',
+      'instance.password.age.policy.removed',
       'org.removed',
       'instance.removed',
     ],

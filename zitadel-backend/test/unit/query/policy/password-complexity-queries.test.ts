@@ -147,59 +147,59 @@ describe('PasswordComplexityQueries', () => {
       resourceOwner: TEST_INSTANCE_ID,
     };
 
-    it('should validate correct password', () => {
-      const result = queries.validatePassword('Password123', mockPolicy);
+    it('should validate correct password', async () => {
+      const result = await queries.validatePassword('Password123', mockPolicy);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should fail when password is too short', () => {
-      const result = queries.validatePassword('Pass1', mockPolicy);
+    it('should fail when password is too short', async () => {
+      const result = await queries.validatePassword('Pass1', mockPolicy);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Password must be at least 8 characters long');
     });
 
-    it('should fail when missing uppercase', () => {
-      const result = queries.validatePassword('password123', mockPolicy);
+    it('should fail when missing uppercase', async () => {
+      const result = await queries.validatePassword('password123', mockPolicy);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Password must contain at least one uppercase letter');
     });
 
-    it('should fail when missing lowercase', () => {
-      const result = queries.validatePassword('PASSWORD123', mockPolicy);
+    it('should fail when missing lowercase', async () => {
+      const result = await queries.validatePassword('PASSWORD123', mockPolicy);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Password must contain at least one lowercase letter');
     });
 
-    it('should fail when missing number', () => {
-      const result = queries.validatePassword('Password', mockPolicy);
+    it('should fail when missing number', async () => {
+      const result = await queries.validatePassword('Password', mockPolicy);
 
       expect(result.valid).toBe(false);
       expect(result.errors).toContain('Password must contain at least one number');
     });
 
-    it('should fail when missing symbol if required', () => {
+    it('should fail when missing symbol if required', async () => {
       const policyWithSymbol = { ...mockPolicy, hasSymbol: true };
-      const result = queries.validatePassword('Password123', policyWithSymbol);
+      const result = await queries.validatePassword('Password123', policyWithSymbol);
 
       expect(result.valid).toBe(false);
-      expect(result.errors).toContain('Password must contain at least one special character');
+      expect(result.errors).toContain('Password must contain at least one symbol');
     });
 
-    it('should pass with symbol when required', () => {
+    it('should pass with symbol when required', async () => {
       const policyWithSymbol = { ...mockPolicy, hasSymbol: true };
-      const result = queries.validatePassword('Password123!', policyWithSymbol);
+      const result = await queries.validatePassword('Password123!', policyWithSymbol);
 
       expect(result.valid).toBe(true);
       expect(result.errors).toHaveLength(0);
     });
 
-    it('should return multiple errors when multiple requirements not met', () => {
-      const result = queries.validatePassword('pass', mockPolicy);
+    it('should return multiple errors when multiple requirements not met', async () => {
+      const result = await queries.validatePassword('pass', mockPolicy);
 
       expect(result.valid).toBe(false);
       expect(result.errors.length).toBeGreaterThan(1);
