@@ -37,7 +37,7 @@ export class ProjectGrantMemberQueries {
     }
 
     if (query.userName) {
-      conditions.push(`u.user_name ILIKE $${paramIndex++}`);
+      conditions.push(`u.username ILIKE $${paramIndex++}`);
       params.push(`%${query.userName}%`);
     }
 
@@ -65,7 +65,7 @@ export class ProjectGrantMemberQueries {
         pgm.sequence,
         pgm.resource_owner,
         pgm.roles,
-        u.user_name,
+        u.username,
         u.email,
         u.first_name,
         u.last_name,
@@ -76,17 +76,17 @@ export class ProjectGrantMemberQueries {
         pg.granted_org_id,
         o.name as granted_org_name
       FROM projections.project_grant_members pgm
-      LEFT JOIN projections.users u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
-      LEFT JOIN projections.projects p ON pgm.project_id = p.id AND pgm.instance_id = p.instance_id
+      LEFT JOIN users_projection u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
+      LEFT JOIN projects_projection p ON pgm.project_id = p.id AND pgm.instance_id = p.instance_id
       LEFT JOIN projections.project_grants pg ON pgm.grant_id = pg.id AND pgm.instance_id = pg.instance_id
-      LEFT JOIN projections.orgs o ON pg.granted_org_id = o.id AND pg.instance_id = o.instance_id
+      LEFT JOIN orgs_projection o ON pg.granted_org_id = o.id AND pg.instance_id = o.instance_id
       WHERE ${whereClause}
     `;
 
     // Get total count
     const countResult = await this.database.queryOne(
       `SELECT COUNT(*) as count FROM projections.project_grant_members pgm 
-       LEFT JOIN projections.users u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
+       LEFT JOIN users_projection u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
        WHERE ${whereClause}`,
       params
     );
@@ -138,7 +138,7 @@ export class ProjectGrantMemberQueries {
         pgm.sequence,
         pgm.resource_owner,
         pgm.roles,
-        u.user_name,
+        u.username,
         u.email,
         u.first_name,
         u.last_name,
@@ -149,10 +149,10 @@ export class ProjectGrantMemberQueries {
         pg.granted_org_id,
         o.name as granted_org_name
       FROM projections.project_grant_members pgm
-      LEFT JOIN projections.users u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
-      LEFT JOIN projections.projects p ON pgm.project_id = p.id AND pgm.instance_id = p.instance_id
+      LEFT JOIN users_projection u ON pgm.user_id = u.id AND pgm.instance_id = u.instance_id
+      LEFT JOIN projects_projection p ON pgm.project_id = p.id AND pgm.instance_id = p.instance_id
       LEFT JOIN projections.project_grants pg ON pgm.grant_id = pg.id AND pgm.instance_id = pg.instance_id
-      LEFT JOIN projections.orgs o ON pg.granted_org_id = o.id AND pg.instance_id = o.instance_id
+      LEFT JOIN orgs_projection o ON pg.granted_org_id = o.id AND pg.instance_id = o.instance_id
       WHERE pgm.project_id = $1 AND pgm.grant_id = $2 AND pgm.user_id = $3 AND pgm.instance_id = $4`,
       [projectID, grantID, userID, instanceID]
     );
@@ -174,7 +174,7 @@ export class ProjectGrantMemberQueries {
       sequence: BigInt(row.sequence),
       resourceOwner: row.resource_owner,
       instanceID: row.instance_id,
-      userName: row.user_name,
+      userName: row.username,
       email: row.email,
       firstName: row.first_name,
       lastName: row.last_name,

@@ -856,6 +856,24 @@ export class Commands {
   removeProjectGrant: typeof import('./project/project-commands').removeProjectGrant = 
     require('./project/project-commands').removeProjectGrant;
   
+  /**
+   * Add project grant member
+   */
+  addProjectGrantMember: typeof import('./project/project-grant-member-commands').addProjectGrantMember = 
+    require('./project/project-grant-member-commands').addProjectGrantMember;
+  
+  /**
+   * Change project grant member
+   */
+  changeProjectGrantMember: typeof import('./project/project-grant-member-commands').changeProjectGrantMember = 
+    require('./project/project-grant-member-commands').changeProjectGrantMember;
+  
+  /**
+   * Remove project grant member
+   */
+  removeProjectGrantMember: typeof import('./project/project-grant-member-commands').removeProjectGrantMember = 
+    require('./project/project-grant-member-commands').removeProjectGrantMember;
+  
   // ============================================================================
   // Application Commands (Week 5)
   // ============================================================================
