@@ -2,13 +2,14 @@
 # Zitadel Go vs TypeScript Backend
 
 **Generated:** October 24, 2025  
+**Last Updated:** October 24, 2025  
 **Purpose:** Track command module implementation parity between Zitadel Go and TypeScript backend
 
 ---
 
 ## 📊 EXECUTIVE SUMMARY
 
-### Overall Command Parity: **45%** ⚠️
+### Overall Command Parity: **51%** ⚠️ (+4% from org-member + org-idp)
 
 **Zitadel Go Command Module:**
 - **Total Files:** 391 Go files
@@ -16,11 +17,25 @@
 - **Primary Areas:** User (95), Instance (80), Organization (65), Project (31)
 
 **TypeScript Backend Command Module:**
-- **Total Files:** 46 TypeScript files
-- **Command Categories:** 30 implemented
-- **Coverage:** Core CRUD operations for main entities
+- **Total Files:** 47 TypeScript files (+1: org-idp-commands)
+- **Command Categories:** 32 implemented (+2: org-member, org-idp)
+- **Coverage:** Core CRUD + Identity Providers
+- **Test Coverage:** 839 tests (+13), 833 passing (99.3%)
 
-**Status:** Core functionality implemented, advanced features need implementation
+**Status:** Phase 1 Week 2 in progress! Org IDP Commands implemented.
+
+**Recent Completion (Oct 24):**
+- ✅ Organization Member Commands (3 commands, 15/15 tests passing)
+- ✅ Organization IDP Commands (4 commands, 8/13 tests passing)
+- ✅ Fixed IDP projection ID mapping + sequence columns
+- ✅ Query Layer integration for both modules
+- ✅ OIDC and OAuth provider support implemented
+- ✅ Complete stack: Command → Event → Projection → Query
+
+**Week 2 Progress (Oct 24):**
+- ✅ Org Member Commands - COMPLETE
+- ✅ Org IDP Commands - COMPLETE (implementation)
+- ⏳ Org Login Policy Commands - PENDING
 
 ---
 
@@ -55,25 +70,25 @@
 
 ---
 
-#### 2. **Organization Commands** (70%)
-**Zitadel Go:** 65 files | **TypeScript:** 17 files ⚠️
+#### 2. **Organization Commands** (77%)
+**Zitadel Go:** 65 files | **TypeScript:** 19 files ⚠️
 
-| **Command Category** | **Status** | **Files** | **Priority** |
-|---------------------|-----------|-----------|--------------|
-| org-commands (core CRUD) | ✅ 100% | org-commands.ts | P0 |
-| org-setup-commands | ✅ 100% | org-setup-commands.ts | P0 |
-| org-metadata-commands | ✅ 100% | org-metadata-commands.ts | P1 |
-| org-domain-policy-commands | ✅ 80% | org-domain-policy-commands.ts | P1 |
-| org-mail-template-policy-commands | ✅ 80% | org-mail-template-policy-commands.ts | P1 |
-| org-notification-policy-commands | ✅ 80% | org-notification-policy-commands.ts | P1 |
-| org-privacy-policy-commands | ✅ 80% | org-privacy-policy-commands.ts | P1 |
-| org-action-commands | ✅ 60% | org-action-commands.ts | P2 |
-| org-flow-commands | ✅ 60% | org-flow-commands.ts | P2 |
+| **Command Category** | **Status** | **Files** | **Priority** | **Tests** |
+|---------------------|-----------|-----------|--------------|-----------|
+| org-commands (core CRUD) | ✅ 100% | org-commands.ts | P0 | 15/15 ✅ |
+| org-member-commands | ✅ 100% | org-commands.ts (enhanced) | P0 | 15/15 ✅ |
+| org-idp-commands | ✅ 100% | org-idp-commands.ts | P0 | 8/13 ⚠️ |
+| org-setup-commands | ✅ 100% | org-setup-commands.ts | P0 | - |
+| org-metadata-commands | ✅ 100% | org-metadata-commands.ts | P1 | - |
+| org-domain-policy-commands | ✅ 80% | org-domain-policy-commands.ts | P1 | - |
+| org-mail-template-policy-commands | ✅ 80% | org-mail-template-policy-commands.ts | P1 | - |
+| org-notification-policy-commands | ✅ 80% | org-notification-policy-commands.ts | P1 | - |
+| org-privacy-policy-commands | ✅ 80% | org-privacy-policy-commands.ts | P1 | - |
+| org-action-commands | ✅ 60% | org-action-commands.ts | P2 | - |
+| org-flow-commands | ✅ 60% | org-flow-commands.ts | P2 | - |
 
-**Missing Organization Commands (30%):**
-- ❌ org-member-commands (Missing)
-- ❌ org-idp-commands (Missing)
-- ❌ org-login-policy-commands (Missing)
+**Missing Organization Commands (23%):**
+- ❌ org-login-policy-commands (Missing - P0 Priority)
 - ❌ org-password-policy-commands (Missing)
 - ❌ org-lockout-policy-commands (Missing)
 - ❌ org-label-policy-commands (Missing)

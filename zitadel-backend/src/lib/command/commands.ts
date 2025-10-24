@@ -531,6 +531,30 @@ export class Commands {
     require('./org/org-commands').removeOrgMember;
   
   /**
+   * Add OIDC IDP to organization
+   */
+  addOIDCIDPToOrg: typeof import('./org/org-idp-commands').addOIDCIDPToOrg = 
+    require('./org/org-idp-commands').addOIDCIDPToOrg;
+  
+  /**
+   * Add OAuth IDP to organization
+   */
+  addOAuthIDPToOrg: typeof import('./org/org-idp-commands').addOAuthIDPToOrg = 
+    require('./org/org-idp-commands').addOAuthIDPToOrg;
+  
+  /**
+   * Update organization IDP
+   */
+  updateOrgIDP: typeof import('./org/org-idp-commands').updateOrgIDP = 
+    require('./org/org-idp-commands').updateOrgIDP;
+  
+  /**
+   * Remove IDP from organization
+   */
+  removeIDPFromOrg: typeof import('./org/org-idp-commands').removeIDPFromOrg = 
+    require('./org/org-idp-commands').removeIDPFromOrg;
+  
+  /**
    * Add domain to organization
    */
   addDomain: typeof import('./org/org-commands').addDomain = 

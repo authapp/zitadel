@@ -56,6 +56,7 @@ export class IDPProjection extends Projection {
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
+      // Instance-level IDP events
       case 'idp.added':
       case 'idp.oidc.added':
       case 'idp.oauth.added':
@@ -65,6 +66,16 @@ export class IDPProjection extends Projection {
       case 'idp.azure.added':
       case 'idp.google.added':
       case 'idp.apple.added':
+      // Organization-level IDP events
+      case 'org.idp.added':
+      case 'org.idp.oidc.added':
+      case 'org.idp.oauth.added':
+      case 'org.idp.ldap.added':
+      case 'org.idp.saml.added':
+      case 'org.idp.jwt.added':
+      case 'org.idp.azure.added':
+      case 'org.idp.google.added':
+      case 'org.idp.apple.added':
         await this.handleIDPAdded(event);
         break;
 
@@ -78,10 +89,22 @@ export class IDPProjection extends Projection {
       case 'idp.azure.changed':
       case 'idp.google.changed':
       case 'idp.apple.changed':
+      // Organization-level changes
+      case 'org.idp.changed':
+      case 'org.idp.config.changed':
+      case 'org.idp.oidc.changed':
+      case 'org.idp.oauth.changed':
+      case 'org.idp.ldap.changed':
+      case 'org.idp.saml.changed':
+      case 'org.idp.jwt.changed':
+      case 'org.idp.azure.changed':
+      case 'org.idp.google.changed':
+      case 'org.idp.apple.changed':
         await this.handleIDPChanged(event);
         break;
 
       case 'idp.removed':
+      case 'org.idp.removed':
         await this.handleIDPRemoved(event);
         break;
 
@@ -122,11 +145,11 @@ export class IDPProjection extends Projection {
         change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
-        event.aggregateID,
+        payload.id || payload.idpID, // IDP ID from payload, not aggregateID
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n), // Use aggregateVersion, not position
         event.owner,
         payload.name || 'Unnamed IDP',
         type,
@@ -183,9 +206,9 @@ export class IDPProjection extends Projection {
     values.push(event.createdAt);
 
     updates.push(`sequence = $${paramIndex++}`);
-    values.push(Math.floor(event.position.position));
+    values.push(Number(event.aggregateVersion || 1n));
 
-    values.push(event.aggregateID);
+    values.push(payload.idpID || payload.id); // IDP ID from payload
     values.push(event.instanceID);
 
     if (updates.length > 0) {
@@ -202,9 +225,10 @@ export class IDPProjection extends Projection {
    * Handle IDP removed event
    */
   private async handleIDPRemoved(event: Event): Promise<void> {
+    const payload = event.payload || {};
     await this.query(
       `DELETE FROM projections.idps WHERE id = $1 AND instance_id = $2`,
-      [event.aggregateID, event.instanceID]
+      [payload.idpID || payload.id, event.instanceID]
     );
   }
 
