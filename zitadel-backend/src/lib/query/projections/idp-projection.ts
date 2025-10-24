@@ -135,6 +135,12 @@ export class IDPProjection extends Projection {
     else if (event.eventType.includes('google')) type = 7;
     else if (event.eventType.includes('apple')) type = 8;
 
+    // Determine IDP ID based on event type
+    // - For instance-level IDPs: aggregateID IS the IDP ID
+    // - For org-level IDPs: aggregateID is org ID, IDP ID is in payload
+    const isOrgLevel = event.eventType.startsWith('org.');
+    const idpID = isOrgLevel ? (payload.id || payload.idpID) : event.aggregateID;
+
     await this.query(
       `INSERT INTO projections.idps (
         id, instance_id, creation_date, change_date, sequence, resource_owner,
@@ -145,11 +151,11 @@ export class IDPProjection extends Projection {
         change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
-        payload.id || payload.idpID, // IDP ID from payload, not aggregateID
+        idpID,
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Number(event.aggregateVersion || 1n), // Use aggregateVersion, not position
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.name || 'Unnamed IDP',
         type,
@@ -208,7 +214,11 @@ export class IDPProjection extends Projection {
     updates.push(`sequence = $${paramIndex++}`);
     values.push(Number(event.aggregateVersion || 1n));
 
-    values.push(payload.idpID || payload.id); // IDP ID from payload
+    // Determine IDP ID based on event type
+    const isOrgLevel = event.eventType.startsWith('org.');
+    const idpID = isOrgLevel ? (payload.idpID || payload.id) : event.aggregateID;
+
+    values.push(idpID);
     values.push(event.instanceID);
 
     if (updates.length > 0) {
@@ -226,9 +236,14 @@ export class IDPProjection extends Projection {
    */
   private async handleIDPRemoved(event: Event): Promise<void> {
     const payload = event.payload || {};
+    
+    // Determine IDP ID based on event type
+    const isOrgLevel = event.eventType.startsWith('org.');
+    const idpID = isOrgLevel ? (payload.idpID || payload.id) : event.aggregateID;
+    
     await this.query(
       `DELETE FROM projections.idps WHERE id = $1 AND instance_id = $2`,
-      [payload.idpID || payload.id, event.instanceID]
+      [idpID, event.instanceID]
     );
   }
 
