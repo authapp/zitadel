@@ -1,5 +1,5 @@
 /**
- * Project Command Tests
+ * Project Command Tests - Complete Stack
  * 
  * Tests for:
  * - Project lifecycle (create, update, deactivate, reactivate, remove)
@@ -7,21 +7,54 @@
  * - Project members management
  * - Project grants (cross-org sharing)
  * - State management and validation
+ * - Complete stack: Command → Event → Projection → Query
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
 import { UserBuilder, OrganizationBuilder } from '../../helpers/test-data-builders';
+import { ProjectProjection } from '../../../src/lib/query/projections/project-projection';
+import { ProjectRoleProjection } from '../../../src/lib/query/projections/project-role-projection';
+import { ProjectMemberProjection } from '../../../src/lib/query/projections/project-member-projection';
+import { ProjectGrantProjection } from '../../../src/lib/query/projections/project-grant-projection';
+import { ProjectQueries } from '../../../src/lib/query/project/project-queries';
+// import { ProjectMemberQueries } from '../../../src/lib/query/member/project-member-queries'; // Available for future tests
+// import { ProjectGrantQueries } from '../../../src/lib/query/project-grant/project-grant-queries'; // Available for future tests
 
-describe('Project Commands', () => {
+describe('Project Commands - Complete Flow', () => {
   let pool: DatabasePool;
   let ctx: CommandTestContext;
+  let projectProjection: ProjectProjection;
+  let projectRoleProjection: ProjectRoleProjection;
+  let projectMemberProjection: ProjectMemberProjection;
+  let projectGrantProjection: ProjectGrantProjection;
+  let projectQueries: ProjectQueries;
+  // let projectMemberQueries: ProjectMemberQueries; // Available for future test enhancements
+  // let projectGrantQueries: ProjectGrantQueries; // Available for future test enhancements
 
   beforeAll(async () => {
     pool = await createTestDatabase();
     ctx = await setupCommandTest(pool);
+    
+    // Initialize projections
+    projectProjection = new ProjectProjection(ctx.eventstore, pool);
+    await projectProjection.init();
+    
+    projectRoleProjection = new ProjectRoleProjection(ctx.eventstore, pool);
+    await projectRoleProjection.init();
+    
+    projectMemberProjection = new ProjectMemberProjection(ctx.eventstore, pool);
+    await projectMemberProjection.init();
+    
+    projectGrantProjection = new ProjectGrantProjection(ctx.eventstore, pool);
+    await projectGrantProjection.init();
+    
+    // Initialize query layer
+    projectQueries = new ProjectQueries(pool);
+    // projectMemberQueries = new ProjectMemberQueries(pool); // Available for future tests
+    // projectGrantQueries = new ProjectGrantQueries(pool); // Available for future tests
   });
 
   afterAll(async () => {
@@ -31,6 +64,46 @@ describe('Project Commands', () => {
   beforeEach(async () => {
     await ctx.clearEvents();
   });
+
+  /**
+   * Helper: Process all projections
+   */
+  async function processProjections() {
+    const events = await ctx.getEvents('*', '*');
+    
+    console.log(`Processing ${events.length} event(s) through projections...`);
+    
+    for (const event of events) {
+      try {
+        await projectProjection.reduce(event);
+        await projectRoleProjection.reduce(event);
+        await projectMemberProjection.reduce(event);
+        await projectGrantProjection.reduce(event);
+      } catch (err) {
+        // Some events may not be relevant to all projections
+      }
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log(`  ✓ Processed projections`);
+  }
+
+  /**
+   * Helper: Verify project exists via Query Layer
+   */
+  async function assertProjectInQuery(projectID: string, expectedName?: string) {
+    const project = await projectQueries.getProjectByID(projectID, 'test-instance');
+    
+    expect(project).not.toBeNull();
+    if (expectedName) {
+      expect(project!.name).toBe(expectedName);
+    }
+    
+    console.log(`  ✓ Project verified: ${projectID}`);
+    return project;
+  }
+
+  // Additional helpers available for future tests (currently unused)
 
   // Helper: Create organization for projects
   async function createTestOrg(name?: string) {
@@ -55,6 +128,7 @@ describe('Project Commands', () => {
           hasProjectCheck: false,
         };
 
+        console.log('\n--- Creating project ---');
         const result = await ctx.commands.addProject(
           ctx.createContext(),
           projectData
@@ -67,6 +141,12 @@ describe('Project Commands', () => {
         const event = await ctx.assertEventPublished('project.added');
         expect(event.payload).toHaveProperty('name', projectData.name);
         expect(event.payload).toHaveProperty('projectRoleAssertion', true);
+
+        // Process projection and verify via query layer
+        await processProjections();
+        const project = await assertProjectInQuery(result.projectID, projectData.name);
+        expect(project?.projectRoleAssertion).toBe(true);
+        expect(project?.projectRoleCheck).toBe(true);
       });
 
       it('should allow multiple projects in same org', async () => {

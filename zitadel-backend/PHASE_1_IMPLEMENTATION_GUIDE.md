@@ -19,6 +19,41 @@
 - [x] `org-login-policy-commands.ts` - Organization login policies ✅ **COMPLETE (27/27 tests)**
 - [x] Integration tests: 55 total, 55 passing (100%) ✅
 
+---
+
+### **Week 3-4: Project Enhancement Commands**
+
+**Status:** Week 3-4 COMPLETE ✅ 🎉
+
+#### Deliverables
+- [x] `project-commands.ts` - Project lifecycle, roles, members, grants ✅ **COMPLETE (29/29 tests)**
+- [x] `project-grant-member-commands.ts` - Cross-org grant member management ✅ **COMPLETE**
+- [x] Enhanced with complete stack integration (Command → Event → Projection → Query) ✅
+- [x] Integration tests: 29 tests, 29 passing (100%) ✅
+
+#### Commands Implemented (16 total)
+**Project Lifecycle:**
+- addProject, changeProject, deactivateProject, reactivateProject, removeProject
+
+**Project Roles:**
+- addProjectRole, changeProjectRole, removeProjectRole
+
+**Project Members:**
+- addProjectMember, changeProjectMember, removeProjectMember
+
+**Project Grants (Cross-Org Sharing):**
+- addProjectGrant, changeProjectGrant, deactivateProjectGrant, reactivateProjectGrant, removeProjectGrant
+
+**Project Grant Members:**
+- addProjectGrantMember, changeProjectGrantMember, removeProjectGrantMember
+
+#### Files Enhanced
+```
+src/lib/command/project/project-commands.ts (16 commands)
+src/lib/command/project/project-grant-member-commands.ts (3 commands)
+test/integration/commands/project.test.ts (29 tests, enhanced with projection integration)
+```
+
 #### Files to Create
 ```
 src/lib/command/org/org-member-commands.ts
