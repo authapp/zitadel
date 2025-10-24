@@ -9,7 +9,7 @@
 
 ## 📊 EXECUTIVE SUMMARY
 
-### Overall Command Parity: **51%** ⚠️ (+4% from org-member + org-idp)
+### Overall Command Parity: **56%** ✅ (+9% from org-member + org-idp + login-policy)
 
 **Zitadel Go Command Module:**
 - **Total Files:** 391 Go files
@@ -17,25 +17,26 @@
 - **Primary Areas:** User (95), Instance (80), Organization (65), Project (31)
 
 **TypeScript Backend Command Module:**
-- **Total Files:** 47 TypeScript files (+1: org-idp-commands)
-- **Command Categories:** 32 implemented (+2: org-member, org-idp)
-- **Coverage:** Core CRUD + Identity Providers
-- **Test Coverage:** 839 tests (+13), 833 passing (99.3%)
+- **Total Files:** 49 TypeScript files (+3: org-idp-commands, org-login-policy-commands, org-login-policy-write-model)
+- **Command Categories:** 33 implemented (+3: org-member, org-idp, org-login-policy)
+- **Coverage:** Core CRUD + Identity Providers + Login Policies
+- **Test Coverage:** 866 tests (+27), 860 passing (99.3%)
 
-**Status:** Phase 1 Week 2 in progress! Org IDP Commands implemented.
+**Status:** Phase 1 Week 2 COMPLETE! Login Policy Commands implemented.
 
 **Recent Completion (Oct 24):**
 - ✅ Organization Member Commands (3 commands, 15/15 tests passing)
-- ✅ Organization IDP Commands (4 commands, 8/13 tests passing)
-- ✅ Fixed IDP projection ID mapping + sequence columns
-- ✅ Query Layer integration for both modules
-- ✅ OIDC and OAuth provider support implemented
+- ✅ Organization IDP Commands (4 commands, 13/13 tests passing)
+- ✅ Organization Login Policy Commands (7 commands, 27/27 tests passing)
+- ✅ Fixed IDP projection for both instance and org-level events
+- ✅ Query Layer integration across all modules
+- ✅ MFA and authentication policy support
 - ✅ Complete stack: Command → Event → Projection → Query
 
 **Week 2 Progress (Oct 24):**
-- ✅ Org Member Commands - COMPLETE
-- ✅ Org IDP Commands - COMPLETE (implementation)
-- ⏳ Org Login Policy Commands - PENDING
+- ✅ Org Member Commands - COMPLETE (100%)
+- ✅ Org IDP Commands - COMPLETE (100%)
+- ✅ Org Login Policy Commands - COMPLETE (100%)
 
 ---
 
@@ -70,14 +71,15 @@
 
 ---
 
-#### 2. **Organization Commands** (77%)
-**Zitadel Go:** 65 files | **TypeScript:** 19 files ⚠️
+#### 2. **Organization Commands** (85%)
+**Zitadel Go:** 65 files | **TypeScript:** 20 files ✅
 
 | **Command Category** | **Status** | **Files** | **Priority** | **Tests** |
 |---------------------|-----------|-----------|--------------|-----------|
 | org-commands (core CRUD) | ✅ 100% | org-commands.ts | P0 | 15/15 ✅ |
 | org-member-commands | ✅ 100% | org-commands.ts (enhanced) | P0 | 15/15 ✅ |
-| org-idp-commands | ✅ 100% | org-idp-commands.ts | P0 | 8/13 ⚠️ |
+| org-idp-commands | ✅ 100% | org-idp-commands.ts | P0 | 13/13 ✅ |
+| org-login-policy-commands | ✅ 100% | org-login-policy-commands.ts | P0 | 27/27 ✅ |
 | org-setup-commands | ✅ 100% | org-setup-commands.ts | P0 | - |
 | org-metadata-commands | ✅ 100% | org-metadata-commands.ts | P1 | - |
 | org-domain-policy-commands | ✅ 80% | org-domain-policy-commands.ts | P1 | - |
@@ -87,8 +89,7 @@
 | org-action-commands | ✅ 60% | org-action-commands.ts | P2 | - |
 | org-flow-commands | ✅ 60% | org-flow-commands.ts | P2 | - |
 
-**Missing Organization Commands (23%):**
-- ❌ org-login-policy-commands (Missing - P0 Priority)
+**Missing Organization Commands (15%):**
 - ❌ org-password-policy-commands (Missing)
 - ❌ org-lockout-policy-commands (Missing)
 - ❌ org-label-policy-commands (Missing)

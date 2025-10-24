@@ -11,13 +11,13 @@
 
 ### **Week 1-2: Organization Enhancement Commands**
 
-**Status:** Week 1 Complete ✅ | Week 2 55% Complete 🚀
+**Status:** Week 1-2 COMPLETE ✅ 🎉
 
 #### Deliverables
 - [x] `org-member-commands.ts` - Organization member management ✅ **COMPLETE (15/15 tests)**
-- [x] `org-idp-commands.ts` - Organization IDP configuration ✅ **COMPLETE (8/13 tests)**
-- [ ] `org-login-policy-commands.ts` - Organization login policies **PENDING**
-- [x] Integration tests: 28 total, 23 passing (82%) ✅
+- [x] `org-idp-commands.ts` - Organization IDP configuration ✅ **COMPLETE (13/13 tests)**
+- [x] `org-login-policy-commands.ts` - Organization login policies ✅ **COMPLETE (27/27 tests)**
+- [x] Integration tests: 55 total, 55 passing (100%) ✅
 
 #### Files to Create
 ```

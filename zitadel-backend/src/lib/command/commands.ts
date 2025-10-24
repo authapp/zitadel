@@ -555,6 +555,48 @@ export class Commands {
     require('./org/org-idp-commands').removeIDPFromOrg;
   
   /**
+   * Add organization login policy
+   */
+  addOrgLoginPolicy: typeof import('./org/org-login-policy-commands').addOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').addOrgLoginPolicy;
+  
+  /**
+   * Change organization login policy
+   */
+  changeOrgLoginPolicy: typeof import('./org/org-login-policy-commands').changeOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').changeOrgLoginPolicy;
+  
+  /**
+   * Remove organization login policy
+   */
+  removeOrgLoginPolicy: typeof import('./org/org-login-policy-commands').removeOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').removeOrgLoginPolicy;
+  
+  /**
+   * Add second factor to organization login policy
+   */
+  addSecondFactorToOrgLoginPolicy: typeof import('./org/org-login-policy-commands').addSecondFactorToOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').addSecondFactorToOrgLoginPolicy;
+  
+  /**
+   * Remove second factor from organization login policy
+   */
+  removeSecondFactorFromOrgLoginPolicy: typeof import('./org/org-login-policy-commands').removeSecondFactorFromOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').removeSecondFactorFromOrgLoginPolicy;
+  
+  /**
+   * Add multi factor to organization login policy
+   */
+  addMultiFactorToOrgLoginPolicy: typeof import('./org/org-login-policy-commands').addMultiFactorToOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').addMultiFactorToOrgLoginPolicy;
+  
+  /**
+   * Remove multi factor from organization login policy
+   */
+  removeMultiFactorFromOrgLoginPolicy: typeof import('./org/org-login-policy-commands').removeMultiFactorFromOrgLoginPolicy = 
+    require('./org/org-login-policy-commands').removeMultiFactorFromOrgLoginPolicy;
+  
+  /**
    * Add domain to organization
    */
   addDomain: typeof import('./org/org-commands').addDomain = 
