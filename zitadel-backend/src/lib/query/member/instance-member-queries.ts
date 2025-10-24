@@ -27,7 +27,7 @@ export class InstanceMemberQueries {
     }
 
     if (query.userName) {
-      conditions.push(`u.user_name ILIKE $${paramIndex++}`);
+      conditions.push(`u.username ILIKE $${paramIndex++}`);
       params.push(`%${query.userName}%`);
     }
 
@@ -53,7 +53,7 @@ export class InstanceMemberQueries {
         im.sequence,
         im.resource_owner,
         im.roles,
-        u.user_name,
+        u.username,
         u.email,
         u.first_name,
         u.last_name,
@@ -61,14 +61,14 @@ export class InstanceMemberQueries {
         u.preferred_login_name,
         u.avatar_url
       FROM projections.instance_members im
-      LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
+      LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
       WHERE ${whereClause}
     `;
 
     // Get total count
     const countResult = await this.database.queryOne(
       `SELECT COUNT(*) as count FROM projections.instance_members im 
-       LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
+       LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
        WHERE ${whereClause}`,
       params
     );
@@ -114,7 +114,7 @@ export class InstanceMemberQueries {
         im.sequence,
         im.resource_owner,
         im.roles,
-        u.user_name,
+        u.username,
         u.email,
         u.first_name,
         u.last_name,
@@ -122,7 +122,7 @@ export class InstanceMemberQueries {
         u.preferred_login_name,
         u.avatar_url
       FROM projections.instance_members im
-      LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
+      LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
       WHERE im.instance_id = $1 AND im.user_id = $2`,
       [iamID, userID]
     );

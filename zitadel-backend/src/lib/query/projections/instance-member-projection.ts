@@ -86,7 +86,7 @@ export class InstanceMemberProjection extends Projection {
         payload.userID || payload.userId,
         event.createdAt,
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n), // Convert bigint to number for sequence
         event.owner,
         payload.roles || [],
       ]
@@ -107,7 +107,7 @@ export class InstanceMemberProjection extends Projection {
       WHERE instance_id = $4 AND user_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n), // Convert bigint to number for sequence
         payload.roles || [],
         event.instanceID,
         payload.userID || payload.userId,

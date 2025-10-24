@@ -17,6 +17,10 @@ export class InstanceProjection extends Projection {
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
+      case 'instance.setup':
+        await this.handleInstanceSetup(event);
+        break;
+      
       case 'instance.added':
         await this.handleInstanceAdded(event);
         break;
@@ -37,6 +41,42 @@ export class InstanceProjection extends Projection {
         await this.handleInstanceFeaturesReset(event);
         break;
     }
+  }
+
+  private async handleInstanceSetup(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    
+    const instanceId = payload.instanceId || event.aggregateID;
+    
+    await this.database.query(
+      `INSERT INTO instances_projection (
+        id, instance_id, name, default_org_id, default_language, state, features,
+        created_at, updated_at, change_date, sequence
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ON CONFLICT (id) DO UPDATE SET
+        instance_id = EXCLUDED.instance_id,
+        name = EXCLUDED.name,
+        default_org_id = EXCLUDED.default_org_id,
+        default_language = EXCLUDED.default_language,
+        state = EXCLUDED.state,
+        features = EXCLUDED.features,
+        updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
+        sequence = EXCLUDED.sequence`,
+      [
+        instanceId,
+        instanceId, // instance_id = id for this table
+        payload.instanceName || payload.name,
+        payload.defaultOrgID || payload.defaultOrgId || null,
+        payload.defaultLanguage || 'en',
+        'active',
+        JSON.stringify(payload.features || {}),
+        event.createdAt,
+        event.createdAt,
+        event.createdAt,
+        Math.floor(event.position.position),
+      ]
+    );
   }
 
   private async handleInstanceAdded(event: Event): Promise<void> {
@@ -121,25 +161,8 @@ export class InstanceProjection extends Projection {
   private async handleInstanceFeaturesSet(event: Event): Promise<void> {
     const payload = event.payload as any;
     
-    await this.database.query(
-      `UPDATE instances_projection SET
-        features = $2,
-        updated_at = $3,
-        change_date = $4,
-        sequence = $5
-      WHERE id = $1`,
-      [
-        payload.instanceId || event.aggregateID,
-        JSON.stringify(payload.features || {}),
-        event.createdAt,
-        event.createdAt,
-        Math.floor(event.position.position),
-      ]
-    );
-  }
-
-  private async handleInstanceFeaturesReset(event: Event): Promise<void> {
-    const payload = event.payload as any;
+    // Support both formats: payload.features (nested) or payload itself (flat)
+    const features = payload.features || payload;
     
     await this.database.query(
       `UPDATE instances_projection SET
@@ -149,7 +172,25 @@ export class InstanceProjection extends Projection {
         sequence = $5
       WHERE id = $1`,
       [
-        payload.instanceId || event.aggregateID,
+        event.aggregateID,
+        JSON.stringify(features || {}),
+        event.createdAt,
+        event.createdAt,
+        Math.floor(event.position.position),
+      ]
+    );
+  }
+
+  private async handleInstanceFeaturesReset(event: Event): Promise<void> {
+    await this.database.query(
+      `UPDATE instances_projection SET
+        features = $2,
+        updated_at = $3,
+        change_date = $4,
+        sequence = $5
+      WHERE id = $1`,
+      [
+        event.aggregateID,
         JSON.stringify({}),
         event.createdAt,
         event.createdAt,

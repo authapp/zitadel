@@ -25,6 +25,7 @@ export class InstanceDomainProjection extends Projection {
         await this.handleInstanceDomainRemoved(event);
         break;
       
+      case 'instance.domain.default.set':
       case 'instance.domain.primary.set':
         await this.handleInstanceDomainPrimarySet(event);
         break;
