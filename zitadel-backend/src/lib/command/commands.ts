@@ -633,6 +633,78 @@ export class Commands {
     require('./instance/instance-idp-commands').removeInstanceIDP;
   
   /**
+   * Add SMTP configuration to organization
+   */
+  addSMTPConfigToOrg: typeof import('./smtp/smtp-commands').addSMTPConfigToOrg = 
+    require('./smtp/smtp-commands').addSMTPConfigToOrg;
+  
+  /**
+   * Change SMTP configuration
+   */
+  changeSMTPConfig: typeof import('./smtp/smtp-commands').changeSMTPConfig = 
+    require('./smtp/smtp-commands').changeSMTPConfig;
+  
+  /**
+   * Activate SMTP configuration
+   */
+  activateSMTPConfig: typeof import('./smtp/smtp-commands').activateSMTPConfig = 
+    require('./smtp/smtp-commands').activateSMTPConfig;
+  
+  /**
+   * Deactivate SMTP configuration
+   */
+  deactivateSMTPConfig: typeof import('./smtp/smtp-commands').deactivateSMTPConfig = 
+    require('./smtp/smtp-commands').deactivateSMTPConfig;
+  
+  /**
+   * Remove SMTP configuration
+   */
+  removeSMTPConfig: typeof import('./smtp/smtp-commands').removeSMTPConfig = 
+    require('./smtp/smtp-commands').removeSMTPConfig;
+  
+  /**
+   * Add Twilio SMS configuration to organization
+   */
+  addTwilioSMSConfigToOrg: typeof import('./sms/sms-commands').addTwilioSMSConfigToOrg = 
+    require('./sms/sms-commands').addTwilioSMSConfigToOrg;
+  
+  /**
+   * Change Twilio SMS configuration
+   */
+  changeTwilioSMSConfig: typeof import('./sms/sms-commands').changeTwilioSMSConfig = 
+    require('./sms/sms-commands').changeTwilioSMSConfig;
+  
+  /**
+   * Add HTTP SMS configuration to organization
+   */
+  addHTTPSMSConfigToOrg: typeof import('./sms/sms-commands').addHTTPSMSConfigToOrg = 
+    require('./sms/sms-commands').addHTTPSMSConfigToOrg;
+  
+  /**
+   * Change HTTP SMS configuration
+   */
+  changeHTTPSMSConfig: typeof import('./sms/sms-commands').changeHTTPSMSConfig = 
+    require('./sms/sms-commands').changeHTTPSMSConfig;
+  
+  /**
+   * Activate SMS configuration
+   */
+  activateSMSConfig: typeof import('./sms/sms-commands').activateSMSConfig = 
+    require('./sms/sms-commands').activateSMSConfig;
+  
+  /**
+   * Deactivate SMS configuration
+   */
+  deactivateSMSConfig: typeof import('./sms/sms-commands').deactivateSMSConfig = 
+    require('./sms/sms-commands').deactivateSMSConfig;
+  
+  /**
+   * Remove SMS configuration
+   */
+  removeSMSConfig: typeof import('./sms/sms-commands').removeSMSConfig = 
+    require('./sms/sms-commands').removeSMSConfig;
+  
+  /**
    * Add organization login policy
    */
   addOrgLoginPolicy: typeof import('./org/org-login-policy-commands').addOrgLoginPolicy = 
