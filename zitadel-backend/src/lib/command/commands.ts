@@ -11,6 +11,7 @@ import { Storage } from '../static/types';
 import { SnowflakeGenerator } from '../id';
 import { PermissionChecker, SimplePermissionChecker, checkPermission as checkPerm } from './permissions';
 import { Context } from './context';
+import { DatabasePool } from '../database';
 
 // Type alias for convenience
 export type IDGenerator = SnowflakeGenerator;
@@ -33,6 +34,7 @@ export interface CommandsConfig {
  */
 export class Commands {
   private permissionChecker: PermissionChecker;
+  public database?: DatabasePool; // Optional database pool for direct access
   
   constructor(
     private eventstore: Eventstore,
@@ -40,9 +42,11 @@ export class Commands {
     private staticStorage: Storage,
     private idGenerator: IDGenerator,
     private config: CommandsConfig,
-    permissionChecker?: PermissionChecker
+    permissionChecker?: PermissionChecker,
+    database?: DatabasePool
   ) {
     this.permissionChecker = permissionChecker || new SimplePermissionChecker();
+    this.database = database;
   }
   
   /**
@@ -553,156 +557,6 @@ export class Commands {
    */
   removeIDPFromOrg: typeof import('./org/org-idp-commands').removeIDPFromOrg = 
     require('./org/org-idp-commands').removeIDPFromOrg;
-  
-  /**
-   * Add JWT IDP to organization
-   */
-  addJWTIDPToOrg: typeof import('./idp/jwt-idp-commands').addJWTIDPToOrg = 
-    require('./idp/jwt-idp-commands').addJWTIDPToOrg;
-  
-  /**
-   * Change JWT IDP configuration
-   */
-  changeJWTIDP: typeof import('./idp/jwt-idp-commands').changeJWTIDP = 
-    require('./idp/jwt-idp-commands').changeJWTIDP;
-  
-  /**
-   * Add Google IDP to organization
-   */
-  addGoogleIDPToOrg: typeof import('./idp/provider-helpers').addGoogleIDPToOrg = 
-    require('./idp/provider-helpers').addGoogleIDPToOrg;
-  
-  /**
-   * Add Azure AD IDP to organization
-   */
-  addAzureADIDPToOrg: typeof import('./idp/provider-helpers').addAzureADIDPToOrg = 
-    require('./idp/provider-helpers').addAzureADIDPToOrg;
-  
-  /**
-   * Add Apple IDP to organization
-   */
-  addAppleIDPToOrg: typeof import('./idp/provider-helpers').addAppleIDPToOrg = 
-    require('./idp/provider-helpers').addAppleIDPToOrg;
-  
-  /**
-   * Add SAML IDP to organization
-   */
-  addSAMLIDPToOrg: typeof import('./idp/saml-idp-commands').addSAMLIDPToOrg = 
-    require('./idp/saml-idp-commands').addSAMLIDPToOrg;
-  
-  /**
-   * Change SAML IDP configuration
-   */
-  changeSAMLIDP: typeof import('./idp/saml-idp-commands').changeSAMLIDP = 
-    require('./idp/saml-idp-commands').changeSAMLIDP;
-  
-  /**
-   * Add LDAP IDP to organization
-   */
-  addLDAPIDPToOrg: typeof import('./idp/ldap-idp-commands').addLDAPIDPToOrg = 
-    require('./idp/ldap-idp-commands').addLDAPIDPToOrg;
-  
-  /**
-   * Change LDAP IDP configuration
-   */
-  changeLDAPIDP: typeof import('./idp/ldap-idp-commands').changeLDAPIDP = 
-    require('./idp/ldap-idp-commands').changeLDAPIDP;
-  
-  /**
-   * Add OIDC IDP to instance
-   */
-  addOIDCIDPToInstance: typeof import('./instance/instance-idp-commands').addOIDCIDPToInstance = 
-    require('./instance/instance-idp-commands').addOIDCIDPToInstance;
-  
-  /**
-   * Add OAuth IDP to instance
-   */
-  addOAuthIDPToInstance: typeof import('./instance/instance-idp-commands').addOAuthIDPToInstance = 
-    require('./instance/instance-idp-commands').addOAuthIDPToInstance;
-  
-  /**
-   * Update instance IDP
-   */
-  updateInstanceIDP: typeof import('./instance/instance-idp-commands').updateInstanceIDP = 
-    require('./instance/instance-idp-commands').updateInstanceIDP;
-  
-  /**
-   * Remove instance IDP
-   */
-  removeInstanceIDP: typeof import('./instance/instance-idp-commands').removeInstanceIDP = 
-    require('./instance/instance-idp-commands').removeInstanceIDP;
-  
-  /**
-   * Add SMTP configuration to organization
-   */
-  addSMTPConfigToOrg: typeof import('./smtp/smtp-commands').addSMTPConfigToOrg = 
-    require('./smtp/smtp-commands').addSMTPConfigToOrg;
-  
-  /**
-   * Change SMTP configuration
-   */
-  changeSMTPConfig: typeof import('./smtp/smtp-commands').changeSMTPConfig = 
-    require('./smtp/smtp-commands').changeSMTPConfig;
-  
-  /**
-   * Activate SMTP configuration
-   */
-  activateSMTPConfig: typeof import('./smtp/smtp-commands').activateSMTPConfig = 
-    require('./smtp/smtp-commands').activateSMTPConfig;
-  
-  /**
-   * Deactivate SMTP configuration
-   */
-  deactivateSMTPConfig: typeof import('./smtp/smtp-commands').deactivateSMTPConfig = 
-    require('./smtp/smtp-commands').deactivateSMTPConfig;
-  
-  /**
-   * Remove SMTP configuration
-   */
-  removeSMTPConfig: typeof import('./smtp/smtp-commands').removeSMTPConfig = 
-    require('./smtp/smtp-commands').removeSMTPConfig;
-  
-  /**
-   * Add Twilio SMS configuration to organization
-   */
-  addTwilioSMSConfigToOrg: typeof import('./sms/sms-commands').addTwilioSMSConfigToOrg = 
-    require('./sms/sms-commands').addTwilioSMSConfigToOrg;
-  
-  /**
-   * Change Twilio SMS configuration
-   */
-  changeTwilioSMSConfig: typeof import('./sms/sms-commands').changeTwilioSMSConfig = 
-    require('./sms/sms-commands').changeTwilioSMSConfig;
-  
-  /**
-   * Add HTTP SMS configuration to organization
-   */
-  addHTTPSMSConfigToOrg: typeof import('./sms/sms-commands').addHTTPSMSConfigToOrg = 
-    require('./sms/sms-commands').addHTTPSMSConfigToOrg;
-  
-  /**
-   * Change HTTP SMS configuration
-   */
-  changeHTTPSMSConfig: typeof import('./sms/sms-commands').changeHTTPSMSConfig = 
-    require('./sms/sms-commands').changeHTTPSMSConfig;
-  
-  /**
-   * Activate SMS configuration
-   */
-  activateSMSConfig: typeof import('./sms/sms-commands').activateSMSConfig = 
-    require('./sms/sms-commands').activateSMSConfig;
-  
-  /**
-   * Deactivate SMS configuration
-   */
-  deactivateSMSConfig: typeof import('./sms/sms-commands').deactivateSMSConfig = 
-    require('./sms/sms-commands').deactivateSMSConfig;
-  
-  /**
-   * Remove SMS configuration
-   */
-  removeSMSConfig: typeof import('./sms/sms-commands').removeSMSConfig = 
-    require('./sms/sms-commands').removeSMSConfig;
   
   /**
    * Add organization login policy
@@ -1449,6 +1303,216 @@ export class Commands {
    */
   failAuthRequest: typeof import('./auth/auth-commands').failAuthRequest = 
     require('./auth/auth-commands').failAuthRequest;
+  
+  /**
+   * Add personal access token
+   */
+  addPersonalAccessToken: typeof import('./user/personal-access-token-commands').addPersonalAccessToken = 
+    require('./user/personal-access-token-commands').addPersonalAccessToken;
+  
+  /**
+   * Remove personal access token
+   */
+  removePersonalAccessToken: typeof import('./user/personal-access-token-commands').removePersonalAccessToken = 
+    require('./user/personal-access-token-commands').removePersonalAccessToken;
+  
+  /**
+   * Update personal access token usage
+   */
+  updatePersonalAccessTokenUsage: typeof import('./user/personal-access-token-commands').updatePersonalAccessTokenUsage = 
+    require('./user/personal-access-token-commands').updatePersonalAccessTokenUsage;
+  
+  /**
+   * Add machine key
+   */
+  addMachineKey: typeof import('./user/machine-key-commands').addMachineKey = 
+    require('./user/machine-key-commands').addMachineKey;
+  
+  /**
+   * Remove machine key
+   */
+  removeMachineKey: typeof import('./user/machine-key-commands').removeMachineKey = 
+    require('./user/machine-key-commands').removeMachineKey;
+  
+  /**
+   * Get machine key public key
+   */
+  getMachineKeyPublicKey: typeof import('./user/machine-key-commands').getMachineKeyPublicKey = 
+    require('./user/machine-key-commands').getMachineKeyPublicKey;
+  
+  /**
+   * Add encryption key
+   */
+  addEncryptionKey: typeof import('./crypto/encryption-key-commands').addEncryptionKey = 
+    require('./crypto/encryption-key-commands').addEncryptionKey;
+  
+  /**
+   * Get encryption key
+   */
+  getEncryptionKey: typeof import('./crypto/encryption-key-commands').getEncryptionKey = 
+    require('./crypto/encryption-key-commands').getEncryptionKey;
+  
+  /**
+   * List encryption keys
+   */
+  listEncryptionKeys: typeof import('./crypto/encryption-key-commands').listEncryptionKeys = 
+    require('./crypto/encryption-key-commands').listEncryptionKeys;
+  
+  /**
+   * Remove encryption key
+   */
+  removeEncryptionKey: typeof import('./crypto/encryption-key-commands').removeEncryptionKey = 
+    require('./crypto/encryption-key-commands').removeEncryptionKey;
+  
+  /**
+   * Add SMTP configuration to organization
+   */
+  addSMTPConfigToOrg: typeof import('./smtp/smtp-commands').addSMTPConfigToOrg = 
+    require('./smtp/smtp-commands').addSMTPConfigToOrg;
+  
+  /**
+   * Change SMTP configuration
+   */
+  changeSMTPConfig: typeof import('./smtp/smtp-commands').changeSMTPConfig = 
+    require('./smtp/smtp-commands').changeSMTPConfig;
+  
+  /**
+   * Activate SMTP configuration
+   */
+  activateSMTPConfig: typeof import('./smtp/smtp-commands').activateSMTPConfig = 
+    require('./smtp/smtp-commands').activateSMTPConfig;
+  
+  /**
+   * Deactivate SMTP configuration
+   */
+  deactivateSMTPConfig: typeof import('./smtp/smtp-commands').deactivateSMTPConfig = 
+    require('./smtp/smtp-commands').deactivateSMTPConfig;
+  
+  /**
+   * Remove SMTP configuration
+   */
+  removeSMTPConfig: typeof import('./smtp/smtp-commands').removeSMTPConfig = 
+    require('./smtp/smtp-commands').removeSMTPConfig;
+  
+  /**
+   * Add Twilio SMS configuration to organization
+   */
+  addTwilioSMSConfigToOrg: typeof import('./sms/sms-commands').addTwilioSMSConfigToOrg = 
+    require('./sms/sms-commands').addTwilioSMSConfigToOrg;
+  
+  /**
+   * Change Twilio SMS configuration
+   */
+  changeTwilioSMSConfig: typeof import('./sms/sms-commands').changeTwilioSMSConfig = 
+    require('./sms/sms-commands').changeTwilioSMSConfig;
+  
+  /**
+   * Add HTTP SMS configuration to organization
+   */
+  addHTTPSMSConfigToOrg: typeof import('./sms/sms-commands').addHTTPSMSConfigToOrg = 
+    require('./sms/sms-commands').addHTTPSMSConfigToOrg;
+  
+  /**
+   * Change HTTP SMS configuration
+   */
+  changeHTTPSMSConfig: typeof import('./sms/sms-commands').changeHTTPSMSConfig = 
+    require('./sms/sms-commands').changeHTTPSMSConfig;
+  
+  /**
+   * Activate SMS configuration
+   */
+  activateSMSConfig: typeof import('./sms/sms-commands').activateSMSConfig = 
+    require('./sms/sms-commands').activateSMSConfig;
+  
+  /**
+   * Deactivate SMS configuration
+   */
+  deactivateSMSConfig: typeof import('./sms/sms-commands').deactivateSMSConfig = 
+    require('./sms/sms-commands').deactivateSMSConfig;
+  
+  /**
+   * Remove SMS configuration
+   */
+  removeSMSConfig: typeof import('./sms/sms-commands').removeSMSConfig = 
+    require('./sms/sms-commands').removeSMSConfig;
+  
+  /**
+   * Add JWT IDP to organization
+   */
+  addJWTIDPToOrg: typeof import('./idp/jwt-idp-commands').addJWTIDPToOrg = 
+    require('./idp/jwt-idp-commands').addJWTIDPToOrg;
+  
+  /**
+   * Change JWT IDP
+   */
+  changeJWTIDP: typeof import('./idp/jwt-idp-commands').changeJWTIDP = 
+    require('./idp/jwt-idp-commands').changeJWTIDP;
+  
+  /**
+   * Add SAML IDP to organization
+   */
+  addSAMLIDPToOrg: typeof import('./idp/saml-idp-commands').addSAMLIDPToOrg = 
+    require('./idp/saml-idp-commands').addSAMLIDPToOrg;
+  
+  /**
+   * Change SAML IDP
+   */
+  changeSAMLIDP: typeof import('./idp/saml-idp-commands').changeSAMLIDP = 
+    require('./idp/saml-idp-commands').changeSAMLIDP;
+  
+  /**
+   * Add LDAP IDP to organization
+   */
+  addLDAPIDPToOrg: typeof import('./idp/ldap-idp-commands').addLDAPIDPToOrg = 
+    require('./idp/ldap-idp-commands').addLDAPIDPToOrg;
+  
+  /**
+   * Change LDAP IDP
+   */
+  changeLDAPIDP: typeof import('./idp/ldap-idp-commands').changeLDAPIDP = 
+    require('./idp/ldap-idp-commands').changeLDAPIDP;
+  
+  /**
+   * Add Google IDP to organization
+   */
+  addGoogleIDPToOrg: typeof import('./idp/provider-helpers').addGoogleIDPToOrg = 
+    require('./idp/provider-helpers').addGoogleIDPToOrg;
+  
+  /**
+   * Add Azure AD IDP to organization
+   */
+  addAzureADIDPToOrg: typeof import('./idp/provider-helpers').addAzureADIDPToOrg = 
+    require('./idp/provider-helpers').addAzureADIDPToOrg;
+  
+  /**
+   * Add Apple IDP to organization
+   */
+  addAppleIDPToOrg: typeof import('./idp/provider-helpers').addAppleIDPToOrg = 
+    require('./idp/provider-helpers').addAppleIDPToOrg;
+  
+  /**
+   * Add OIDC IDP to instance
+   */
+  addOIDCIDPToInstance: typeof import('./instance/instance-idp-commands').addOIDCIDPToInstance = 
+    require('./instance/instance-idp-commands').addOIDCIDPToInstance;
+  
+  /**
+   * Add OAuth IDP to instance
+   */
+  addOAuthIDPToInstance: typeof import('./instance/instance-idp-commands').addOAuthIDPToInstance = 
+    require('./instance/instance-idp-commands').addOAuthIDPToInstance;
+  
+  /**
+   * Update instance IDP
+   */
+  updateInstanceIDP: typeof import('./instance/instance-idp-commands').updateInstanceIDP = 
+    require('./instance/instance-idp-commands').updateInstanceIDP;
+  
+  /**
+   * Remove instance IDP
+   */
+  removeInstanceIDP: typeof import('./instance/instance-idp-commands').removeInstanceIDP = 
+    require('./instance/instance-idp-commands').removeInstanceIDP;
 }
 
 /**

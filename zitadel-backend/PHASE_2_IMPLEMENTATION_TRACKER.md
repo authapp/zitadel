@@ -223,41 +223,59 @@ internal/command/idp_jwt_config.go
 
 ---
 
-### **Week 14: Notification Infrastructure** (P1) - 100% COMPLETE ✅
-- **Commands:** 10/8 (125% - 2 bonus!) ✅
-- **Tests:** 33/33 (100%) ✅
-- **Parity:** 82.5% → 83.4% (+0.9%)
-- **Focus:** Email and SMS delivery providers
-- **Priority:** P1 - Communication infrastructure
-- **Status:** COMPLETE - All commands and tests passing
+### **Week 14: Notification Infrastructure** (P1)
 
-**Key Deliverables:**
-- ✅ `smtp/smtp-commands.ts` - SMTP configuration with TLS (5 commands, 428 lines)
-- ✅ `sms/sms-commands.ts` - SMS providers Twilio + HTTP (7 commands, 566 lines)
-- ✅ `test/integration/commands/smtp.test.ts` - SMTP tests (15 tests, 542 lines)
-- ✅ `test/integration/commands/sms.test.ts` - SMS tests (18 tests, 638 lines)
+**Status:** NOT STARTED  
+**Priority:** P1 (Email/SMS delivery)  
+**Target Parity:** 83% → 84% (+1%)
 
-**Commands Implemented:**
-- ✅ addSMTPConfigToOrg, changeSMTPConfig, activateSMTPConfig, deactivateSMTPConfig, removeSMTPConfig
-- ✅ addTwilioSMSConfigToOrg, changeTwilioSMSConfig
-- ✅ addHTTPSMSConfigToOrg, changeHTTPSMSConfig
-- ✅ activateSMSConfig, deactivateSMSConfig, removeSMSConfig
+#### Deliverables
+- [ ] `smtp-config-commands.ts` - Email provider configuration
+- [ ] `sms-config-commands.ts` - SMS provider configuration
+- [ ] Integration tests: 20+ tests
 
-**Files Created:**
-- ✅ `src/lib/command/smtp/smtp-commands.ts` (428 lines, 5 commands)
-- ✅ `src/lib/command/sms/sms-commands.ts` (566 lines, 7 commands)
-- ✅ `test/integration/commands/smtp.test.ts` (542 lines, 15 tests)
-- ✅ `test/integration/commands/sms.test.ts` (638 lines, 18 tests)
+#### Commands to Implement (8 total)
 
-#### Success Criteria ✅ ALL MET
-- ✅ SMTP configuration (host, port, auth, TLS)
-- ✅ Email address validation
-- ✅ State management (INACTIVE, ACTIVE)
-- ✅ Twilio SMS integration (SID, token, sender number)
-- ✅ Generic HTTP SMS provider (webhook support)
-- ✅ Provider type enforcement
-- ✅ Complete lifecycle testing (add → change → activate → deactivate → remove)
-- ✅ 33/33 integration tests passing (100%)
+**SMTP Configuration Commands (4 commands):**
+- [ ] `addSMTPConfig()` - Configure SMTP server for emails
+- [ ] `changeSMTPConfig()` - Update SMTP settings
+- [ ] `testSMTPConfig()` - Test email delivery
+- [ ] `removeSMTPConfig()` - Remove SMTP config
+
+**SMS Configuration Commands (4 commands):**
+- [ ] `addSMSProvider()` - Configure SMS provider (Twilio, HTTP)
+- [ ] `changeSMSProvider()` - Update SMS settings
+- [ ] `testSMSProvider()` - Test SMS delivery
+- [ ] `removeSMSProvider()` - Remove SMS provider
+
+#### Files to Create
+```
+src/lib/command/notification/smtp-config-commands.ts
+src/lib/command/notification/smtp-config-write-model.ts
+src/lib/command/notification/sms-config-commands.ts
+src/lib/command/notification/sms-config-write-model.ts
+
+test/integration/commands/smtp-config.test.ts
+test/integration/commands/sms-config.test.ts
+```
+
+#### Reference Files (Zitadel Go)
+```
+internal/command/smtp.go
+internal/command/sms.go
+internal/command/sms_twilio.go
+internal/command/sms_http.go
+```
+
+#### Success Criteria
+- ✅ SMTP configuration (host, port, auth)
+- ✅ TLS/SSL support
+- ✅ From address configuration
+- ✅ Test email functionality
+- ✅ Twilio SMS integration
+- ✅ Generic HTTP SMS provider
+- ✅ Test SMS functionality
+- ✅ 20+ integration tests passing
 
 ---
 

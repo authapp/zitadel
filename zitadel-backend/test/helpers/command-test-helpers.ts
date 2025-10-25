@@ -75,7 +75,9 @@ export async function setupCommandTest(pool: DatabasePool): Promise<CommandTestC
       externalDomain: 'localhost',
       externalSecure: false,
       externalPort: 8080,
-    }
+    },
+    undefined, // permissionChecker
+    pool // database pool for encryption key commands
   );
 
   // Helper to create test context

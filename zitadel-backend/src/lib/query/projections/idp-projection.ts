@@ -66,6 +66,7 @@ export class IDPProjection extends Projection {
       case 'idp.azure.added':
       case 'idp.google.added':
       case 'idp.apple.added':
+      // Instance-level IDP events
       case 'instance.idp.added':
       case 'instance.idp.oidc.added':
       case 'instance.idp.oauth.added':
@@ -98,6 +99,7 @@ export class IDPProjection extends Projection {
       case 'idp.azure.changed':
       case 'idp.google.changed':
       case 'idp.apple.changed':
+      // Instance-level changes
       case 'instance.idp.changed':
       case 'instance.idp.config.changed':
       case 'instance.idp.oidc.changed':
@@ -156,9 +158,9 @@ export class IDPProjection extends Projection {
     else if (event.eventType.includes('apple')) type = 8;
 
     // Determine IDP ID based on event type
-    // - For org-level IDPs: aggregateID is org ID, IDP ID is in payload
-    // - For instance.idp.* IDPs: aggregateID is instance ID, IDP ID is in payload
-    // - For old-style instance IDPs (idp.*): aggregateID IS the IDP ID
+    // - For old instance-level IDPs (idp.*): aggregateID IS the IDP ID
+    // - For new instance-level IDPs (instance.idp.*): IDP ID is in payload
+    // - For org-level IDPs (org.idp.*): aggregateID is org ID, IDP ID is in payload
     const isOrgLevel = event.eventType.startsWith('org.');
     const isNewInstanceLevel = event.eventType.startsWith('instance.idp.');
     const idpID = (isOrgLevel || isNewInstanceLevel) ? (payload.id || payload.idpID) : event.aggregateID;
@@ -266,7 +268,7 @@ export class IDPProjection extends Projection {
     const idpID = (isOrgLevel || isNewInstanceLevel) ? (payload.idpID || payload.id) : event.aggregateID;
     
     await this.query(
-      `UPDATE projections.idps SET state = 3 WHERE id = $1 AND instance_id = $2`,
+      `DELETE FROM projections.idps WHERE id = $1 AND instance_id = $2`,
       [idpID, event.instanceID]
     );
   }

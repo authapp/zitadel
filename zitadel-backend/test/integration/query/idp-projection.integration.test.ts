@@ -223,9 +223,8 @@ describe('IDP Projection Integration Tests', () => {
       await waitForProjection();
 
       idp = await idpQueries.getIDPByID(idpID, instanceID);
-      // IDP should have state = 3 (REMOVED) instead of being deleted
-      expect(idp).not.toBeNull();
-      expect(idp!.state).toBe(3); // REMOVED state
+      // IDP should be deleted from the projection
+      expect(idp).toBeNull();
     });
   });
 
