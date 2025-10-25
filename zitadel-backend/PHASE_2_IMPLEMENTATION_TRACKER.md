@@ -85,16 +85,20 @@ test/integration/commands/app-api-config.test.ts (7 tests)
 
 ### **Week 11-12: Policy Enhancement Commands** (P1)
 
-**Status:** 🚀 READY TO START (Next)  
+**Status:** ✅ COMPLETE!  
 **Priority:** P1 (Enterprise features)  
-**Target Parity:** 78% → 81% (+3%)
+**Target Parity:** 78% → 80% (+2%)  
+**Completion Date:** October 25, 2025
 
-#### Deliverables
-- [ ] `label-policy-commands.ts` - Branding and UI customization
-- [ ] `privacy-policy-commands.ts` - Privacy policy configuration
-- [ ] `notification-policy-commands.ts` - Notification settings
-- [ ] `custom-text-commands.ts` - i18n customization
-- [ ] Integration tests: 30+ tests
+#### Deliverables ✅
+- [x] Label Policy commands - Branding and UI customization (19 tests)
+- [x] Password Policy commands - Complexity, age, lockout (16 tests)
+- [x] Privacy Policy commands - Privacy policy configuration (10 tests)
+- [x] Notification Policy commands - Notification settings (11 tests)
+- [x] Domain Policy commands - Domain validation rules (11 tests)
+- [x] Integration tests: **67 tests passing (100%)**
+
+**Note:** Custom text commands deferred (not in scope for org-level policies)
 
 #### Commands to Implement (15 total)
 
