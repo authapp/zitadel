@@ -59,6 +59,9 @@ class OrgIDPWriteModel extends WriteModel {
       case 'org.idp.config.changed':
       case 'org.idp.oidc.changed':
       case 'org.idp.oauth.changed':
+      case 'org.idp.jwt.changed':
+      case 'org.idp.ldap.changed':
+      case 'org.idp.saml.changed':
         if (event.payload?.name) {
           this.name = event.payload.name;
         }

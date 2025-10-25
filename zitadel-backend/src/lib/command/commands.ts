@@ -555,6 +555,84 @@ export class Commands {
     require('./org/org-idp-commands').removeIDPFromOrg;
   
   /**
+   * Add JWT IDP to organization
+   */
+  addJWTIDPToOrg: typeof import('./idp/jwt-idp-commands').addJWTIDPToOrg = 
+    require('./idp/jwt-idp-commands').addJWTIDPToOrg;
+  
+  /**
+   * Change JWT IDP configuration
+   */
+  changeJWTIDP: typeof import('./idp/jwt-idp-commands').changeJWTIDP = 
+    require('./idp/jwt-idp-commands').changeJWTIDP;
+  
+  /**
+   * Add Google IDP to organization
+   */
+  addGoogleIDPToOrg: typeof import('./idp/provider-helpers').addGoogleIDPToOrg = 
+    require('./idp/provider-helpers').addGoogleIDPToOrg;
+  
+  /**
+   * Add Azure AD IDP to organization
+   */
+  addAzureADIDPToOrg: typeof import('./idp/provider-helpers').addAzureADIDPToOrg = 
+    require('./idp/provider-helpers').addAzureADIDPToOrg;
+  
+  /**
+   * Add Apple IDP to organization
+   */
+  addAppleIDPToOrg: typeof import('./idp/provider-helpers').addAppleIDPToOrg = 
+    require('./idp/provider-helpers').addAppleIDPToOrg;
+  
+  /**
+   * Add SAML IDP to organization
+   */
+  addSAMLIDPToOrg: typeof import('./idp/saml-idp-commands').addSAMLIDPToOrg = 
+    require('./idp/saml-idp-commands').addSAMLIDPToOrg;
+  
+  /**
+   * Change SAML IDP configuration
+   */
+  changeSAMLIDP: typeof import('./idp/saml-idp-commands').changeSAMLIDP = 
+    require('./idp/saml-idp-commands').changeSAMLIDP;
+  
+  /**
+   * Add LDAP IDP to organization
+   */
+  addLDAPIDPToOrg: typeof import('./idp/ldap-idp-commands').addLDAPIDPToOrg = 
+    require('./idp/ldap-idp-commands').addLDAPIDPToOrg;
+  
+  /**
+   * Change LDAP IDP configuration
+   */
+  changeLDAPIDP: typeof import('./idp/ldap-idp-commands').changeLDAPIDP = 
+    require('./idp/ldap-idp-commands').changeLDAPIDP;
+  
+  /**
+   * Add OIDC IDP to instance
+   */
+  addOIDCIDPToInstance: typeof import('./instance/instance-idp-commands').addOIDCIDPToInstance = 
+    require('./instance/instance-idp-commands').addOIDCIDPToInstance;
+  
+  /**
+   * Add OAuth IDP to instance
+   */
+  addOAuthIDPToInstance: typeof import('./instance/instance-idp-commands').addOAuthIDPToInstance = 
+    require('./instance/instance-idp-commands').addOAuthIDPToInstance;
+  
+  /**
+   * Update instance IDP
+   */
+  updateInstanceIDP: typeof import('./instance/instance-idp-commands').updateInstanceIDP = 
+    require('./instance/instance-idp-commands').updateInstanceIDP;
+  
+  /**
+   * Remove instance IDP
+   */
+  removeInstanceIDP: typeof import('./instance/instance-idp-commands').removeInstanceIDP = 
+    require('./instance/instance-idp-commands').removeInstanceIDP;
+  
+  /**
    * Add organization login policy
    */
   addOrgLoginPolicy: typeof import('./org/org-login-policy-commands').addOrgLoginPolicy = 

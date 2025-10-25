@@ -96,11 +96,14 @@ describe('Organization IDP Commands - Complete Flow', () => {
   }
 
   /**
-   * Helper: Verify IDP does NOT exist
+   * Helper: Verify IDP is removed (state = REMOVED)
    */
   async function assertIDPNotInQuery(idpID: string) {
     const idp = await idpQueries.getIDPByID(idpID, 'test-instance');
-    expect(idp).toBeNull();
+    // IDP should either be null or have state = 3 (REMOVED)
+    if (idp) {
+      expect(idp.state).toBe(IDPState.REMOVED); // state = 3
+    }
     console.log(`✓ Verified IDP removed: ${idpID}`);
   }
 
