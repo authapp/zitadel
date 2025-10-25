@@ -2,14 +2,14 @@
 # Zitadel Go vs TypeScript Backend
 
 **Generated:** October 24, 2025  
-**Last Updated:** October 24, 2025  
+**Last Updated:** October 25, 2025  
 **Purpose:** Track command module implementation parity between Zitadel Go and TypeScript backend
 
 ---
 
 ## 📊 EXECUTIVE SUMMARY
 
-### Overall Command Parity: **75%** ✅ (+5% from session & auth commands)
+### Overall Command Parity: **79%** ✅ (Phase 1 + Week 9-10 COMPLETE, Week 11-12 IN PROGRESS)
 
 **Zitadel Go Command Module:**
 - **Total Files:** 391 Go files
@@ -17,14 +17,14 @@
 - **Primary Areas:** User (95), Instance (80), Organization (65), Project (31)
 
 **TypeScript Backend Command Module:**
-- **Total Files:** 51 TypeScript files
-- **Command Categories:** 35 implemented
-- **Coverage:** Core CRUD + Identity Providers + Login Policies + Project Management + Instance Management + Session Management + Auth Flows
-- **Test Coverage:** 963 tests (928 + 35 new session/auth tests)
+- **Total Files:** 72 TypeScript files
+- **Command Categories:** 37 implemented
+- **Coverage:** Core CRUD + Identity Providers + Login Policies + Project Management + Instance Management + Session Management + Auth Flows + Application Configuration
+- **Test Coverage:** 1,022 tests (1,019 passing, 3 skipped)
 
-**Status:** Phase 1 Week 7-8 COMPLETE! Session & Auth commands with full stack integration.
+**Status:** Phase 1 COMPLETE + Week 9-10 COMPLETE! ✅ Week 11-12 Policy Enhancement: 65% complete (9 of 15 commands tested)
 
-**Recent Completion (Oct 24):**
+**Recent Completion (Oct 24-25):**
 - ✅ Organization Member Commands (3 commands, 15/15 tests passing)
 - ✅ Organization IDP Commands (4 commands, 13/13 tests passing)
 - ✅ Organization Login Policy Commands (7 commands, 27/27 tests passing)
@@ -36,6 +36,8 @@
 - ✅ Query Layer integration across all modules
 - ✅ MFA and authentication policy support
 - ✅ Complete stack: Command → Event → Projection → Query
+- ✅ Application Configuration Commands (12 commands, 47/47 tests passing) - Week 9-10 COMPLETE
+- ✅ Privacy Policy Commands (3 commands, 9/10 tests passing) - Week 11-12 NEW
 
 **Week 1-8 Progress (Oct 24):**
 - ✅ Org Member Commands - COMPLETE (100%)
