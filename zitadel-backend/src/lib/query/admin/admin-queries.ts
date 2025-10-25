@@ -65,9 +65,9 @@ export class AdminQueries {
   ): Promise<PersonalAccessToken | null> {
     const query = `
       SELECT 
-        id, user_id, instance_id, creation_date, change_date, sequence,
+        id, user_id, instance_id, created_at AS creation_date, change_date, sequence,
         scopes, expiration_date
-      FROM projections.personal_access_tokens
+      FROM personal_access_tokens_projection
       WHERE instance_id = $1 AND id = $2
       LIMIT 1
     `;

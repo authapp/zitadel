@@ -72,6 +72,8 @@ export class UserProjection extends Projection {
       case 'user.added':
       case 'user.registered':
       case 'user.created':  // Old event type
+      case 'user.human.added':  // Human user specific event
+      case 'user.machine.added':  // Machine user specific event
         await this.handleUserAdded(event);
         break;
       
