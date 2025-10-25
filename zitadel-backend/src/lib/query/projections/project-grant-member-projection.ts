@@ -16,35 +16,10 @@ export class ProjectGrantMemberProjection extends Projection {
   readonly tables = ['project_grant_members'];
 
   /**
-   * Initialize projection tables
+   * Initialize projection - table created by migration 002_55
    */
   async init(): Promise<void> {
-    await this.query(`
-      CREATE TABLE IF NOT EXISTS projections.project_grant_members (
-        project_id TEXT NOT NULL,
-        grant_id TEXT NOT NULL,
-        user_id TEXT NOT NULL,
-        instance_id TEXT NOT NULL,
-        creation_date TIMESTAMPTZ NOT NULL,
-        change_date TIMESTAMPTZ NOT NULL,
-        sequence BIGINT NOT NULL,
-        resource_owner TEXT NOT NULL,
-        roles TEXT[] NOT NULL DEFAULT '{}',
-        PRIMARY KEY (project_id, grant_id, user_id, instance_id)
-      );
-
-      CREATE INDEX IF NOT EXISTS project_grant_members_project_id_idx 
-        ON projections.project_grant_members (project_id, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grant_members_grant_id_idx 
-        ON projections.project_grant_members (grant_id, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grant_members_user_id_idx 
-        ON projections.project_grant_members (user_id, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grant_members_resource_owner_idx 
-        ON projections.project_grant_members (resource_owner, instance_id);
-    `, []);
+    // Table created by migration, no initialization needed
   }
 
   /**
@@ -84,6 +59,11 @@ export class ProjectGrantMemberProjection extends Projection {
   private async handleMemberAdded(event: Event): Promise<void> {
     const payload = event.payload || {};
     
+    const projectID = payload.projectID || event.aggregateID;
+    const grantID = payload.grantID || payload.grantId;
+    const userID = payload.userID || payload.userId;
+    const roles = payload.roles || [];
+    
     await this.query(
       `INSERT INTO projections.project_grant_members (
         project_id, grant_id, user_id, instance_id, creation_date, change_date, 
@@ -94,15 +74,15 @@ export class ProjectGrantMemberProjection extends Projection {
         sequence = EXCLUDED.sequence,
         roles = EXCLUDED.roles`,
       [
-        payload.projectID || event.aggregateID,
-        payload.grantID || payload.grantId,
-        payload.userID || payload.userId,
+        projectID,
+        grantID,
+        userID,
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         event.owner,
-        payload.roles || [],
+        roles,
       ]
     );
   }
@@ -121,7 +101,7 @@ export class ProjectGrantMemberProjection extends Projection {
       WHERE project_id = $4 AND grant_id = $5 AND user_id = $6 AND instance_id = $7`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         payload.roles || [],
         payload.projectID || event.aggregateID,
         payload.grantID || payload.grantId,

@@ -43,11 +43,11 @@ describe('Auth Request Projection Integration Tests', () => {
         name: 'auth_request_projection',
         tables: ['auth_requests'],
         eventTypes: [
-          'auth_request.added',
-          'auth_request.code.added',
-          'auth_request.session.linked',
-          'auth_request.succeeded',
-          'auth_request.failed',
+          'auth.request.added',
+          'auth.request.code.added',
+          'auth.request.session.linked',
+          'auth.request.succeeded',
+          'auth.request.failed',
           'instance.removed',
         ],
         aggregateTypes: ['auth_request', 'instance'],
@@ -90,7 +90,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-123',
           clientID,
@@ -143,7 +143,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-123',
           clientID: 'client-123',
@@ -161,7 +161,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.code.added',
+        eventType: 'auth.request.code.added',
         payload: {
           code: authCode,
         },
@@ -189,7 +189,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-123',
           clientID: 'client-123',
@@ -207,7 +207,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.session.linked',
+        eventType: 'auth.request.session.linked',
         payload: {
           sessionID,
           userID,
@@ -237,7 +237,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-123',
           clientID: 'client-123',
@@ -259,7 +259,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.succeeded',
+        eventType: 'auth.request.succeeded',
         payload: {},
         creator: 'user-123',
         owner: 'org-123',
@@ -281,7 +281,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-123',
           clientID: 'client-123',
@@ -299,7 +299,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.failed',
+        eventType: 'auth.request.failed',
         payload: {
           reason: 'user_cancelled',
         },
@@ -328,7 +328,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: userID,
           clientID: 'client-123',
@@ -357,7 +357,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.session.linked',
+        eventType: 'auth.request.session.linked',
         payload: {
           sessionID,
           userID,
@@ -379,7 +379,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.code.added',
+        eventType: 'auth.request.code.added',
         payload: {
           code: authCode,
         },
@@ -398,7 +398,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID,
-        eventType: 'auth_request.succeeded',
+        eventType: 'auth.request.succeeded',
         payload: {},
         creator: userID,
         owner: 'org-123',
@@ -424,7 +424,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID1,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-1',
           clientID,
@@ -439,7 +439,7 @@ describe('Auth Request Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'auth_request',
         aggregateID: authRequestID2,
-        eventType: 'auth_request.added',
+        eventType: 'auth.request.added',
         payload: {
           loginClient: 'user-2',
           clientID,

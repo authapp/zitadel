@@ -95,7 +95,7 @@ export class ProjectMemberProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.roles || [],
       ]
@@ -116,7 +116,7 @@ export class ProjectMemberProjection extends Projection {
       WHERE project_id = $4 AND user_id = $5 AND instance_id = $6`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         payload.roles || [],
         event.aggregateID,
         payload.userID || payload.userId,

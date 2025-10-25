@@ -147,7 +147,7 @@ export class AppProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -196,7 +196,7 @@ export class AppProjection extends Projection {
         payload.skipNativeAppSuccessPage,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -217,7 +217,7 @@ export class AppProjection extends Projection {
         payload.clientSecret,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -262,7 +262,7 @@ export class AppProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -295,7 +295,7 @@ export class AppProjection extends Projection {
         payload.attributeStatements ? JSON.stringify(payload.attributeStatements) : null,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -331,7 +331,7 @@ export class AppProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -354,7 +354,7 @@ export class AppProjection extends Projection {
         payload.authMethodType,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -375,7 +375,7 @@ export class AppProjection extends Projection {
         payload.clientSecret,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -396,7 +396,7 @@ export class AppProjection extends Projection {
         payload.name,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -413,7 +413,7 @@ export class AppProjection extends Projection {
       [
         payload.appId || event.aggregateID,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -433,7 +433,7 @@ export class AppProjection extends Projection {
         payload.appId || event.aggregateID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }

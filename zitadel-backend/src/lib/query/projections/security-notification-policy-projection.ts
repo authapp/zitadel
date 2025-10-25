@@ -221,7 +221,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.maxPasswordAttempts || 10,
         payload.maxOTPAttempts || 5,
@@ -245,7 +245,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
       WHERE instance_id = $6 AND id = $7`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.maxPasswordAttempts,
         payload.maxOTPAttempts,
         payload.showFailures,
@@ -283,7 +283,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.tosLink || '',
         payload.privacyLink || '',
@@ -302,7 +302,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
     const policyID = event.aggregateID;
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     const fieldMappings: [string, string, any][] = [
@@ -355,7 +355,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.passwordChange !== false,
         isDefault,
@@ -375,7 +375,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
       WHERE instance_id = $4 AND id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.passwordChange,
         event.instanceID,
         policyID,
@@ -403,7 +403,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.enableIframeEmbedding || false,
         payload.allowedOrigins || [],
@@ -416,7 +416,7 @@ export class SecurityNotificationPolicyProjection extends Projection {
     const payload = event.payload || {};
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     if (payload.enableIframeEmbedding !== undefined) {

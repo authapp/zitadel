@@ -135,7 +135,7 @@ export class MailOIDCProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.template || '',
         isDefault,
       ]
@@ -154,7 +154,7 @@ export class MailOIDCProjection extends Projection {
       WHERE instance_id = $4 AND aggregate_id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.template,
         event.instanceID,
         aggregateID,
@@ -183,7 +183,7 @@ export class MailOIDCProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.accessTokenLifetime || 43200,
         payload.idTokenLifetime || 43200,
@@ -197,7 +197,7 @@ export class MailOIDCProjection extends Projection {
     const payload = event.payload || {};
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     if (payload.accessTokenLifetime !== undefined) {

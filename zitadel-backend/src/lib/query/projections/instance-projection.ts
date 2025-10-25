@@ -74,7 +74,7 @@ export class InstanceProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -110,7 +110,7 @@ export class InstanceProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -134,7 +134,7 @@ export class InstanceProjection extends Projection {
         payload.defaultLanguage,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -153,7 +153,7 @@ export class InstanceProjection extends Projection {
         payload.instanceId || event.aggregateID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -176,7 +176,7 @@ export class InstanceProjection extends Projection {
         JSON.stringify(features || {}),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -194,7 +194,7 @@ export class InstanceProjection extends Projection {
         JSON.stringify({}),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }

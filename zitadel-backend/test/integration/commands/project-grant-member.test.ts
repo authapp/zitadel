@@ -68,6 +68,13 @@ describe('Project Grant Member Commands - Complete Flow', () => {
         console.log(`  ✓ Processed ${event.eventType} for ${event.aggregateID}`);
       } catch (err: any) {
         console.error(`  ✗ Failed to process ${event.eventType}:`, err.message);
+        console.error('    Error details:', err.details);
+        if (err.cause) {
+          console.error('    Cause:', err.cause.message);
+          console.error('    SQL Error code:', err.cause.code);
+          console.error('    SQL Error detail:', err.cause.detail);
+          console.error('    Full SQL Error:', JSON.stringify(err.cause, null, 2));
+        }
       }
     }
     
@@ -565,9 +572,12 @@ describe('Project Grant Member Commands - Complete Flow', () => {
           }
         );
 
-        await ctx.clearEvents();
+        // Count events before the idempotent update
+        const eventsBefore = await ctx.getEvents('project', project.projectID);
+        const eventCountBefore = eventsBefore.length;
 
         console.log('\n--- Idempotent role update ---');
+        console.log('Events before:', eventCountBefore);
 
         // Update with same roles (should not create event)
         await ctx.commands.changeProjectGrantMember(
@@ -581,10 +591,10 @@ describe('Project Grant Member Commands - Complete Flow', () => {
           }
         );
 
-        // Should not publish event for unchanged roles
-        const events = await ctx.getEvents('*', '*');
-        expect(events.length).toBe(0);
-        console.log('✓ No event published for unchanged roles');
+        // Should not publish new event for unchanged roles
+        const eventsAfter = await ctx.getEvents('project', project.projectID);
+        expect(eventsAfter.length).toBe(eventCountBefore);
+        console.log('✓ No new event published for unchanged roles');
       });
     });
 

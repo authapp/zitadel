@@ -94,7 +94,8 @@ describe('Migration System Integration', () => {
       // Infrastructure: 002_47 (failed_events), 002_48 (fix failed_events columns), 002_49 (add id column)
       // Resource Management: 002_50 (quotas)
       // Future Enhancements: 002_51 (actions), 002_52 (logstore), 002_53 (milestones)
-      expect(version).toBe(65); // Updated count: 39 original + 15 Phase 2 + 4 Phase 3 + 3 infrastructure + 1 quotas + 3 future enhancements
+      // Test Fixes: 002_54 (project_grants), 002_55 (project_grant_members), 002_56 (auth_requests)
+      expect(version).toBe(68); // Updated count: 39 original + 15 Phase 2 + 4 Phase 3 + 3 infrastructure + 1 quotas + 3 future enhancements + 3 test fixes
     });
   });
 
@@ -120,8 +121,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should have 65 records (one per migration step, including Phase 2, Phase 3, infrastructure, quotas, and future enhancements)
-      expect(migrations.length).toBe(65);
+      // Should have 68 records (one per migration step, including Phase 2, Phase 3, infrastructure, quotas, future enhancements, and test fixes)
+      expect(migrations.length).toBe(68);
     });
   });
 
@@ -135,7 +136,7 @@ describe('Migration System Integration', () => {
       );
       
       // All migrations should be applied
-      expect(migrations1.length).toBe(65);
+      expect(migrations1.length).toBe(68);
     });
 
     it('should skip already applied migrations', async () => {
@@ -167,9 +168,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(65);
+      expect(applied.length).toBe(68);
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(65);
+      expect(applied[applied.length - 1].version).toBe(68);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

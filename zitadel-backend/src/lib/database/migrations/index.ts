@@ -86,4 +86,7 @@ export const migrations = [
   { version: 63, name: 'Create actions tables (Workflow Automation)', filename: '002_51_create_actions_tables.sql' },
   { version: 64, name: 'Create logstore tables (Audit Logging)', filename: '002_52_create_logstore_tables.sql' },
   { version: 65, name: 'Create milestones table (Progress Tracking)', filename: '002_53_create_milestones_table.sql' },
+  { version: 66, name: 'Create project grants table', filename: '002_54_create_project_grants_table.sql' },
+  { version: 67, name: 'Create project grant members table', filename: '002_55_create_project_grant_members_table.sql' },
+  { version: 68, name: 'Create auth requests table', filename: '002_56_create_auth_requests_table.sql' },
 ];

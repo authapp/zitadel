@@ -101,7 +101,7 @@ export class IDPUserLinkProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.idpName || payload.idpID,
         payload.providedUserID,

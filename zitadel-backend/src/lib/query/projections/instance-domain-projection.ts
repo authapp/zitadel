@@ -62,7 +62,7 @@ export class InstanceDomainProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -95,7 +95,7 @@ export class InstanceDomainProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
     
@@ -112,7 +112,7 @@ export class InstanceDomainProjection extends Projection {
         payload.domain,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }
@@ -133,7 +133,7 @@ export class InstanceDomainProjection extends Projection {
         payload.domain,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
       ]
     );
   }

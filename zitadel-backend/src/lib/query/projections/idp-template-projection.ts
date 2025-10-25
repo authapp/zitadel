@@ -107,7 +107,7 @@ export class IDPTemplateProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.name || 'Unnamed Template',
         payload.type || 0,
@@ -161,7 +161,7 @@ export class IDPTemplateProjection extends Projection {
     values.push(event.createdAt);
 
     updates.push(`sequence = $${paramIndex++}`);
-    values.push(Math.floor(event.position.position));
+    values.push(Number(event.aggregateVersion || 1n));
 
     values.push(idpID);
     values.push(event.instanceID);

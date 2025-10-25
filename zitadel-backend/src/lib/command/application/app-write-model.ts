@@ -76,6 +76,7 @@ export class AppWriteModel extends WriteModel {
         break;
         
       case 'application.oidc.changed':
+      case 'application.oidc.config.changed':
       case 'project.application.changed':
         if (event.payload?.name !== undefined) {
           this.name = event.payload.name;
@@ -91,6 +92,9 @@ export class AppWriteModel extends WriteModel {
         }
         if (event.payload?.authMethodType !== undefined) {
           this.authMethodType = event.payload.authMethodType;
+        }
+        if (event.payload?.oidcAppType !== undefined) {
+          this.oidcAppType = event.payload.oidcAppType;
         }
         if (event.payload?.postLogoutRedirectURIs !== undefined) {
           this.postLogoutRedirectURIs = event.payload.postLogoutRedirectURIs;
@@ -128,6 +132,7 @@ export class AppWriteModel extends WriteModel {
         break;
         
       case 'application.api.changed':
+      case 'application.api.config.changed':
         if (event.payload?.name !== undefined) {
           this.name = event.payload.name;
         }

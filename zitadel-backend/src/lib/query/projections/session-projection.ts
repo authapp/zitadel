@@ -80,7 +80,7 @@ export class SessionProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         metadataJSON,
         '[]', // tokens
         '[]', // factors
@@ -96,7 +96,7 @@ export class SessionProjection extends Projection {
     
     // Build update parts dynamically
     const updates: string[] = ['updated_at = $1', 'change_date = $2', 'sequence = $3'];
-    const values: any[] = [event.createdAt, event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 4;
     
     if (payload.userAgent !== undefined) {
@@ -138,7 +138,7 @@ export class SessionProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.instanceID,
         event.aggregateID,
       ]
@@ -190,7 +190,7 @@ export class SessionProjection extends Projection {
         JSON.stringify(tokens),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.instanceID,
         event.aggregateID,
       ]
@@ -243,7 +243,7 @@ export class SessionProjection extends Projection {
         JSON.stringify(factors),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.instanceID,
         event.aggregateID,
       ]
@@ -285,7 +285,7 @@ export class SessionProjection extends Projection {
         JSON.stringify(metadata),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.instanceID,
         event.aggregateID,
       ]
@@ -327,7 +327,7 @@ export class SessionProjection extends Projection {
         JSON.stringify(metadata),
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.instanceID,
         event.aggregateID,
       ]

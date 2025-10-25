@@ -19,36 +19,10 @@ export class ProjectGrantProjection extends Projection {
   readonly tables = ['project_grants'];
 
   /**
-   * Initialize projection tables
+   * Initialize projection - table created by migration 002_54
    */
   async init(): Promise<void> {
-    await this.query(`
-      CREATE TABLE IF NOT EXISTS projections.project_grants (
-        id TEXT NOT NULL,
-        creation_date TIMESTAMPTZ NOT NULL,
-        change_date TIMESTAMPTZ NOT NULL,
-        sequence BIGINT NOT NULL,
-        resource_owner TEXT NOT NULL,
-        instance_id TEXT NOT NULL,
-        project_id TEXT NOT NULL,
-        granted_org_id TEXT NOT NULL,
-        state SMALLINT NOT NULL DEFAULT 0,
-        granted_roles TEXT[] NOT NULL DEFAULT '{}',
-        PRIMARY KEY (id, instance_id)
-      );
-
-      CREATE INDEX IF NOT EXISTS project_grants_project_id_idx 
-        ON projections.project_grants (project_id, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grants_granted_org_id_idx 
-        ON projections.project_grants (granted_org_id, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grants_resource_owner_idx 
-        ON projections.project_grants (resource_owner, instance_id);
-      
-      CREATE INDEX IF NOT EXISTS project_grants_state_idx 
-        ON projections.project_grants (state, instance_id);
-    `, []);
+    // Table created by migration, no initialization needed
   }
 
   /**
@@ -96,6 +70,19 @@ export class ProjectGrantProjection extends Projection {
   private async handleGrantAdded(event: Event): Promise<void> {
     const payload = event.payload || {};
     
+    const params = [
+      payload.grantID || payload.id || event.aggregateID,
+      event.createdAt,
+      event.createdAt,
+      Number(event.aggregateVersion || 1n),
+      event.owner,
+      event.instanceID,
+      payload.projectID || event.aggregateID,
+      payload.grantedOrgID || payload.grantedOrgId,
+      1, // State.ACTIVE
+      payload.roleKeys || payload.grantedRoles || [],
+    ];
+    
     await this.query(
       `INSERT INTO projections.project_grants (
         id, creation_date, change_date, sequence, resource_owner, instance_id,
@@ -107,18 +94,7 @@ export class ProjectGrantProjection extends Projection {
         granted_org_id = EXCLUDED.granted_org_id,
         state = EXCLUDED.state,
         granted_roles = EXCLUDED.granted_roles`,
-      [
-        payload.grantID || payload.id || event.aggregateID,
-        event.createdAt,
-        event.createdAt,
-        event.position?.position || 0,
-        event.owner,
-        event.instanceID,
-        payload.projectID || event.aggregateID,
-        payload.grantedOrgID || payload.grantedOrgId,
-        1, // State.ACTIVE
-        payload.roleKeys || payload.grantedRoles || [],
-      ]
+      params
     );
   }
 
@@ -137,7 +113,7 @@ export class ProjectGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         payload.roleKeys || payload.grantedRoles || [],
         grantID,
         event.instanceID,
@@ -160,7 +136,7 @@ export class ProjectGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         2, // State.INACTIVE
         grantID,
         event.instanceID,
@@ -183,7 +159,7 @@ export class ProjectGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         1, // State.ACTIVE
         grantID,
         event.instanceID,

@@ -117,7 +117,7 @@ export class UserGrantProjection extends Projection {
         payload.userGrantID || payload.grantID || event.aggregateID,
         event.createdAt,
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         event.owner,
         event.instanceID,
         payload.userID || event.aggregateID,
@@ -144,7 +144,7 @@ export class UserGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         payload.roleKeys || payload.roles || [],
         grantID,
         event.instanceID,
@@ -167,7 +167,7 @@ export class UserGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         2, // State.INACTIVE
         grantID,
         event.instanceID,
@@ -190,7 +190,7 @@ export class UserGrantProjection extends Projection {
       WHERE id = $4 AND instance_id = $5`,
       [
         event.createdAt,
-        event.position?.position || 0,
+        Number(event.aggregateVersion || 1n),
         1, // State.ACTIVE
         grantID,
         event.instanceID,

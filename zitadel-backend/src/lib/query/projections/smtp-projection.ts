@@ -127,7 +127,7 @@ export class SMTPProjection extends Projection {
         event.owner,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.description || '',
         payload.state || SMTPConfigState.INACTIVE,
         payload.tls !== false,
@@ -145,7 +145,7 @@ export class SMTPProjection extends Projection {
     const configID = payload.id || event.aggregateID;
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     const fields: [string, string, any][] = [
@@ -188,7 +188,7 @@ export class SMTPProjection extends Projection {
       WHERE instance_id = $4 AND id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         SMTPConfigState.ACTIVE,
         event.instanceID,
         configID,
@@ -208,7 +208,7 @@ export class SMTPProjection extends Projection {
       WHERE instance_id = $4 AND id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         SMTPConfigState.INACTIVE,
         event.instanceID,
         configID,

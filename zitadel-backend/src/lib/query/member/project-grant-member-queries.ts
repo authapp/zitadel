@@ -156,7 +156,7 @@ export class ProjectGrantMemberQueries {
       WHERE pgm.project_id = $1 AND pgm.grant_id = $2 AND pgm.user_id = $3 AND pgm.instance_id = $4`,
       [projectID, grantID, userID, instanceID]
     );
-
+    
     return row ? this.mapRowToProjectGrantMember(row) : null;
   }
 

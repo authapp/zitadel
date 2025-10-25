@@ -39,9 +39,8 @@ class ProjectGrantMemberWriteModel extends WriteModel {
   reduce(event: any): void {
     switch (event.eventType) {
       case 'project.grant.member.added':
-        if (event.payload?.userID) {
-          this.userID = event.payload.userID;
-          this.grantID = event.payload?.grantID || '';
+        // Only process if this is the user+grant we're looking for
+        if (event.payload?.userID === this.userID && event.payload?.grantID === this.grantID) {
           this.roles = event.payload?.roles || [];
           this.state = MemberState.ACTIVE;
         }
@@ -59,6 +58,39 @@ class ProjectGrantMemberWriteModel extends WriteModel {
         break;
     }
   }
+}
+
+/**
+ * Helper function to check if a grant exists by querying events
+ */
+async function checkGrantExists(
+  this: Commands,
+  projectID: string,
+  grantID: string
+): Promise<boolean> {
+  const events = await this.getEventstore().query({
+    aggregateTypes: ['project'],
+    aggregateIDs: [projectID],
+  });
+
+  let grantActive = false;
+  for (const event of events) {
+    const payload = event.payload || {};
+    
+    // Check for grant.added event
+    if (event.eventType === 'project.grant.added' && 
+        (payload.grantID === grantID || payload.id === grantID)) {
+      grantActive = true;
+    }
+    
+    // Check for grant.removed event
+    if (event.eventType === 'project.grant.removed' && 
+        (payload.grantID === grantID || payload.id === grantID)) {
+      grantActive = false;
+    }
+  }
+  
+  return grantActive;
 }
 
 /**
@@ -99,12 +131,18 @@ export async function addProjectGrantMember(
   validateRequired(data.grantID, 'grantID');
   validateRequired(data.orgID, 'orgID');
 
-  if (data.roles.length === 0) {
-    throwInvalidArgument('at least one role is required', 'GRANT-MEMBER-001');
+  if (!data.roles || data.roles.length === 0) {
+    throwInvalidArgument('at least one roles is required', 'GRANT-MEMBER-001');
   }
 
   // Check permissions
   await this.checkPermission(ctx, 'project.grant.member', 'write', data.orgID);
+
+  // Validate that grant exists by checking project events
+  const grantExists = await checkGrantExists.call(this, data.projectID, data.grantID);
+  if (!grantExists) {
+    throwNotFound('grant not found', 'GRANT-MEMBER-005');
+  }
 
   // Load write model to check if member already exists
   const wm = new ProjectGrantMemberWriteModel(data.projectID);
@@ -153,8 +191,8 @@ export async function changeProjectGrantMember(
   validateRequired(data.grantID, 'grantID');
   validateRequired(data.orgID, 'orgID');
 
-  if (data.roles.length === 0) {
-    throwInvalidArgument('at least one role is required', 'GRANT-MEMBER-003');
+  if (!data.roles || data.roles.length === 0) {
+    throwInvalidArgument('at least one roles is required', 'GRANT-MEMBER-003');
   }
 
   // Check permissions
@@ -170,10 +208,12 @@ export async function changeProjectGrantMember(
     throwNotFound('member not found', 'GRANT-MEMBER-004');
   }
 
-  // Check if roles have changed
+  // Check if roles have changed (order-independent comparison)
+  const sortedWmRoles = [...wm.roles].sort();
+  const sortedDataRoles = [...data.roles].sort();
   const rolesChanged = 
-    wm.roles.length !== data.roles.length ||
-    !wm.roles.every((role, index) => role === data.roles[index]);
+    sortedWmRoles.length !== sortedDataRoles.length ||
+    !sortedWmRoles.every((role, index) => role === sortedDataRoles[index]);
 
   if (!rolesChanged) {
     // No changes needed
@@ -223,6 +263,12 @@ export async function removeProjectGrantMember(
   // Check permissions
   await this.checkPermission(ctx, 'project.grant.member', 'delete', orgID);
 
+  // Validate that grant exists by checking project events
+  const grantExists = await checkGrantExists.call(this, projectID, grantID);
+  if (!grantExists) {
+    throwNotFound('grant not found', 'GRANT-MEMBER-006');
+  }
+
   // Load write model
   const wm = new ProjectGrantMemberWriteModel(projectID);
   wm.userID = userID;
@@ -230,8 +276,8 @@ export async function removeProjectGrantMember(
   await wm.load(this.getEventstore(), projectID, orgID);
 
   if (wm.state !== MemberState.ACTIVE) {
-    // Already removed or never existed
-    return writeModelToObjectDetails(wm);
+    // Member not found or already removed
+    throwNotFound('member not found', 'GRANT-MEMBER-007');
   }
 
   // Create event

@@ -102,7 +102,7 @@ export class IDPLoginPolicyLinkProjection extends Projection {
         event.aggregateID, // Org ID
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         'org',
       ]
     );
@@ -154,7 +154,7 @@ export class IDPLoginPolicyLinkProjection extends Projection {
         event.instanceID, // Instance is the resource owner
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         'instance',
       ]
     );

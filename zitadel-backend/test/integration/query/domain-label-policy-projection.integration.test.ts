@@ -177,9 +177,12 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
 
   describe('Label Policy', () => {
     it('should return built-in default when no policies exist', async () => {
-      const policy = await labelQueries.getDefaultLabelPolicy(TEST_INSTANCE_ID);
+      // Use unique instance ID to ensure no policies exist
+      const uniqueInstanceID = generateId();
+      const policy = await labelQueries.getDefaultLabelPolicy(uniqueInstanceID);
 
       expect(policy.id).toBe('built-in-default');
+      expect(policy.instanceID).toBe(uniqueInstanceID);
       expect(policy.primaryColor).toBe('#5469d4');
       expect(policy.backgroundColor).toBe('#ffffff');
       expect(policy.themeMode).toBe(ThemeMode.AUTO);

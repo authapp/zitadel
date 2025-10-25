@@ -117,7 +117,7 @@ export class AuthNKeyProjection extends Projection {
         event.instanceID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         event.aggregateID, // User ID (machine user)
         payload.keyID, // object_id is the key ID

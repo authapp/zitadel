@@ -133,7 +133,7 @@ export class SMSProjection extends Projection {
         event.owner,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.description || '',
         payload.state || SMSConfigState.INACTIVE,
         SMSProviderType.TWILIO,
@@ -149,7 +149,7 @@ export class SMSProjection extends Projection {
     const configID = payload.id || event.aggregateID;
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     const fields: [string, string, any][] = [
@@ -197,7 +197,7 @@ export class SMSProjection extends Projection {
         event.owner,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.description || '',
         payload.state || SMSConfigState.INACTIVE,
         SMSProviderType.HTTP,
@@ -211,7 +211,7 @@ export class SMSProjection extends Projection {
     const configID = payload.id || event.aggregateID;
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     if (payload.description !== undefined) {
@@ -248,7 +248,7 @@ export class SMSProjection extends Projection {
       WHERE instance_id = $4 AND id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         SMSConfigState.ACTIVE,
         event.instanceID,
         configID,
@@ -268,7 +268,7 @@ export class SMSProjection extends Projection {
       WHERE instance_id = $4 AND id = $5`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         SMSConfigState.INACTIVE,
         event.instanceID,
         configID,

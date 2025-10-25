@@ -950,6 +950,76 @@ export class Commands {
   removeApplication: typeof import('./application/app-commands').removeApplication = 
     require('./application/app-commands').removeApplication;
 
+  /**
+   * Add OIDC Redirect URI
+   */
+  addOIDCRedirectURI: typeof import('./application/app-commands').addOIDCRedirectURI = 
+    require('./application/app-commands').addOIDCRedirectURI;
+  
+  /**
+   * Remove OIDC Redirect URI
+   */
+  removeOIDCRedirectURI: typeof import('./application/app-commands').removeOIDCRedirectURI = 
+    require('./application/app-commands').removeOIDCRedirectURI;
+  
+  /**
+   * Change OIDC App to Confidential Client
+   */
+  changeOIDCAppToConfidential: typeof import('./application/app-commands').changeOIDCAppToConfidential = 
+    require('./application/app-commands').changeOIDCAppToConfidential;
+  
+  /**
+   * Change OIDC App to Public Client
+   */
+  changeOIDCAppToPublic: typeof import('./application/app-commands').changeOIDCAppToPublic = 
+    require('./application/app-commands').changeOIDCAppToPublic;
+  
+  /**
+   * Change API App Authentication Method
+   */
+  changeAPIAppAuthMethod: typeof import('./application/app-commands').changeAPIAppAuthMethod = 
+    require('./application/app-commands').changeAPIAppAuthMethod;
+
+  // ============================================================================
+  // Policy Commands (Phase 2)
+  // ============================================================================
+  
+  /**
+   * Add organization label policy
+   */
+  addOrgLabelPolicy: typeof import('./policy/label-policy-commands').addOrgLabelPolicy = 
+    require('./policy/label-policy-commands').addOrgLabelPolicy;
+  
+  /**
+   * Change organization label policy
+   */
+  changeOrgLabelPolicy: typeof import('./policy/label-policy-commands').changeOrgLabelPolicy = 
+    require('./policy/label-policy-commands').changeOrgLabelPolicy;
+  
+  /**
+   * Remove organization label policy
+   */
+  removeOrgLabelPolicy: typeof import('./policy/label-policy-commands').removeOrgLabelPolicy = 
+    require('./policy/label-policy-commands').removeOrgLabelPolicy;
+  
+  /**
+   * Add instance label policy
+   */
+  addInstanceLabelPolicy: typeof import('./policy/label-policy-commands').addInstanceLabelPolicy = 
+    require('./policy/label-policy-commands').addInstanceLabelPolicy;
+  
+  /**
+   * Change instance label policy
+   */
+  changeInstanceLabelPolicy: typeof import('./policy/label-policy-commands').changeInstanceLabelPolicy = 
+    require('./policy/label-policy-commands').changeInstanceLabelPolicy;
+  
+  /**
+   * Remove instance label policy
+   */
+  removeInstanceLabelPolicy: typeof import('./policy/label-policy-commands').removeInstanceLabelPolicy = 
+    require('./policy/label-policy-commands').removeInstanceLabelPolicy;
+
   // ============================================================================
   // Session Commands (Phase 3)
   // ============================================================================

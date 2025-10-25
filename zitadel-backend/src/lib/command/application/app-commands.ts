@@ -762,3 +762,279 @@ export async function removeApplication(
   appendAndReduce(wm, event);
   return writeModelToObjectDetails(wm);
 }
+
+/**
+ * Add OIDC Redirect URI
+ * Add a new redirect URI to an existing OIDC application
+ */
+export async function addOIDCRedirectURI(
+  this: Commands,
+  ctx: Context,
+  appID: string,
+  orgID: string,
+  redirectURI: string
+): Promise<ObjectDetails> {
+  // 1. Validate URI
+  validateRequired(redirectURI, 'redirectURI');
+  validateURL(redirectURI, 'redirectURI');
+  
+  // 2. Load app write model
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppOIDC01');
+  }
+  if (wm.appType !== AppType.OIDC) {
+    throwPreconditionFailed('not an OIDC application', 'COMMAND-AppOIDC02');
+  }
+  
+  // 3. Check if URI already exists
+  if (wm.redirectURIs.includes(redirectURI)) {
+    throwAlreadyExists('redirect URI already exists', 'COMMAND-AppOIDC03');
+  }
+  
+  // 4. Check permissions
+  await this.checkPermission(ctx, 'application', 'update', orgID);
+  
+  // 5. Add URI to array
+  const updatedURIs = [...wm.redirectURIs, redirectURI];
+  
+  // 6. Create command
+  const command: Command = {
+    eventType: 'application.oidc.config.changed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      redirectURIs: updatedURIs,
+    },
+  };
+  
+  // 7. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove OIDC Redirect URI
+ * Remove a redirect URI from an existing OIDC application
+ */
+export async function removeOIDCRedirectURI(
+  this: Commands,
+  ctx: Context,
+  appID: string,
+  orgID: string,
+  redirectURI: string
+): Promise<ObjectDetails> {
+  // 1. Validate URI
+  validateRequired(redirectURI, 'redirectURI');
+  
+  // 2. Load app write model
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppOIDC04');
+  }
+  if (wm.appType !== AppType.OIDC) {
+    throwPreconditionFailed('not an OIDC application', 'COMMAND-AppOIDC05');
+  }
+  
+  // 3. Check if URI exists
+  if (!wm.redirectURIs.includes(redirectURI)) {
+    throwNotFound('redirect URI not found', 'COMMAND-AppOIDC06');
+  }
+  
+  // 4. Cannot remove last redirect URI
+  if (wm.redirectURIs.length === 1) {
+    throwPreconditionFailed('cannot remove last redirect URI', 'COMMAND-AppOIDC07');
+  }
+  
+  // 5. Check permissions
+  await this.checkPermission(ctx, 'application', 'update', orgID);
+  
+  // 6. Remove URI from array
+  const updatedURIs = wm.redirectURIs.filter(uri => uri !== redirectURI);
+  
+  // 7. Create command
+  const command: Command = {
+    eventType: 'application.oidc.config.changed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      redirectURIs: updatedURIs,
+    },
+  };
+  
+  // 8. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Change OIDC App to Confidential Client
+ * Changes the OIDC application type to confidential (requires client secret)
+ */
+export async function changeOIDCAppToConfidential(
+  this: Commands,
+  ctx: Context,
+  appID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load app write model
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppOIDC08');
+  }
+  if (wm.appType !== AppType.OIDC) {
+    throwPreconditionFailed('not an OIDC application', 'COMMAND-AppOIDC09');
+  }
+  
+  // 2. Check if already confidential
+  if (wm.oidcAppType === OIDCAppType.WEB) {
+    throwPreconditionFailed('application is already confidential', 'COMMAND-AppOIDC10');
+  }
+  
+  // 3. Check permissions
+  await this.checkPermission(ctx, 'application', 'update', orgID);
+  
+  // 4. Create command
+  const command: Command = {
+    eventType: 'application.oidc.config.changed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      oidcAppType: OIDCAppType.WEB,
+      authMethodType: OIDCAuthMethodType.BASIC,
+    },
+  };
+  
+  // 5. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Change OIDC App to Public Client
+ * Changes the OIDC application type to public (no client secret, requires PKCE)
+ */
+export async function changeOIDCAppToPublic(
+  this: Commands,
+  ctx: Context,
+  appID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load app write model
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppOIDC11');
+  }
+  if (wm.appType !== AppType.OIDC) {
+    throwPreconditionFailed('not an OIDC application', 'COMMAND-AppOIDC12');
+  }
+  
+  // 2. Check if already public
+  if (wm.oidcAppType === OIDCAppType.USER_AGENT || wm.oidcAppType === OIDCAppType.NATIVE) {
+    throwPreconditionFailed('application is already public', 'COMMAND-AppOIDC13');
+  }
+  
+  // 3. Check permissions
+  await this.checkPermission(ctx, 'application', 'update', orgID);
+  
+  // 4. Create command - Change to USER_AGENT (SPA)
+  const command: Command = {
+    eventType: 'application.oidc.config.changed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      oidcAppType: OIDCAppType.USER_AGENT,
+      authMethodType: OIDCAuthMethodType.NONE,
+    },
+  };
+  
+  // 5. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Change API App Authentication Method
+ * Changes the authentication method for an API application (BASIC or PRIVATE_KEY_JWT)
+ */
+export async function changeAPIAppAuthMethod(
+  this: Commands,
+  ctx: Context,
+  appID: string,
+  orgID: string,
+  authMethodType: OIDCAuthMethodType
+): Promise<ObjectDetails> {
+  // 1. Validate auth method
+  validateRequired(authMethodType, 'authMethodType');
+  
+  if (authMethodType !== OIDCAuthMethodType.BASIC && 
+      authMethodType !== OIDCAuthMethodType.PRIVATE_KEY_JWT) {
+    throwInvalidArgument('invalid auth method for API app', 'COMMAND-AppAPI01');
+  }
+  
+  // 2. Load app write model
+  const wm = new AppWriteModel();
+  await wm.load(this.getEventstore(), appID, orgID);
+  
+  if (wm.state === AppState.UNSPECIFIED) {
+    throwNotFound('application not found', 'COMMAND-AppAPI02');
+  }
+  if (wm.appType !== AppType.API) {
+    throwPreconditionFailed('not an API application', 'COMMAND-AppAPI03');
+  }
+  
+  // 3. Check if same as current
+  if (wm.apiAuthMethodType === authMethodType) {
+    return writeModelToObjectDetails(wm); // Idempotent
+  }
+  
+  // 4. Check permissions
+  await this.checkPermission(ctx, 'application', 'update', orgID);
+  
+  // 5. Create command
+  const command: Command = {
+    eventType: 'application.api.config.changed',
+    aggregateType: 'application',
+    aggregateID: appID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      authMethodType,
+    },
+  };
+  
+  // 6. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}

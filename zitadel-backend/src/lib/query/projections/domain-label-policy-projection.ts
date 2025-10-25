@@ -149,7 +149,7 @@ export class DomainLabelPolicyProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.userLoginMustBeDomain || false,
         payload.validateOrgDomains || false,
@@ -173,7 +173,7 @@ export class DomainLabelPolicyProjection extends Projection {
       WHERE instance_id = $6 AND id = $7`,
       [
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         payload.userLoginMustBeDomain,
         payload.validateOrgDomains,
         payload.smtpSenderAddressMatchesInstanceDomain,
@@ -223,7 +223,7 @@ export class DomainLabelPolicyProjection extends Projection {
         organizationID,
         event.createdAt,
         event.createdAt,
-        Math.floor(event.position.position),
+        Number(event.aggregateVersion || 1n),
         event.owner,
         payload.primaryColor || '#5469d4',
         payload.backgroundColor || '#ffffff',
@@ -252,7 +252,7 @@ export class DomainLabelPolicyProjection extends Projection {
     const policyID = event.aggregateID;
 
     const updates: string[] = ['change_date = $1', 'sequence = $2'];
-    const values: any[] = [event.createdAt, Math.floor(event.position.position)];
+    const values: any[] = [event.createdAt, Number(event.aggregateVersion || 1n)];
     let paramIndex = 3;
 
     // Only update fields that are provided in the payload
