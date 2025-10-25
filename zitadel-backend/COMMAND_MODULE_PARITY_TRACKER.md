@@ -9,7 +9,7 @@
 
 ## 📊 EXECUTIVE SUMMARY
 
-### Overall Command Parity: **80%** ✅ (Phase 1 + Week 9-10 + Week 11-12 COMPLETE!)
+### Overall Command Parity: **81%** ✅ (Phase 1 + Week 9-10 + Week 11-12 + Week 15 Partial COMPLETE!)
 
 **Zitadel Go Command Module:**
 - **Total Files:** 391 Go files
@@ -22,7 +22,7 @@
 - **Coverage:** Core CRUD + Identity Providers + Login Policies + Project Management + Instance Management + Session Management + Auth Flows + Application Configuration + Policy Management
 - **Test Coverage:** 1,089 tests (1,086 passing, 3 skipped)
 
-**Status:** Phase 1 COMPLETE + Week 9-10 COMPLETE + Week 11-12 COMPLETE! ✅ Ready for Week 13: IDP Providers
+**Status:** Phase 1 COMPLETE + Week 9-10 COMPLETE + Week 11-12 COMPLETE + Week 15 (Partial) COMPLETE! ✅ Ready for Week 13: IDP Providers
 
 **Recent Completion (Oct 24-25):**
 - ✅ Organization Member Commands (3 commands, 15/15 tests passing)
@@ -40,6 +40,9 @@
 - ✅ Privacy Policy Commands (3 commands, 10/10 tests passing) - Week 11-12 COMPLETE
 - ✅ Notification Policy Commands (3 commands, 11/11 tests passing) - Week 11-12 COMPLETE
 - ✅ Domain Policy Commands (3 commands, 11/11 tests passing) - Week 11-12 COMPLETE
+- ✅ Encryption Key Commands (4 commands, 15/15 tests passing) - Week 15 COMPLETE
+- ⚠️ Personal Access Token Commands (3 commands implemented, tests pending) - Week 15 PARTIAL
+- ⚠️ Machine Key Commands (3 commands implemented, tests pending) - Week 15 PARTIAL
 
 **Week 1-8 Progress (Oct 24):**
 - ✅ Org Member Commands - COMPLETE (100%)
@@ -72,14 +75,18 @@
 | user-grant-commands | ✅ 100% | user-grant-commands.ts | P0 |
 | user-refresh-token-commands | ✅ 100% | user-refresh-token-commands.ts | P0 |
 | user-init-commands | ✅ 100% | user-init-commands.ts | P0 |
+| user-personal-access-token | ⚠️ 70% | personal-access-token-commands.ts | P1 |
+| user-machine-keys | ⚠️ 70% | machine-key-commands.ts | P1 |
 
-**Missing User Commands (15%):**
+**Missing User Commands (10%):**
 - ⚠️ user-password-complexity (Zitadel Go only)
 - ⚠️ user-lockout-policy (Zitadel Go only)
 - ⚠️ user-notification-settings (Zitadel Go only)
-- ⚠️ user-personal-access-token (Zitadel Go only)
-- ⚠️ user-machine-keys (Zitadel Go only)
 - ⚠️ user-schema (Zitadel Go v3 feature)
+
+**Partially Implemented (need comprehensive tests):**
+- ⚠️ user-personal-access-token (3 commands implemented, tests pending)
+- ⚠️ user-machine-keys (3 commands implemented, tests pending)
 
 ---
 
@@ -238,6 +245,50 @@
 - Complete success and failure paths
 
 **Note:** 2 tests have query layer assertions pending AuthRequestQueries table adjustments (87% pass rate).
+
+---
+
+#### 8. **Crypto & Security Commands** (70%)
+**Zitadel Go:** Integrated in crypto/user modules | **TypeScript:** 3 files ⚠️
+
+| **Command Category** | **Status** | **Files** | **Priority** | **Tests** |
+|---------------------|-----------|-----------|--------------|-----------|
+| encryption-key-commands | ✅ 100% | encryption-key-commands.ts | P1 | 15/15 ✅ |
+| personal-access-token-commands | ⚠️ 70% | personal-access-token-commands.ts | P1 | 0/15 ⚠️ |
+| machine-key-commands | ⚠️ 70% | machine-key-commands.ts | P1 | 0/15 ⚠️ |
+
+**Encryption Key Commands - ✅ COMPLETE:**
+- ✅ addEncryptionKey (with AES256, RSA2048, RSA4096 support)
+- ✅ getEncryptionKey (retrieve by ID)
+- ✅ listEncryptionKeys (list all keys)
+- ✅ removeEncryptionKey (delete key)
+- ✅ Direct database CRUD operations (no projections)
+- ✅ Identifier uniqueness validation
+- ✅ Complete lifecycle testing (15/15 tests passing)
+
+**Personal Access Token Commands - ⚠️ PARTIALLY COMPLETE:**
+- ✅ addPersonalAccessToken (create PAT with scopes and expiration)
+- ✅ removePersonalAccessToken (revoke PAT)
+- ✅ updatePersonalAccessTokenUsage (track last used)
+- ⚠️ Commands implemented but need comprehensive test suite
+
+**Machine Key Commands - ⚠️ PARTIALLY COMPLETE:**
+- ✅ addMachineKey (create service account key with JWT support)
+- ✅ removeMachineKey (delete service account key)
+- ✅ getMachineKeyPublicKey (retrieve public key for verification)
+- ⚠️ Commands implemented but need comprehensive test suite
+
+**Implementation Highlights:**
+- Encryption keys use direct database storage (not event-sourced)
+- PAT and Machine Keys use event sourcing with projections
+- Secure token hashing for PATs
+- RSA/EC key support for Machine Keys
+- Expiration tracking for both PATs and Machine Keys
+
+**Next Steps:**
+- Add comprehensive integration tests for PAT commands (15+ tests)
+- Add comprehensive integration tests for Machine Key commands (15+ tests)
+- Verify projection and query layer integration for PATs and Machine Keys
 
 ---
 
