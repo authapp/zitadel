@@ -91,7 +91,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'instance-123',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -218,7 +218,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'dedupe-instance',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -276,7 +276,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'instance-alpha',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -325,7 +325,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'instance-beta',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -349,7 +349,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         // instanceID intentionally not set
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -390,7 +390,7 @@ describe('Enhanced Projection State Tracking', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'test-instance',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 

@@ -34,13 +34,13 @@ describe('Instance Projection Integration Tests', () => {
     
     // Register instance projection with fast polling
     const instanceConfig = createInstanceProjectionConfig();
-    instanceConfig.interval = 100; // Fast polling for tests
+    instanceConfig.interval = 50; // Fast polling for tests
     const instanceProjection = new InstanceProjection(eventstore, pool);
     registry.register(instanceConfig, instanceProjection);
 
     // Register instance domain projection with fast polling
     const domainConfig = createInstanceDomainProjectionConfig();
-    domainConfig.interval = 100; // Fast polling for tests
+    domainConfig.interval = 50; // Fast polling for tests
     const domainProjection = new InstanceDomainProjection(eventstore, pool);
     registry.register(domainConfig, domainProjection);
     

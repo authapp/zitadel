@@ -50,13 +50,13 @@ describe('Project Projection Integration Tests', () => {
     
     // Register project projection with fast polling
     const projectConfig = createProjectProjectionConfig();
-    projectConfig.interval = 100; // Fast polling for tests
+    projectConfig.interval = 50; // Fast polling for tests
     const projectProjection = createProjectProjection(eventstore, pool);
     registry.register(projectConfig, projectProjection);
     
     // Register project role projection with fast polling
     const roleConfig = createProjectRoleProjectionConfig();
-    roleConfig.interval = 100; // Fast polling for tests
+    roleConfig.interval = 50; // Fast polling for tests
     const roleProjection = createProjectRoleProjection(eventstore, pool);
     registry.register(roleConfig, roleProjection);
     

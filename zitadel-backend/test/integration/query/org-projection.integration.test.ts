@@ -242,7 +242,7 @@ describe('Organization Projection Integration Tests', () => {
       ]);
       
       // Wait for projections to process (both org and org_domain)
-      await new Promise(resolve => setTimeout(resolve, 800));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(1);
@@ -433,7 +433,7 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(0);

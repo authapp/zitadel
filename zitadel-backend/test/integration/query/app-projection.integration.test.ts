@@ -44,7 +44,7 @@ describe('Application Projection Integration Tests', () => {
     
     // Register app projection with fast polling
     const appConfig = createAppProjectionConfig();
-    appConfig.interval = 100; // Fast polling for tests
+    appConfig.interval = 50; // Fast polling for tests
     const appProjection = createAppProjection(eventstore, pool);
     registry.register(appConfig, appProjection);
     

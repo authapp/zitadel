@@ -120,7 +120,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -159,7 +159,7 @@ describe('Projection Production-Readiness Tests', () => {
       projection.failOnEventNumber = 2;
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       await handler.stop();
 
       // Verify: Only event 1 should be in database (event 2 failed, rolled back)
@@ -185,7 +185,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -208,7 +208,7 @@ describe('Projection Production-Readiness Tests', () => {
       projection.failOnEventNumber = 3;
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       await handler.stop();
 
       // Verify: Events 1, 2, 4, 5 processed (event 3 failed but didn't affect others)
@@ -235,7 +235,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -289,7 +289,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -338,7 +338,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false, // Using transaction-level advisory locks instead
       });
 
@@ -364,7 +364,7 @@ describe('Projection Production-Readiness Tests', () => {
         handler2.start(),
       ]);
 
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
 
       await Promise.all([
         handler1.stop(),
@@ -393,7 +393,7 @@ describe('Projection Production-Readiness Tests', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         batchSize: 5, // Small batch to test continuous processing
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -414,7 +414,7 @@ describe('Projection Production-Readiness Tests', () => {
       const startTime = Date.now();
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Give time for continuous processing (4 batches)
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced: Test continuous processing (2 batches)
       await handler.stop();
 
       const duration = Date.now() - startTime;
@@ -443,7 +443,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -496,7 +496,7 @@ describe('Projection Production-Readiness Tests', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         instanceID: 'validation-instance',
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -543,7 +543,7 @@ describe('Projection Production-Readiness Tests', () => {
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
         // instanceID intentionally undefined
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -576,7 +576,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
@@ -615,14 +615,14 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         enableLocking: false,
       });
 
       // No events pushed
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 500)); // Wait for at least one interval cycle
+      await new Promise(resolve => setTimeout(resolve, 300)); // Wait for at least one interval cycle
       await handler.stop();
 
       // Should complete without error - state may be 'stopped' or 'live' depending on timing
@@ -640,7 +640,7 @@ describe('Projection Production-Readiness Tests', () => {
         tables: ['test_data'],
         eventTypes: ['test.event'],
         aggregateTypes: ['test'],
-        interval: 100,
+        interval: 50,
         maxRetries: 5,
         enableLocking: false,
       });
@@ -660,7 +660,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
       await handler.stop();
 
       // Verify: All events attempted but failed

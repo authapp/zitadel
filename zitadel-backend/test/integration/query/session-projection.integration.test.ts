@@ -34,7 +34,7 @@ describe('Session Projection Integration Tests', () => {
     
     // Register session projection with fast polling
     const sessionConfig = createSessionProjectionConfig();
-    sessionConfig.interval = 100; // Fast polling for tests
+    sessionConfig.interval = 50; // Fast polling for tests
     const sessionProjection = new SessionProjection(eventstore, pool);
     registry.register(sessionConfig, sessionProjection);
     

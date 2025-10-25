@@ -51,7 +51,7 @@ describe('Auth Request Projection Integration Tests', () => {
           'instance.removed',
         ],
         aggregateTypes: ['auth_request', 'instance'],
-        interval: 100, // Fast polling for tests
+        interval: 50, // Fast polling for tests
         enableLocking: false,
       },
       authRequestProjection

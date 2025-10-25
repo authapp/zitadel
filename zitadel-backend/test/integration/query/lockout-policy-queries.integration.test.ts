@@ -61,7 +61,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
     await registry.start('lockout_policy_projection');
     
     // Wait for projections to be ready
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 300));
   });
 
   afterAll(async () => {

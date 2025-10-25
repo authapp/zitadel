@@ -39,7 +39,7 @@ describe('AuthN Key Projection Integration Tests', () => {
     
     // Register authn key projection with fast polling
     const config = createAuthNKeyProjectionConfig();
-    config.interval = 100; // Fast polling for tests
+    config.interval = 50; // Fast polling for tests
     const authNKeyProjection = new AuthNKeyProjection(eventstore, pool);
     registry.register(config, authNKeyProjection);
     
