@@ -1513,6 +1513,64 @@ export class Commands {
    */
   removeInstanceIDP: typeof import('./instance/instance-idp-commands').removeInstanceIDP = 
     require('./instance/instance-idp-commands').removeInstanceIDP;
+  
+  // =============================================================================
+  // Custom Text Commands (Phase 3 - Week 17-18)
+  // =============================================================================
+  
+  /**
+   * Set custom text for organization
+   */
+  setCustomText: typeof import('./custom-text/custom-text-commands').setCustomText = 
+    require('./custom-text/custom-text-commands').setCustomText;
+  
+  /**
+   * Set custom login text (instance-level)
+   */
+  setCustomLoginText: typeof import('./custom-text/custom-text-commands').setCustomLoginText = 
+    require('./custom-text/custom-text-commands').setCustomLoginText;
+  
+  /**
+   * Set custom init message text (instance-level)
+   */
+  setCustomInitMessageText: typeof import('./custom-text/custom-text-commands').setCustomInitMessageText = 
+    require('./custom-text/custom-text-commands').setCustomInitMessageText;
+  
+  /**
+   * Reset custom text to defaults (org-level)
+   */
+  resetCustomText: typeof import('./custom-text/custom-text-commands').resetCustomText = 
+    require('./custom-text/custom-text-commands').resetCustomText;
+  
+  /**
+   * Reset custom login text to defaults (instance-level)
+   */
+  resetCustomLoginText: typeof import('./custom-text/custom-text-commands').resetCustomLoginText = 
+    require('./custom-text/custom-text-commands').resetCustomLoginText;
+  
+  /**
+   * Set custom message text (instance-level)
+   */
+  setCustomMessageText: typeof import('./custom-text/custom-text-commands').setCustomMessageText = 
+    require('./custom-text/custom-text-commands').setCustomMessageText;
+  
+  /**
+   * Set custom message text (org-level)
+   */
+  setOrgCustomMessageText: typeof import('./custom-text/custom-text-commands').setOrgCustomMessageText = 
+    require('./custom-text/custom-text-commands').setOrgCustomMessageText;
+  
+  /**
+   * Reset custom message text (instance-level)
+   */
+  resetCustomMessageText: typeof import('./custom-text/custom-text-commands').resetCustomMessageText = 
+    require('./custom-text/custom-text-commands').resetCustomMessageText;
+  
+  /**
+   * Reset custom message text (org-level)
+   */
+  resetOrgCustomMessageText: typeof import('./custom-text/custom-text-commands').resetOrgCustomMessageText = 
+    require('./custom-text/custom-text-commands').resetOrgCustomMessageText;
 }
 
 /**

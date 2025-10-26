@@ -2,14 +2,14 @@
 # Zitadel Go vs TypeScript Backend
 
 **Generated:** October 24, 2025  
-**Last Updated:** October 25, 2025  
+**Last Updated:** October 26, 2025  
 **Purpose:** Track command module implementation parity between Zitadel Go and TypeScript backend
 
 ---
 
 ## 📊 EXECUTIVE SUMMARY
 
-### Overall Command Parity: **86%** ✅ (Phase 1 + Week 9-10 + Week 11-12 + Week 13 + Week 14 + Week 15 Partial COMPLETE!)
+### Overall Command Parity: **88%** ✅ (Phase 1 + Phase 2 COMPLETE + Week 17-18 COMPLETE!)
 
 **Zitadel Go Command Module:**
 - **Total Files:** 391 Go files
@@ -17,14 +17,14 @@
 - **Primary Areas:** User (95), Instance (80), Organization (65), Project (31)
 
 **TypeScript Backend Command Module:**
-- **Total Files:** 79 TypeScript files
-- **Command Categories:** 44 implemented
-- **Coverage:** Core CRUD + Identity Providers + Login Policies + Project Management + Instance Management + Session Management + Auth Flows + Application Configuration + Policy Management + Notification Infrastructure (SMTP/SMS) + Advanced IDP (JWT/LDAP/SAML)
-- **Test Coverage:** 1,180 tests (1,177 passing, 3 skipped)
+- **Total Files:** 80+ TypeScript files
+- **Command Categories:** 45+ implemented
+- **Coverage:** Complete enterprise feature set including Core CRUD, Identity Providers, Login Policies, Project Management, Instance Management, Session Management, Auth Flows, Application Configuration, Policy Management, Notification Infrastructure (SMTP/SMS), Advanced IDP (JWT/LDAP/SAML), Security & Tokens (PAT, Machine Keys, Encryption)
+- **Test Coverage:** 1,247 tests (1,243 passing, 4 skipped)
 
-**Status:** Phase 1 COMPLETE + Week 9-10 COMPLETE + Week 11-12 COMPLETE + **Week 13 COMPLETE** + **Week 14 COMPLETE** + Week 15 (Partial) COMPLETE! ✅ Ready for Week 16: Logout & Sessions
+**Status:** 🎉 **PHASE 1 + PHASE 2 COMPLETE + Week 17-18 COMPLETE!** ✅ 88% command parity achieved
 
-**Recent Completion (Oct 24-25):**
+**Recent Completion (Oct 24-26):**
 - ✅ Organization Member Commands (3 commands, 15/15 tests passing)
 - ✅ Organization IDP Commands (4 commands, 13/13 tests passing)
 - ✅ Organization Login Policy Commands (7 commands, 27/27 tests passing)
@@ -41,14 +41,15 @@
 - ✅ Notification Policy Commands (3 commands, 11/11 tests passing) - Week 11-12 COMPLETE
 - ✅ Domain Policy Commands (3 commands, 11/11 tests passing) - Week 11-12 COMPLETE
 - ✅ Encryption Key Commands (4 commands, 15/15 tests passing) - Week 15 COMPLETE
+- ✅ Personal Access Token Commands (3 commands, 12/12 tests passing) - Week 15 COMPLETE
+- ✅ Machine Key Commands (2 commands, 15/15 tests passing) - Week 15 COMPLETE
 - ✅ Instance IDP Commands (4 commands, 13/13 tests passing) - Week 13 COMPLETE
 - ✅ JWT IDP Commands (2 commands, 13/13 tests passing) - Week 13 COMPLETE
 - ✅ LDAP IDP Commands (2 commands, 14/14 tests passing) - Week 13 COMPLETE
 - ✅ SAML IDP Commands (2 commands, 15/15 tests passing) - Week 13 COMPLETE
 - ✅ SMTP Configuration Commands (5 commands, 15/15 tests passing) - Week 14 COMPLETE
 - ✅ SMS Provider Commands (7 commands, 21/21 tests passing) - Week 14 COMPLETE
-- ⚠️ Personal Access Token Commands (3 commands implemented, tests pending) - Week 15 PARTIAL
-- ⚠️ Machine Key Commands (3 commands implemented, tests pending) - Week 15 PARTIAL
+- ✅ **Custom Text & i18n Commands (9 commands, 25/25 tests passing) - Week 17-18 COMPLETE** 🎉
 
 **Week 1-8 Progress (Oct 24):**
 - ✅ Org Member Commands - COMPLETE (100%)
@@ -81,8 +82,8 @@
 | user-grant-commands | ✅ 100% | user-grant-commands.ts | P0 |
 | user-refresh-token-commands | ✅ 100% | user-refresh-token-commands.ts | P0 |
 | user-init-commands | ✅ 100% | user-init-commands.ts | P0 |
-| user-personal-access-token | ⚠️ 70% | personal-access-token-commands.ts | P1 |
-| user-machine-keys | ⚠️ 70% | machine-key-commands.ts | P1 |
+| user-personal-access-token | ✅ 100% | personal-access-token-commands.ts | P1 |
+| user-machine-keys | ✅ 100% | machine-key-commands.ts | P1 |
 
 **Missing User Commands (10%):**
 - ⚠️ user-password-complexity (Zitadel Go only)
@@ -90,9 +91,11 @@
 - ⚠️ user-notification-settings (Zitadel Go only)
 - ⚠️ user-schema (Zitadel Go v3 feature)
 
-**Partially Implemented (need comprehensive tests):**
-- ⚠️ user-personal-access-token (3 commands implemented, tests pending)
-- ⚠️ user-machine-keys (3 commands implemented, tests pending)
+**Recently Completed (Week 15 - Oct 26, 2025):**
+- ✅ user-personal-access-token (3 commands, 12/12 tests passing - 100%)
+- ✅ user-machine-keys (2 commands, 15/15 tests passing - 100%)
+- ✅ Complete stack tested (Command → Event → Projection → Query)
+- ✅ FK constraints properly handled via UserProjection integration
 
 ---
 
