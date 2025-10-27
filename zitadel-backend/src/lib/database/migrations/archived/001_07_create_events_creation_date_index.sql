@@ -1,0 +1,2 @@
+-- Migration: 001_07 - No-op (removed in Go v2 simplification)
+-- Creation date queries are covered by idx_events_active_instances

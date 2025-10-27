@@ -4,8 +4,31 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/lib/*"],
+      "@/zerrors/*": ["./src/lib/zerrors/*"],
+      "@/domain/*": ["./src/lib/domain/*"],
+      "@/crypto/*": ["./src/lib/crypto/*"],
+      "@/id/*": ["./src/lib/id/*"],
+      "@/database/*": ["./src/lib/database/*"],
+      "@/eventstore/*": ["./src/lib/eventstore/*"],
+      "@/cache/*": ["./src/lib/cache/*"],
+      "@/static/*": ["./src/lib/static/*"],
+      "@/command/*": ["./src/lib/command/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/query/*": ["./src/lib/query/*"],
+      "@/authz/*": ["./src/lib/authz/*"],
+      "@/auth/*": ["./src/lib/auth/*"],
+      "@/api/*": ["./src/api/*"],
+      "@/notification/*": ["./src/lib/notification/*"],
+      "@/actions/*": ["./src/lib/actions/*"],
+      "@/i18n/*": ["./src/lib/i18n/*"],
+      "@/config/*": ["./src/lib/config/*"],
+      "@/telemetry/*": ["./src/lib/telemetry/*"]
+    }
   },
-  "include": ["test/**/*"],
+  "include": ["src/**/*", "test/**/*"],
   "exclude": ["node_modules", "dist"]
 }

@@ -1,0 +1,2 @@
+-- Migration: 001_08 - No-op (removed in Go v2 simplification)
+-- Creator queries are less common and can use table scan if needed

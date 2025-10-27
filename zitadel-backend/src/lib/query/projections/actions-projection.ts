@@ -8,7 +8,7 @@ import { Projection } from '../projection/projection';
 
 export class ActionsProjection extends Projection {
   readonly name = 'actions_projection';
-  readonly tables = ['actions', 'action_flows', 'executions', 'execution_states'];
+  readonly tables = ['projections.actions', 'projections.action_flows', 'projections.executions', 'projections.execution_states'];
 
   async init(): Promise<void> {
     // Tables already created by migration
@@ -254,7 +254,7 @@ export class ActionsProjection extends Projection {
 export function createActionsProjectionConfig() {
   return {
     name: 'actions_projection',
-    tables: ['actions', 'action_flows', 'executions', 'execution_states'],
+    tables: ['projections.actions', 'projections.action_flows', 'projections.executions', 'projections.execution_states'],
     eventTypes: [
       'action.added',
       'action.v2.added',

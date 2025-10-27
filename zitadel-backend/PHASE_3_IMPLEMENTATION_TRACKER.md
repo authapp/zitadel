@@ -136,6 +136,7 @@ internal/command/custom_login_text.go
 - ✅ `src/lib/query/projections/custom-text-projection.ts` (263 lines, 9 event handlers)
 - ✅ `src/lib/query/custom-text/custom-text-queries.ts` (172 lines, 5 query methods)
 - ✅ `test/integration/commands/custom-text.test.ts` (735 lines, 25 tests)
+- ✅ `test/integration/commands/custom-text-comprehensive.test.ts` (600 lines, 19 tests)
 - ✅ Updated `src/lib/command/commands.ts` (registered 9 commands)
 
 **Complete Stack Implementation:**

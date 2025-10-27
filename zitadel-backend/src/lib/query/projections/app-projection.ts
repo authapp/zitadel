@@ -16,7 +16,7 @@ import { ProjectionConfig } from '../projection/projection-config';
  */
 export class AppProjection extends Projection {
   readonly name = 'app_projection';
-  readonly tables = ['applications_projection'];
+  readonly tables = ['projections.applications'];
 
   /**
    * Initialize the projection
@@ -88,7 +88,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO applications_projection (
+      `INSERT INTO projections.applications (
         id, instance_id, project_id, resource_owner, name, state, app_type,
         client_id, client_secret, redirect_uris, response_types, grant_types,
         oidc_app_type, auth_method_type, post_logout_redirect_uris,
@@ -156,7 +156,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         name = COALESCE($3, name),
         redirect_uris = COALESCE($4, redirect_uris),
         response_types = COALESCE($5, response_types),
@@ -205,7 +205,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         client_secret = $3,
         updated_at = $4,
         change_date = $5,
@@ -226,7 +226,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO applications_projection (
+      `INSERT INTO projections.applications (
         id, instance_id, project_id, resource_owner, name, state, app_type,
         entity_id, metadata_url, metadata, acs_urls,
         single_logout_url, name_id_format, attribute_statements,
@@ -271,7 +271,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         name = COALESCE($2, name),
         entity_id = COALESCE($3, entity_id),
         metadata_url = COALESCE($4, metadata_url),
@@ -304,7 +304,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO applications_projection (
+      `INSERT INTO projections.applications (
         id, instance_id, project_id, resource_owner, name, state, app_type,
         client_id, client_secret, auth_method_type,
         created_at, updated_at, change_date, sequence
@@ -340,7 +340,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         name = COALESCE($3, name),
         auth_method_type = COALESCE($4, auth_method_type),
         updated_at = $5,
@@ -363,7 +363,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         client_secret = $3,
         updated_at = $4,
         change_date = $5,
@@ -384,7 +384,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         name = COALESCE($3, name),
         updated_at = $4,
         change_date = $5,
@@ -405,7 +405,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         state = 'inactive',
         updated_at = $2,
         sequence = $3
@@ -422,7 +422,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE applications_projection SET
+      `UPDATE projections.applications SET
         state = 'active',
         updated_at = $3,
         change_date = $4,
@@ -442,7 +442,7 @@ export class AppProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `DELETE FROM applications_projection WHERE instance_id = $1 AND id = $2`,
+      `DELETE FROM projections.applications WHERE instance_id = $1 AND id = $2`,
       [event.instanceID || 'default', payload.appId || event.aggregateID]
     );
   }
@@ -464,7 +464,7 @@ export function createAppProjection(
 export function createAppProjectionConfig(): ProjectionConfig {
   return {
     name: 'app_projection',
-    tables: ['applications_projection'],
+    tables: ['projections.applications'],
     eventTypes: [
       'project.application.oidc.added',
       'project.application.oidc.changed',

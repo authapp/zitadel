@@ -1,0 +1,2 @@
+-- Migration: 001_09 - No-op (removed in Go v2 simplification)
+-- Covered by idx_events_wm and idx_events_projection

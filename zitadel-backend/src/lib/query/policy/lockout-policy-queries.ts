@@ -44,16 +44,15 @@ export class LockoutPolicyQueries {
       SELECT 
         id,
         instance_id,
-        created_at as creation_date,
-        updated_at,
+        organization_id as resource_owner,
+        creation_date,
         change_date,
         sequence,
         max_password_attempts,
         max_otp_attempts,
-        show_failure as show_failures,
-        is_default,
-        resource_owner
-      FROM lockout_policies_projection
+        show_failures,
+        is_default
+      FROM projections.lockout_policies
       WHERE instance_id = $1 AND is_default = true
       LIMIT 1
     `;
@@ -83,18 +82,16 @@ export class LockoutPolicyQueries {
       SELECT 
         id,
         instance_id,
-        resource_owner as organization_id,
-        created_at as creation_date,
-        updated_at,
+        organization_id as resource_owner,
+        creation_date,
         change_date,
         sequence,
         max_password_attempts,
         max_otp_attempts,
-        show_failure as show_failures,
-        is_default,
-        resource_owner
-      FROM lockout_policies_projection
-      WHERE instance_id = $1 AND resource_owner = $2 AND is_default = false
+        show_failures,
+        is_default
+      FROM projections.lockout_policies
+      WHERE instance_id = $1 AND organization_id = $2 AND is_default = false
       LIMIT 1
     `;
 

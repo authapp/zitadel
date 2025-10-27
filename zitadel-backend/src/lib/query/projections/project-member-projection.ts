@@ -13,7 +13,7 @@ import { Projection } from '../projection/projection';
  */
 export class ProjectMemberProjection extends Projection {
   readonly name = 'project_member_projection';
-  readonly tables = ['project_members'];
+  readonly tables = ['projections.project_members'];
 
   /**
    * Initialize projection tables

@@ -1,6 +1,6 @@
 /**
  * Instance domain projection for Zitadel query layer
- * Projects instance domain events into instance_domains_projection and instance_trusted_domains_projection
+ * Projects instance domain events into projections.instance_domains and projections.instance_trusted_domains
  */
 
 import { Projection } from '../projection/projection';
@@ -9,7 +9,7 @@ import { Event } from '../../eventstore/types';
 
 export class InstanceDomainProjection extends Projection {
   readonly name = 'instance_domain_projection';
-  readonly tables = ['instance_domains_projection', 'instance_trusted_domains_projection'];
+  readonly tables = ['projections.instance_domains', 'projections.instance_trusted_domains'];
 
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
@@ -44,7 +44,7 @@ export class InstanceDomainProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO instance_domains_projection (
+      `INSERT INTO projections.instance_domains (
         instance_id, domain, is_primary, is_generated,
         created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -71,7 +71,7 @@ export class InstanceDomainProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `DELETE FROM instance_domains_projection
+      `DELETE FROM projections.instance_domains
       WHERE instance_id = $1 AND domain = $2`,
       [
         event.instanceID,
@@ -85,7 +85,7 @@ export class InstanceDomainProjection extends Projection {
     
     // First, unset any existing primary domain for this instance
     await this.database.query(
-      `UPDATE instance_domains_projection SET
+      `UPDATE projections.instance_domains SET
         is_primary = false,
         updated_at = $2,
         change_date = $3,
@@ -101,7 +101,7 @@ export class InstanceDomainProjection extends Projection {
     
     // Then set the new primary domain
     await this.database.query(
-      `UPDATE instance_domains_projection SET
+      `UPDATE projections.instance_domains SET
         is_primary = true,
         updated_at = $3,
         change_date = $4,
@@ -121,7 +121,7 @@ export class InstanceDomainProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO instance_trusted_domains_projection (
+      `INSERT INTO projections.instance_trusted_domains (
         instance_id, domain, created_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (instance_id, domain) DO UPDATE SET
@@ -142,7 +142,7 @@ export class InstanceDomainProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `DELETE FROM instance_trusted_domains_projection
+      `DELETE FROM projections.instance_trusted_domains
       WHERE instance_id = $1 AND domain = $2`,
       [
         event.instanceID,
@@ -158,7 +158,7 @@ export class InstanceDomainProjection extends Projection {
 export function createInstanceDomainProjectionConfig(): ProjectionConfig {
   return {
     name: 'instance_domain_projection',
-    tables: ['instance_domains_projection', 'instance_trusted_domains_projection'],
+    tables: ['projections.instance_domains', 'projections.instance_trusted_domains'],
     eventTypes: [
       'instance.domain.added',
       'instance.domain.removed',

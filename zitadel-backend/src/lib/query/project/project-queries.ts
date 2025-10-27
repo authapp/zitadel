@@ -27,8 +27,8 @@ export class ProjectQueries {
    */
   async getProjectByID(projectID: string, instanceID?: string): Promise<Project | null> {
     const query = instanceID
-      ? 'SELECT * FROM projects_projection WHERE instance_id = $1 AND id = $2 AND state != $3'
-      : 'SELECT * FROM projects_projection WHERE id = $1 AND state != $2';
+      ? 'SELECT * FROM projections.projects WHERE instance_id = $1 AND id = $2 AND state != $3'
+      : 'SELECT * FROM projections.projects WHERE id = $1 AND state != $2';
     const params = instanceID ? [instanceID, projectID, 'removed'] : [projectID, 'removed'];
     
     const result = await this.database.query(query, params);
@@ -86,7 +86,7 @@ export class ProjectQueries {
 
     // Get total count
     const countResult = await this.database.query(
-      `SELECT COUNT(*) as count FROM projects_projection ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.projects ${whereClause}`,
       values
     );
     const total = parseInt(countResult.rows[0].count);
@@ -96,7 +96,7 @@ export class ProjectQueries {
     const offset = query.offset || 0;
     
     const result = await this.database.query(
-      `SELECT * FROM projects_projection 
+      `SELECT * FROM projections.projects 
        ${whereClause}
        ORDER BY created_at DESC
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -119,8 +119,8 @@ export class ProjectQueries {
     }
 
     const query = instanceID
-      ? 'SELECT * FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
-      : 'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key';
+      ? 'SELECT * FROM projections.project_roles WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
+      : 'SELECT * FROM projections.project_roles WHERE project_id = $1 ORDER BY role_key';
     const params = instanceID ? [instanceID, projectID] : [projectID];
     
     const rolesResult = await this.database.query(query, params);
@@ -169,7 +169,7 @@ export class ProjectQueries {
 
     // Get total count
     const countResult = await this.database.query(
-      `SELECT COUNT(*) as count FROM project_roles_projection WHERE ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.project_roles WHERE ${whereClause}`,
       values
     );
     const total = parseInt(countResult.rows[0].count);
@@ -179,7 +179,7 @@ export class ProjectQueries {
     const offset = query.offset || 0;
     
     const result = await this.database.query(
-      `SELECT * FROM project_roles_projection 
+      `SELECT * FROM projections.project_roles 
        WHERE ${whereClause}
        ORDER BY role_key
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -197,8 +197,8 @@ export class ProjectQueries {
    */
   async getProjectRoles(projectID: string, instanceID?: string): Promise<ProjectRole[]> {
     const query = instanceID
-      ? 'SELECT * FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
-      : 'SELECT * FROM project_roles_projection WHERE project_id = $1 ORDER BY role_key';
+      ? 'SELECT * FROM projections.project_roles WHERE instance_id = $1 AND project_id = $2 ORDER BY role_key'
+      : 'SELECT * FROM projections.project_roles WHERE project_id = $1 ORDER BY role_key';
     const params = instanceID ? [instanceID, projectID] : [projectID];
     
     const result = await this.database.query(query, params);
@@ -211,8 +211,8 @@ export class ProjectQueries {
    */
   async hasProjectRole(projectID: string, roleKey: string, instanceID?: string): Promise<boolean> {
     const query = instanceID
-      ? 'SELECT 1 FROM project_roles_projection WHERE instance_id = $1 AND project_id = $2 AND role_key = $3'
-      : 'SELECT 1 FROM project_roles_projection WHERE project_id = $1 AND role_key = $2';
+      ? 'SELECT 1 FROM projections.project_roles WHERE instance_id = $1 AND project_id = $2 AND role_key = $3'
+      : 'SELECT 1 FROM projections.project_roles WHERE project_id = $1 AND role_key = $2';
     const params = instanceID ? [instanceID, projectID, roleKey] : [projectID, roleKey];
     
     const result = await this.database.query(query, params);
@@ -225,7 +225,7 @@ export class ProjectQueries {
    */
   async getProjectsByOrg(orgID: string): Promise<Project[]> {
     const result = await this.database.query(
-      `SELECT * FROM projects_projection 
+      `SELECT * FROM projections.projects 
        WHERE resource_owner = $1 AND state != $2
        ORDER BY created_at DESC`,
       [orgID, 'removed']
@@ -239,7 +239,7 @@ export class ProjectQueries {
    */
   async countProjectsByOrg(orgID: string): Promise<number> {
     const result = await this.database.query(
-      'SELECT COUNT(*) as count FROM projects_projection WHERE resource_owner = $1 AND state = $2',
+      'SELECT COUNT(*) as count FROM projections.projects WHERE resource_owner = $1 AND state = $2',
       [orgID, 'active']
     );
 

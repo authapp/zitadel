@@ -52,7 +52,7 @@ export class SessionWriteModel extends WriteModel {
         this.createdAt = event.createdAt;
         this.updatedAt = event.createdAt;
         
-        // Set metadata
+        // Set metadata (supports both regular and OIDC sessions)
         if (event.payload?.metadata) {
           for (const [key, value] of Object.entries(event.payload.metadata)) {
             this.metadata.set(key, value as string);

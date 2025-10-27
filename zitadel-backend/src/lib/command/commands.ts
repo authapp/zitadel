@@ -1077,6 +1077,50 @@ export class Commands {
     require('./session/session-commands').deleteSessionMetadata;
 
   // ============================================================================
+  // OIDC Session Commands (Phase 3 - Week 19-20)
+  // ============================================================================
+  
+  /**
+   * Create OIDC session
+   */
+  createOIDCSession: typeof import('./session/oidc-session-commands').createOIDCSession = 
+    require('./session/oidc-session-commands').createOIDCSession;
+  
+  /**
+   * Update OIDC session
+   */
+  updateOIDCSession: typeof import('./session/oidc-session-commands').updateOIDCSession = 
+    require('./session/oidc-session-commands').updateOIDCSession;
+  
+  /**
+   * Terminate OIDC session
+   */
+  terminateOIDCSession: typeof import('./session/oidc-session-commands').terminateOIDCSession = 
+    require('./session/oidc-session-commands').terminateOIDCSession;
+
+  // ============================================================================
+  // Logout Commands (Phase 3 - Week 19-20)
+  // ============================================================================
+  
+  /**
+   * Terminate all user sessions
+   */
+  terminateAllUserSessions: typeof import('./session/logout-commands').terminateAllUserSessions = 
+    require('./session/logout-commands').terminateAllUserSessions;
+  
+  /**
+   * Terminate all sessions of organization
+   */
+  terminateAllSessionsOfOrg: typeof import('./session/logout-commands').terminateAllSessionsOfOrg = 
+    require('./session/logout-commands').terminateAllSessionsOfOrg;
+  
+  /**
+   * Handle backchannel logout
+   */
+  handleBackchannelLogout: typeof import('./session/logout-commands').handleBackchannelLogout = 
+    require('./session/logout-commands').handleBackchannelLogout;
+
+  // ============================================================================
   // Instance Commands (Phase 3)
   // ============================================================================
   

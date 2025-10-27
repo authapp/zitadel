@@ -46,7 +46,7 @@ export class SessionQueries {
         s.metadata,
         s.tokens,
         s.factors
-      FROM sessions_projection s
+      FROM projections.sessions s
       WHERE ${conditions.join(' AND ')}
     `;
 
@@ -92,7 +92,7 @@ export class SessionQueries {
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     // Get total count
-    const countQuery = `SELECT COUNT(*) as count FROM sessions_projection s ${whereClause}`;
+    const countQuery = `SELECT COUNT(*) as count FROM projections.sessions s ${whereClause}`;
     const countResult = await this.database.queryOne(countQuery, params);
     const total = parseInt(countResult?.count || '0', 10);
 
@@ -117,7 +117,7 @@ export class SessionQueries {
         s.metadata,
         s.tokens,
         s.factors
-      FROM sessions_projection s
+      FROM projections.sessions s
       ${whereClause}
       ORDER BY s.${sortBy} ${sortOrder}
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}
@@ -154,7 +154,7 @@ export class SessionQueries {
 
     const countQuery = `
       SELECT COUNT(*) as count 
-      FROM sessions_projection s 
+      FROM projections.sessions s 
       WHERE ${conditions.join(' AND ')}
     `;
 
@@ -300,5 +300,190 @@ export class SessionQueries {
       }));
     }
     return [];
+  }
+
+  // ============================================================================
+  // OIDC Session & Logout Query Methods (Phase 3 - Week 19-20)
+  // ============================================================================
+
+  /**
+   * Get OIDC session by ID with OAuth/OIDC metadata
+   */
+  async getOIDCSessionByID(sessionID: string, instanceID?: string): Promise<Session | null> {
+    const conditions = ['s.id = $1'];
+    const params: any[] = [sessionID];
+
+    if (instanceID) {
+      conditions.push('s.instance_id = $2');
+      params.push(instanceID);
+    }
+
+    const query = `
+      SELECT 
+        s.id,
+        s.instance_id,
+        s.state,
+        s.user_id,
+        s.user_agent,
+        s.client_ip,
+        s.created_at,
+        s.updated_at,
+        s.terminated_at,
+        s.sequence,
+        s.metadata,
+        s.tokens,
+        s.factors,
+        s.oidc_data,
+        s.termination_reason,
+        s.logout_method
+      FROM projections.sessions s
+      WHERE ${conditions.join(' AND ')}
+    `;
+
+    const row = await this.database.queryOne(query, params);
+    if (!row) return null;
+
+    // Note: OIDC data, termination_reason, and logout_method are stored in the row
+    // but mapped as part of the session object for now
+    return this.mapRowToSession(row);
+  }
+
+  /**
+   * Get all active sessions for a user
+   */
+  async getActiveSessionsForUser(
+    userID: string,
+    instanceID: string
+  ): Promise<Session[]> {
+    const query = `
+      SELECT 
+        s.id,
+        s.instance_id,
+        s.state,
+        s.user_id,
+        s.user_agent,
+        s.client_ip,
+        s.created_at,
+        s.updated_at,
+        s.terminated_at,
+        s.sequence,
+        s.metadata,
+        s.tokens,
+        s.factors,
+        s.oidc_data
+      FROM projections.sessions s
+      WHERE s.user_id = $1
+        AND s.instance_id = $2
+        AND s.state = 'active'
+      ORDER BY s.updated_at DESC
+    `;
+
+    const rows = await this.database.queryMany(query, [userID, instanceID]);
+    return rows.map(row => this.mapRowToSession(row));
+  }
+
+  /**
+   * Get all active sessions for an organization
+   */
+  async getActiveSessionsForOrg(
+    orgID: string,
+    instanceID: string
+  ): Promise<Session[]> {
+    const query = `
+      SELECT 
+        s.id,
+        s.instance_id,
+        s.state,
+        s.user_id,
+        s.user_agent,
+        s.client_ip,
+        s.created_at,
+        s.updated_at,
+        s.terminated_at,
+        s.sequence,
+        s.metadata,
+        s.tokens,
+        s.factors,
+        s.oidc_data
+      FROM projections.sessions s
+      WHERE s.resource_owner = $1
+        AND s.instance_id = $2
+        AND s.state = 'active'
+      ORDER BY s.updated_at DESC
+    `;
+
+    const rows = await this.database.queryMany(query, [orgID, instanceID]);
+    return rows.map(row => this.mapRowToSession(row));
+  }
+
+  /**
+   * Find session by token ID (access, refresh, or ID token)
+   */
+  async findSessionByTokenID(
+    tokenID: string,
+    instanceID: string
+  ): Promise<Session | null> {
+    const query = `
+      SELECT 
+        s.id,
+        s.instance_id,
+        s.state,
+        s.user_id,
+        s.user_agent,
+        s.client_ip,
+        s.created_at,
+        s.updated_at,
+        s.terminated_at,
+        s.sequence,
+        s.metadata,
+        s.tokens,
+        s.factors,
+        s.oidc_data
+      FROM projections.sessions s
+      WHERE s.instance_id = $1
+        AND (
+          s.oidc_data::jsonb->>'accessTokenID' = $2
+          OR s.oidc_data::jsonb->>'refreshTokenID' = $2
+          OR s.oidc_data::jsonb->>'idTokenID' = $2
+        )
+      LIMIT 1
+    `;
+
+    const row = await this.database.queryOne(query, [instanceID, tokenID]);
+    if (!row) return null;
+
+    return this.mapRowToSession(row);
+  }
+
+  /**
+   * Count active sessions (for user or org)
+   */
+  async countActiveSessions(params: {
+    userID?: string;
+    orgID?: string;
+    instanceID: string;
+  }): Promise<number> {
+    const conditions = ['s.instance_id = $1', "s.state = 'active'"];
+    const queryParams: any[] = [params.instanceID];
+    let paramIndex = 2;
+
+    if (params.userID) {
+      conditions.push(`s.user_id = $${paramIndex++}`);
+      queryParams.push(params.userID);
+    }
+
+    if (params.orgID) {
+      conditions.push(`s.resource_owner = $${paramIndex++}`);
+      queryParams.push(params.orgID);
+    }
+
+    const query = `
+      SELECT COUNT(*) as count
+      FROM projections.sessions s
+      WHERE ${conditions.join(' AND ')}
+    `;
+
+    const result = await this.database.queryOne(query, queryParams);
+    return parseInt(result?.count || '0', 10);
   }
 }

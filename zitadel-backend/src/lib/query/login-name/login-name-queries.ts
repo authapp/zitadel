@@ -1,7 +1,7 @@
 /**
  * Login Name Queries
  * 
- * Query methods for login names from the login_names_projection table.
+ * Query methods for login names from the projections.login_names table.
  * Based on Zitadel's CQRS query pattern.
  */
 
@@ -35,7 +35,7 @@ export class LoginNameQueries {
         is_primary as "isPrimary",
         created_at as "createdAt",
         updated_at as "updatedAt"
-       FROM login_names_projection
+       FROM projections.login_names
        WHERE user_id = $1 AND instance_id = $2
        ORDER BY is_primary DESC, login_name ASC`,
       [userId, instanceId]
@@ -56,7 +56,7 @@ export class LoginNameQueries {
   async getUserIdByLoginName(loginName: string, instanceId: string): Promise<string | null> {
     const result = await this.database.queryOne<{ user_id: string }>(
       `SELECT user_id 
-       FROM login_names_projection
+       FROM projections.login_names
        WHERE login_name = $1 AND instance_id = $2
        LIMIT 1`,
       [loginName, instanceId]
@@ -82,7 +82,7 @@ export class LoginNameQueries {
         is_primary as "isPrimary",
         created_at as "createdAt",
         updated_at as "updatedAt"
-       FROM login_names_projection
+       FROM projections.login_names
        WHERE login_name = $1 AND instance_id = $2`,
       [loginName, instanceId]
     );
@@ -123,7 +123,7 @@ export class LoginNameQueries {
         is_primary as "isPrimary",
         created_at as "createdAt",
         updated_at as "updatedAt"
-       FROM login_names_projection
+       FROM projections.login_names
        WHERE domain_name = $1 AND instance_id = $2
        ORDER BY login_name ASC`,
       [domainName, instanceId]
@@ -168,7 +168,7 @@ export class LoginNameQueries {
 
     // Get total count
     const countResult = await this.database.query(
-      `SELECT COUNT(*) as count FROM login_names_projection ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.login_names ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count, 10);
@@ -187,7 +187,7 @@ export class LoginNameQueries {
         is_primary as "isPrimary",
         created_at as "createdAt",
         updated_at as "updatedAt"
-       FROM login_names_projection
+       FROM projections.login_names
        ${whereClause}
        ORDER BY is_primary DESC, login_name ASC
        LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,

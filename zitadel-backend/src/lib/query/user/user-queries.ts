@@ -42,7 +42,7 @@ export class UserQueries {
         preferred_language, gender, avatar_url, preferred_login_name, login_names,
         password_hash, password_changed_at, password_change_required, mfa_enabled,
         state, user_type, created_at, updated_at, deleted_at
-       FROM users_projection
+       FROM projections.users
        WHERE id = $1 AND instance_id = $2 AND deleted_at IS NULL`,
       [userId, instanceId]
     );
@@ -76,7 +76,7 @@ export class UserQueries {
         preferred_language, gender, avatar_url, preferred_login_name, login_names,
         password_hash, password_changed_at, password_change_required, mfa_enabled,
         state, user_type, created_at, updated_at, deleted_at
-       FROM users_projection
+       FROM projections.users
        WHERE (username = $1 OR email = $1 OR $1 = ANY(login_names))
          AND resource_owner = $2
          AND instance_id = $3
@@ -157,7 +157,7 @@ export class UserQueries {
 
     // Count total matching users
     const countResult = await this.database.queryOne<{ count: string }>(
-      `SELECT COUNT(*) as count FROM users_projection WHERE ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.users WHERE ${whereClause}`,
       params
     );
 
@@ -172,7 +172,7 @@ export class UserQueries {
         preferred_language, gender, avatar_url, preferred_login_name, login_names,
         password_hash, password_changed_at, password_change_required, mfa_enabled,
         state, user_type, created_at, updated_at, deleted_at
-       FROM users_projection
+       FROM projections.users
        WHERE ${whereClause}
        ORDER BY ${sortColumn} ${sortOrder}
        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -198,7 +198,7 @@ export class UserQueries {
     const result = await this.database.queryOne<any>(
       `SELECT 
         id, username, display_name, first_name, last_name, avatar_url, preferred_language
-       FROM users_projection
+       FROM projections.users
        WHERE id = $1 AND instance_id = $2 AND deleted_at IS NULL`,
       [userId, instanceId]
     );
@@ -250,7 +250,7 @@ export class UserQueries {
       `SELECT 
         COUNT(*) FILTER (WHERE username = $1) as username_count,
         COUNT(*) FILTER (WHERE email = $2) as email_count
-       FROM users_projection
+       FROM projections.users
        WHERE resource_owner = $3 
          AND instance_id = $4
          AND deleted_at IS NULL
@@ -320,7 +320,7 @@ export class UserQueries {
         phone as last_phone,
         CASE WHEN phone_verified THEN phone ELSE NULL END as verified_phone,
         CASE WHEN password_hash IS NOT NULL THEN true ELSE false END as password_set
-       FROM users_projection
+       FROM projections.users
        WHERE id = $1 AND instance_id = $2 AND deleted_at IS NULL`,
       [userId, instanceId]
     );
@@ -360,7 +360,7 @@ export class UserQueries {
         preferred_language, gender, avatar_url, preferred_login_name, login_names,
         password_hash, password_changed_at, password_change_required, mfa_enabled,
         state, user_type, created_at, updated_at, deleted_at
-       FROM users_projection
+       FROM projections.users
        WHERE (username = $1 OR email = $1 OR $1 = ANY(login_names))
          AND instance_id = $2
          AND deleted_at IS NULL
@@ -393,8 +393,8 @@ export class UserQueries {
         u.preferred_language, u.gender, u.avatar_url, u.preferred_login_name, u.login_names,
         u.password_hash, u.password_changed_at, u.password_change_required, u.mfa_enabled,
         u.state, u.user_type, u.created_at, u.updated_at, u.deleted_at
-       FROM users_projection u
-       INNER JOIN sessions_projection s ON s.user_id = u.id
+       FROM projections.users u
+       INNER JOIN projections.sessions s ON s.user_id = u.id
        WHERE s.id = $1 AND u.instance_id = $2 AND u.deleted_at IS NULL
        LIMIT 1`,
       [sessionId, instanceId]
@@ -494,8 +494,8 @@ export class UserQueries {
     const results = await this.database.queryMany<any>(
       `SELECT 
         m.org_id, m.user_id, m.roles, o.name as org_name
-       FROM org_members_projection m
-       INNER JOIN orgs_projection o ON o.id = m.org_id
+       FROM projections.org_members m
+       INNER JOIN projections.orgs o ON o.id = m.org_id
        WHERE m.user_id = $1 AND m.instance_id = $2
        ORDER BY o.name ASC`,
       [userId, instanceId]
@@ -552,7 +552,7 @@ export class UserQueries {
     const results = await this.database.queryMany<any>(
       `SELECT 
         key, value, created_at, updated_at
-       FROM user_metadata_projection
+       FROM projections.user_metadata
        WHERE user_id = $1 AND instance_id = $2
        ORDER BY key ASC`,
       [userId, instanceId]

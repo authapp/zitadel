@@ -34,7 +34,7 @@ export class InstanceQueries {
         i.created_at,
         i.updated_at,
         i.sequence
-      FROM instances_projection i
+      FROM projections.instances i
       WHERE i.id = $1`,
       [instanceID]
     );
@@ -61,7 +61,7 @@ export class InstanceQueries {
     // Look up instance by domain
     const domainResult = await this.database.query<any>(
       `SELECT instance_id
-      FROM instance_domains_projection
+      FROM projections.instance_domains
       WHERE domain = $1`,
       [host]
     );
@@ -91,7 +91,7 @@ export class InstanceQueries {
         i.created_at,
         i.updated_at,
         i.sequence
-      FROM instances_projection i
+      FROM projections.instances i
       WHERE i.state = $1
       ORDER BY i.created_at ASC
       LIMIT 1`,
@@ -111,7 +111,7 @@ export class InstanceQueries {
           i.created_at,
           i.updated_at,
           i.sequence
-        FROM instances_projection i
+        FROM projections.instances i
         ORDER BY i.created_at ASC
         LIMIT 1`
       );
@@ -163,7 +163,7 @@ export class InstanceQueries {
     // Get total count
     const countResult = await this.database.query<{ count: string }>(
       `SELECT COUNT(*) as count
-      FROM instance_domains_projection
+      FROM projections.instance_domains
       ${whereClause}`,
       params
     );
@@ -182,7 +182,7 @@ export class InstanceQueries {
         created_at,
         updated_at,
         sequence
-      FROM instance_domains_projection
+      FROM projections.instance_domains
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
@@ -200,7 +200,7 @@ export class InstanceQueries {
   async getInstanceFeatures(instanceID: string): Promise<InstanceFeatures | null> {
     const result = await this.database.query<any>(
       `SELECT features
-      FROM instances_projection
+      FROM projections.instances
       WHERE id = $1`,
       [instanceID]
     );
@@ -237,7 +237,7 @@ export class InstanceQueries {
     // Get total count
     const countResult = await this.database.query<{ count: string }>(
       `SELECT COUNT(*) as count
-      FROM instance_trusted_domains_projection
+      FROM projections.instance_trusted_domains
       ${whereClause}`,
       params
     );
@@ -253,7 +253,7 @@ export class InstanceQueries {
         domain,
         created_at,
         sequence
-      FROM instance_trusted_domains_projection
+      FROM projections.instance_trusted_domains
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
@@ -278,7 +278,7 @@ export class InstanceQueries {
         created_at,
         updated_at,
         sequence
-      FROM instance_domains_projection
+      FROM projections.instance_domains
       WHERE instance_id = $1
       ORDER BY is_primary DESC, created_at ASC`,
       [instanceID]
@@ -299,7 +299,7 @@ export class InstanceQueries {
         domain,
         created_at,
         sequence
-      FROM instance_trusted_domains_projection
+      FROM projections.instance_trusted_domains
       WHERE instance_id = $1
       ORDER BY created_at ASC`,
       [instanceID]

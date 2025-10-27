@@ -1,7 +1,7 @@
 /**
  * User Projection
  * 
- * Materializes user events into the users_projection table.
+ * Materializes user events into the projections.users table.
  * Uses the new ProjectionRegistry/ProjectionHandler system.
  */
 
@@ -49,7 +49,7 @@ export interface UserReadModel {
  */
 export class UserProjection extends Projection {
   readonly name = 'user_projection';
-  readonly tables = ['users_projection'];
+  readonly tables = ['projections.users'];
 
   /**
    * Initialize the projection
@@ -136,7 +136,7 @@ export class UserProjection extends Projection {
     const data = event.payload as any;
     
     await this.database.query(
-      `INSERT INTO users_projection (
+      `INSERT INTO projections.users (
         id, instance_id, resource_owner, username, email, email_verified, email_verified_at,
         phone, phone_verified, phone_verified_at, first_name, last_name, display_name, nickname,
         preferred_language, gender, avatar_url, preferred_login_name, login_names,
@@ -146,7 +146,7 @@ export class UserProjection extends Projection {
       ON CONFLICT (instance_id, id) DO NOTHING`,
       [
         event.aggregateID,
-        event.instanceID,
+        event.instanceID || 'default',
         event.owner,
         data.username || data.userName,
         data.email,
@@ -231,7 +231,7 @@ export class UserProjection extends Projection {
       values.push(event.aggregateID);
       
       await this.database.query(
-        `UPDATE users_projection SET ${updates.join(', ')} WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
+        `UPDATE projections.users SET ${updates.join(', ')} WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
         values
       );
     }
@@ -244,7 +244,7 @@ export class UserProjection extends Projection {
     const data = event.payload as any;
     
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET email = $1, email_verified = $2, updated_at = $3, change_date = $4, sequence = $5
        WHERE instance_id = $6 AND id = $7`,
       [data.email, false, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -256,7 +256,7 @@ export class UserProjection extends Projection {
    */
   private async handleEmailVerified(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET email_verified = true, email_verified_at = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
       [event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -270,7 +270,7 @@ export class UserProjection extends Projection {
     const data = event.payload as any;
     
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET phone = $1, phone_verified = $2, updated_at = $3, change_date = $4, sequence = $5
        WHERE instance_id = $6 AND id = $7`,
       [data.phone, false, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -282,7 +282,7 @@ export class UserProjection extends Projection {
    */
   private async handlePhoneVerified(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET phone_verified = true, phone_verified_at = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
       [event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -296,7 +296,7 @@ export class UserProjection extends Projection {
     const data = event.payload as any;
     
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET password_hash = $1, password_changed_at = $2, password_change_required = $3, updated_at = $4, change_date = $5, sequence = $6
        WHERE instance_id = $7 AND id = $8`,
       [data.passwordHash, event.createdAt, data.changeRequired || false, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -308,7 +308,7 @@ export class UserProjection extends Projection {
    */
   private async handleUserDeactivated(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE users_projection SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
+      `UPDATE projections.users SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
       ['inactive', event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
     );
   }
@@ -318,7 +318,7 @@ export class UserProjection extends Projection {
    */
   private async handleUserReactivated(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE users_projection SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
+      `UPDATE projections.users SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
       ['active', event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
     );
   }
@@ -328,7 +328,7 @@ export class UserProjection extends Projection {
    */
   private async handleUserLocked(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE users_projection SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
+      `UPDATE projections.users SET state = $1, updated_at = $2, change_date = $3, sequence = $4 WHERE instance_id = $5 AND id = $6`,
       ['locked', event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
     );
   }
@@ -339,7 +339,7 @@ export class UserProjection extends Projection {
   private async handleUserRemoved(event: Event): Promise<void> {
     // Soft delete - mark as inactive and set deleted_at
     await this.database.query(
-      `UPDATE users_projection 
+      `UPDATE projections.users 
        SET state = $1, deleted_at = $2, updated_at = $3, change_date = $4, sequence = $5
        WHERE instance_id = $6 AND id = $7`,
       ['inactive', event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
@@ -350,7 +350,7 @@ export class UserProjection extends Projection {
    * Handle events from eventstore
    */
   async handleEvent(event: Event): Promise<void> {
-    // Route events to appropriate handlers
+    // Handle different event types
     switch (event.eventType) {
       case 'user.added':
       case 'user.registered':
@@ -411,7 +411,7 @@ export function createUserProjection(
 export function createUserProjectionConfig(): ProjectionConfig {
   return {
     name: 'user_projection',
-    tables: ['users_projection'],
+    tables: ['projections.users'],
     eventTypes: [
       // New event types
       'user.added',

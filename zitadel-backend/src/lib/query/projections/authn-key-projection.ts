@@ -8,7 +8,7 @@ import { Event } from '../../eventstore/types';
 
 export class AuthNKeyProjection extends Projection {
   readonly name = 'authn_key_projection';
-  readonly tables = ['authn_keys'];
+  readonly tables = ['projections.authn_keys'];
 
   async init(): Promise<void> {
     // Create authn_keys table if it doesn't exist
@@ -174,7 +174,7 @@ export class AuthNKeyProjection extends Projection {
 export function createAuthNKeyProjectionConfig() {
   return {
     name: 'authn_key_projection',
-    tables: ['authn_keys'],
+    tables: ['projections.authn_keys'],
     eventTypes: [
       'user.machine.key.added',
       'user.machine.key.removed',

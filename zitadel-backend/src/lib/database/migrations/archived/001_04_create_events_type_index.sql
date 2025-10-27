@@ -1,0 +1,2 @@
+-- Migration: 001_04 - No-op (removed in favor of composite indexes in Go v2)
+-- Event type queries are covered by idx_events_wm and idx_events_projection

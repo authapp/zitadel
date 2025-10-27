@@ -33,6 +33,11 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/src/**/*.test.ts', '<rootDir>/test/unit/**/*.test.ts'],
+      transform: {
+        '^.+\\.ts$': ['ts-jest', {
+          tsconfig: 'tsconfig.test.json'
+        }]
+      },
       moduleNameMapper: {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',
@@ -45,6 +50,11 @@ module.exports = {
       preset: 'ts-jest',
       testEnvironment: 'node',
       testMatch: ['<rootDir>/test/integration/**/*.test.ts'],
+      transform: {
+        '^.+\\.ts$': ['ts-jest', {
+          tsconfig: 'tsconfig.test.json'
+        }]
+      },
       moduleNameMapper: {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',

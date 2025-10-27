@@ -9,7 +9,7 @@ import { Projection } from '../projection/projection';
 
 export class UserMetadataProjection extends Projection {
   readonly name = 'user_metadata_projection';
-  readonly tables = ['user_metadata'];
+  readonly tables = ['projections.user_metadata'];
 
   async init(): Promise<void> {
     // Table created by migration 002_15
@@ -67,7 +67,7 @@ export class UserMetadataProjection extends Projection {
       : JSON.stringify(metadataValue);
 
     await this.database.query(
-      `INSERT INTO user_metadata (
+      `INSERT INTO projections.user_metadata (
         id, user_id, instance_id, metadata_key, metadata_value,
         metadata_type, scope, created_at, updated_at, created_by, updated_by
       ) VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8, $9, $10, $11)
@@ -106,14 +106,14 @@ export class UserMetadataProjection extends Projection {
     if (scope) {
       // Remove specific scoped metadata
       await this.database.query(
-        `DELETE FROM user_metadata 
+        `DELETE FROM projections.user_metadata 
          WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope = $4`,
         [event.instanceID, event.aggregateID, metadataKey, scope]
       );
     } else {
       // Remove metadata with null scope
       await this.database.query(
-        `DELETE FROM user_metadata 
+        `DELETE FROM projections.user_metadata 
          WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope IS NULL`,
         [event.instanceID, event.aggregateID, metadataKey]
       );
@@ -123,7 +123,7 @@ export class UserMetadataProjection extends Projection {
   private async handleAllMetadataRemoved(event: Event): Promise<void> {
     // Remove all metadata for this user
     await this.database.query(
-      `DELETE FROM user_metadata 
+      `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
     );
@@ -131,7 +131,7 @@ export class UserMetadataProjection extends Projection {
 
   private async handleUserRemoved(event: Event): Promise<void> {
     await this.database.query(
-      `DELETE FROM user_metadata 
+      `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
     );
@@ -140,9 +140,9 @@ export class UserMetadataProjection extends Projection {
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Remove metadata for all users in this organization
     await this.database.query(
-      `DELETE FROM user_metadata 
+      `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id IN (
-         SELECT id FROM users_projection 
+         SELECT id FROM projections.users 
          WHERE instance_id = $1 AND resource_owner = $2
        )`,
       [event.instanceID, event.aggregateID]
@@ -152,7 +152,7 @@ export class UserMetadataProjection extends Projection {
   private async handleInstanceRemoved(event: Event): Promise<void> {
     // Remove all metadata for this instance
     await this.database.query(
-      `DELETE FROM user_metadata WHERE instance_id = $1`,
+      `DELETE FROM projections.user_metadata WHERE instance_id = $1`,
       [event.instanceID]
     );
   }
@@ -164,7 +164,7 @@ export class UserMetadataProjection extends Projection {
 export function createUserMetadataProjectionConfig() {
   return {
     name: 'user_metadata_projection',
-    tables: ['user_metadata'],
+    tables: ['projections.user_metadata'],
     eventTypes: [
       'user.metadata.set',
       'user.v1.metadata.set',

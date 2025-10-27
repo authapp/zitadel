@@ -336,7 +336,7 @@ export class ProjectionHandler {
         aggregate_type as "aggregateType",
         aggregate_id as "aggregateID",
         sequence
-      FROM projection_states
+      FROM projections.projection_states
       WHERE name = $1`,
       [this.config.name]
     );
@@ -364,7 +364,7 @@ export class ProjectionHandler {
    */
   private async setStateInTx(tx: QueryExecutor, state: CurrentState): Promise<void> {
     await tx.query(
-      `INSERT INTO projection_states (
+      `INSERT INTO projections.projection_states (
         name,
         position,
         position_offset,

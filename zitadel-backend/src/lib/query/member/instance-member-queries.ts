@@ -61,14 +61,14 @@ export class InstanceMemberQueries {
         u.preferred_login_name,
         u.avatar_url
       FROM projections.instance_members im
-      LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
+      LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
       WHERE ${whereClause}
     `;
 
     // Get total count
     const countResult = await this.database.queryOne(
       `SELECT COUNT(*) as count FROM projections.instance_members im 
-       LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
+       LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
        WHERE ${whereClause}`,
       params
     );
@@ -122,7 +122,7 @@ export class InstanceMemberQueries {
         u.preferred_login_name,
         u.avatar_url
       FROM projections.instance_members im
-      LEFT JOIN users_projection u ON im.user_id = u.id AND im.instance_id = u.instance_id
+      LEFT JOIN projections.users u ON im.user_id = u.id AND im.instance_id = u.instance_id
       WHERE im.instance_id = $1 AND im.user_id = $2`,
       [iamID, userID]
     );

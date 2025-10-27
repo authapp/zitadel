@@ -1,6 +1,6 @@
 /**
  * Instance projection for Zitadel query layer
- * Projects instance-related events into the instances_projection table
+ * Projects instance-related events into the projections.instances table
  */
 
 import { Projection } from '../projection/projection';
@@ -9,7 +9,7 @@ import { Event } from '../../eventstore/types';
 
 export class InstanceProjection extends Projection {
   readonly name = 'instance_projection';
-  readonly tables = ['instances_projection'];
+  readonly tables = ['projections.instances'];
 
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
@@ -49,7 +49,7 @@ export class InstanceProjection extends Projection {
     const instanceId = payload.instanceId || event.aggregateID;
     
     await this.database.query(
-      `INSERT INTO instances_projection (
+      `INSERT INTO projections.instances (
         id, instance_id, name, default_org_id, default_language, state, features,
         created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -85,7 +85,7 @@ export class InstanceProjection extends Projection {
     const instanceId = payload.instanceId || event.aggregateID;
     
     await this.database.query(
-      `INSERT INTO instances_projection (
+      `INSERT INTO projections.instances (
         id, instance_id, name, default_org_id, default_language, state, features,
         created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -119,7 +119,7 @@ export class InstanceProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE instances_projection SET
+      `UPDATE projections.instances SET
         name = COALESCE($2, name),
         default_org_id = COALESCE($3, default_org_id),
         default_language = COALESCE($4, default_language),
@@ -143,7 +143,7 @@ export class InstanceProjection extends Projection {
     const payload = event.payload as any;
     
     await this.database.query(
-      `UPDATE instances_projection SET
+      `UPDATE projections.instances SET
         state = 'removed',
         updated_at = $2,
         change_date = $3,
@@ -165,7 +165,7 @@ export class InstanceProjection extends Projection {
     const features = payload.features || payload;
     
     await this.database.query(
-      `UPDATE instances_projection SET
+      `UPDATE projections.instances SET
         features = $2,
         updated_at = $3,
         change_date = $4,
@@ -183,7 +183,7 @@ export class InstanceProjection extends Projection {
 
   private async handleInstanceFeaturesReset(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE instances_projection SET
+      `UPDATE projections.instances SET
         features = $2,
         updated_at = $3,
         change_date = $4,
@@ -206,7 +206,7 @@ export class InstanceProjection extends Projection {
 export function createInstanceProjectionConfig(): ProjectionConfig {
   return {
     name: 'instance_projection',
-    tables: ['instances_projection'],
+    tables: ['projections.instances'],
     eventTypes: [
       'instance.added',
       'instance.changed',

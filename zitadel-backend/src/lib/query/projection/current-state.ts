@@ -63,7 +63,7 @@ export interface CurrentState {
  */
 export class CurrentStateTracker {
   private readonly database: DatabasePool;
-  private readonly tableName = 'projection_states';
+  private readonly tableName = 'projections.projection_states';
 
   constructor(database: DatabasePool) {
     this.database = database;

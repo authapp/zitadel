@@ -69,15 +69,15 @@ export class OrgMemberQueries {
         o.name as org_name,
         o.primary_domain as org_domain
       FROM projections.org_members om
-      LEFT JOIN users_projection u ON om.user_id = u.id AND om.instance_id = u.instance_id
-      LEFT JOIN orgs_projection o ON om.org_id = o.id AND om.instance_id = o.instance_id
+      LEFT JOIN projections.users u ON om.user_id = u.id AND om.instance_id = u.instance_id
+      LEFT JOIN projections.orgs o ON om.org_id = o.id AND om.instance_id = o.instance_id
       WHERE ${whereClause}
     `;
 
     // Get total count
     const countResult = await this.database.queryOne(
       `SELECT COUNT(*) as count FROM projections.org_members om 
-       LEFT JOIN users_projection u ON om.user_id = u.id AND om.instance_id = u.instance_id
+       LEFT JOIN projections.users u ON om.user_id = u.id AND om.instance_id = u.instance_id
        WHERE ${whereClause}`,
       params
     );
@@ -136,8 +136,8 @@ export class OrgMemberQueries {
         o.name as org_name,
         o.primary_domain as org_domain
       FROM projections.org_members om
-      LEFT JOIN users_projection u ON om.user_id = u.id AND om.instance_id = u.instance_id
-      LEFT JOIN orgs_projection o ON om.org_id = o.id AND om.instance_id = o.instance_id
+      LEFT JOIN projections.users u ON om.user_id = u.id AND om.instance_id = u.instance_id
+      LEFT JOIN projections.orgs o ON om.org_id = o.id AND om.instance_id = o.instance_id
       WHERE om.org_id = $1 AND om.user_id = $2 AND om.instance_id = $3`,
       [orgID, userID, instanceID]
     );

@@ -15,7 +15,7 @@ import { ProjectionConfig } from '../projection/projection-config';
  */
 export class ProjectRoleProjection extends Projection {
   readonly name = 'project_role_projection';
-  readonly tables = ['project_roles_projection'];
+  readonly tables = ['projections.project_roles'];
 
   /**
    * Initialize the projection
@@ -61,7 +61,7 @@ export class ProjectRoleProjection extends Projection {
     }
 
     await this.database.query(
-      `INSERT INTO project_roles_projection (
+      `INSERT INTO projections.project_roles (
         instance_id, project_id, role_key, display_name, role_group,
         created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -70,7 +70,7 @@ export class ProjectRoleProjection extends Projection {
         role_group = EXCLUDED.role_group,
         updated_at = EXCLUDED.updated_at,
         change_date = EXCLUDED.change_date,
-        sequence = GREATEST(project_roles_projection.sequence, EXCLUDED.sequence)`,
+        sequence = GREATEST(projections.project_roles.sequence, EXCLUDED.sequence)`,
       [
         event.instanceID,
         event.aggregateID,
@@ -124,7 +124,7 @@ export class ProjectRoleProjection extends Projection {
     values.push(data.roleKey);
 
     await this.database.query(
-      `UPDATE project_roles_projection 
+      `UPDATE projections.project_roles 
        SET ${updates.join(', ')}
        WHERE instance_id = $${paramIndex} AND project_id = $${paramIndex + 1} AND role_key = $${paramIndex + 2}`,
       values
@@ -143,7 +143,7 @@ export class ProjectRoleProjection extends Projection {
     }
 
     await this.database.query(
-      `DELETE FROM project_roles_projection 
+      `DELETE FROM projections.project_roles 
        WHERE instance_id = $1 AND project_id = $2 AND role_key = $3`,
       [event.instanceID, event.aggregateID, data.roleKey]
     );
@@ -166,7 +166,7 @@ export function createProjectRoleProjection(
 export function createProjectRoleProjectionConfig(): ProjectionConfig {
   return {
     name: 'project_role_projection',
-    tables: ['project_roles_projection'],
+    tables: ['projections.project_roles'],
     eventTypes: [
       'project.role.added',
       'project.role.created',

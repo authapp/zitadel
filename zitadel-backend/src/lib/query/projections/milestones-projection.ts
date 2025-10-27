@@ -8,7 +8,7 @@ import { Projection } from '../projection/projection';
 
 export class MilestonesProjection extends Projection {
   readonly name = 'milestones_projection';
-  readonly tables = ['milestones'];
+  readonly tables = ['projections.milestones'];
 
   async init(): Promise<void> {
     // Table already created by migration
@@ -206,7 +206,7 @@ export class MilestonesProjection extends Projection {
 export function createMilestonesProjectionConfig() {
   return {
     name: 'milestones_projection',
-    tables: ['milestones'],
+    tables: ['projections.milestones'],
     eventTypes: [
       // Direct milestone events
       'milestone.pushed',

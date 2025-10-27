@@ -1,0 +1,3 @@
+-- Migration: 001_13 - Optional GIN index for JSONB payload queries
+-- Uncomment if payload searches are needed (not in base Go v2 schema)
+-- CREATE INDEX IF NOT EXISTS idx_events_payload_gin ON events USING GIN (payload);

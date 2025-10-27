@@ -33,8 +33,8 @@ export class AppQueries {
    */
   async getAppByID(appId: string, instanceID?: string): Promise<AnyApp | null> {
     const query = instanceID
-      ? 'SELECT * FROM applications_projection WHERE instance_id = $1 AND id = $2'
-      : 'SELECT * FROM applications_projection WHERE id = $1';
+      ? 'SELECT * FROM projections.applications WHERE instance_id = $1 AND id = $2'
+      : 'SELECT * FROM projections.applications WHERE id = $1';
     const params = instanceID ? [instanceID, appId] : [appId];
     
     const result = await this.database.query<AppRow>(query, params);
@@ -83,7 +83,7 @@ export class AppQueries {
 
     // Get total count
     const countResult = await this.database.query<{ count: string }>(
-      `SELECT COUNT(*) as count FROM applications_projection ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.applications ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0]?.count || '0');
@@ -94,7 +94,7 @@ export class AppQueries {
     params.push(limit, offset);
 
     const result = await this.database.query<AppRow>(
-      `SELECT * FROM applications_projection ${whereClause} 
+      `SELECT * FROM projections.applications ${whereClause} 
        ORDER BY created_at DESC 
        LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
       params
@@ -119,7 +119,7 @@ export class AppQueries {
       app_type: string;
     }>(
       `SELECT client_id, project_id, id, app_type 
-       FROM applications_projection 
+       FROM projections.applications 
        WHERE client_id ILIKE $1 
        AND app_type IN ('oidc', 'api')
        LIMIT 10`,
@@ -178,7 +178,7 @@ export class AppQueries {
    */
   async getAppByClientID(clientId: string): Promise<OIDCApp | APIApp | null> {
     const result = await this.database.query<AppRow>(
-      `SELECT * FROM applications_projection 
+      `SELECT * FROM projections.applications 
        WHERE client_id = $1 
        AND app_type IN ('oidc', 'api')`,
       [clientId]
@@ -197,7 +197,7 @@ export class AppQueries {
   async searchProjectIDsByClientID(clientId: string): Promise<string[]> {
     const result = await this.database.query<{ project_id: string }>(
       `SELECT DISTINCT project_id 
-       FROM applications_projection 
+       FROM projections.applications 
        WHERE client_id = $1`,
       [clientId]
     );
@@ -210,8 +210,8 @@ export class AppQueries {
    */
   async existsApp(appId: string, instanceID?: string): Promise<boolean> {
     const query = instanceID
-      ? 'SELECT EXISTS(SELECT 1 FROM applications_projection WHERE instance_id = $1 AND id = $2) as exists'
-      : 'SELECT EXISTS(SELECT 1 FROM applications_projection WHERE id = $1) as exists';
+      ? 'SELECT EXISTS(SELECT 1 FROM projections.applications WHERE instance_id = $1 AND id = $2) as exists'
+      : 'SELECT EXISTS(SELECT 1 FROM projections.applications WHERE id = $1) as exists';
     const params = instanceID ? [instanceID, appId] : [appId];
     
     const result = await this.database.query<{ exists: boolean }>(query, params);
@@ -224,9 +224,9 @@ export class AppQueries {
    */
   async getProjectByOIDCClientID(clientId: string, instanceID?: string): Promise<string | null> {
     const query = instanceID
-      ? `SELECT project_id FROM applications_projection 
+      ? `SELECT project_id FROM projections.applications 
          WHERE instance_id = $1 AND client_id = $2 AND app_type = 'oidc' LIMIT 1`
-      : `SELECT project_id FROM applications_projection 
+      : `SELECT project_id FROM projections.applications 
          WHERE client_id = $1 AND app_type = 'oidc' LIMIT 1`;
     const params = instanceID ? [instanceID, clientId] : [clientId];
     
@@ -240,9 +240,9 @@ export class AppQueries {
    */
   async getProjectByClientID(clientId: string, instanceID?: string): Promise<string | null> {
     const query = instanceID
-      ? `SELECT project_id FROM applications_projection 
+      ? `SELECT project_id FROM projections.applications 
          WHERE instance_id = $1 AND client_id = $2 AND app_type IN ('oidc', 'api') LIMIT 1`
-      : `SELECT project_id FROM applications_projection 
+      : `SELECT project_id FROM projections.applications 
          WHERE client_id = $1 AND app_type IN ('oidc', 'api') LIMIT 1`;
     const params = instanceID ? [instanceID, clientId] : [clientId];
     
@@ -256,8 +256,8 @@ export class AppQueries {
    */
   async getAPIAppByClientID(clientId: string, instanceID?: string): Promise<APIApp | null> {
     const query = instanceID
-      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND client_id = $2 AND app_type = 'api'`
-      : `SELECT * FROM applications_projection WHERE client_id = $1 AND app_type = 'api'`;
+      ? `SELECT * FROM projections.applications WHERE instance_id = $1 AND client_id = $2 AND app_type = 'api'`
+      : `SELECT * FROM projections.applications WHERE client_id = $1 AND app_type = 'api'`;
     const params = instanceID ? [instanceID, clientId] : [clientId];
     
     const result = await this.database.query<AppRow>(query, params);
@@ -274,8 +274,8 @@ export class AppQueries {
    */
   async getOIDCAppByClientID(clientId: string, instanceID?: string): Promise<OIDCApp | null> {
     const query = instanceID
-      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND client_id = $2 AND app_type = 'oidc'`
-      : `SELECT * FROM applications_projection WHERE client_id = $1 AND app_type = 'oidc'`;
+      ? `SELECT * FROM projections.applications WHERE instance_id = $1 AND client_id = $2 AND app_type = 'oidc'`
+      : `SELECT * FROM projections.applications WHERE client_id = $1 AND app_type = 'oidc'`;
     const params = instanceID ? [instanceID, clientId] : [clientId];
     
     const result = await this.database.query<AppRow>(query, params);
@@ -292,8 +292,8 @@ export class AppQueries {
    */
   async getSAMLAppByEntityID(entityId: string, instanceID?: string): Promise<SAMLApp | null> {
     const query = instanceID
-      ? `SELECT * FROM applications_projection WHERE instance_id = $1 AND entity_id = $2 AND app_type = 'saml'`
-      : `SELECT * FROM applications_projection WHERE entity_id = $1 AND app_type = 'saml'`;
+      ? `SELECT * FROM projections.applications WHERE instance_id = $1 AND entity_id = $2 AND app_type = 'saml'`
+      : `SELECT * FROM projections.applications WHERE entity_id = $1 AND app_type = 'saml'`;
     const params = instanceID ? [instanceID, entityId] : [entityId];
     
     const result = await this.database.query<AppRow>(query, params);

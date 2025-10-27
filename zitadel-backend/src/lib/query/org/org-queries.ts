@@ -33,14 +33,14 @@ export class OrgQueries {
           primary_domain as "primaryDomain", resource_owner as "resourceOwner",
           created_at as "createdAt", updated_at as "updatedAt",
           change_date as "changeDate", sequence
-        FROM orgs_projection
+        FROM projections.orgs
         WHERE instance_id = $1 AND id = $2 AND state != 'removed'`
       : `SELECT 
           id, instance_id as "instanceID", name, state,
           primary_domain as "primaryDomain", resource_owner as "resourceOwner",
           created_at as "createdAt", updated_at as "updatedAt",
           change_date as "changeDate", sequence
-        FROM orgs_projection
+        FROM projections.orgs
         WHERE id = $1 AND state != 'removed'`;
     
     const params = instanceID ? [instanceID, orgID] : [orgID];
@@ -67,8 +67,8 @@ export class OrgQueries {
           o.created_at as "createdAt",
           o.updated_at as "updatedAt",
           o.sequence
-        FROM orgs_projection o
-        INNER JOIN org_domains_projection od ON o.instance_id = od.instance_id AND o.id = od.org_id
+        FROM projections.orgs o
+        INNER JOIN projections.org_domains od ON o.instance_id = od.instance_id AND o.id = od.org_id
         WHERE o.instance_id = $1 AND od.domain = $2 AND od.is_verified = TRUE AND o.state != 'removed'`
       : `SELECT 
           o.id,
@@ -79,8 +79,8 @@ export class OrgQueries {
           o.created_at as "createdAt",
           o.updated_at as "updatedAt",
           o.sequence
-        FROM orgs_projection o
-        INNER JOIN org_domains_projection od ON o.instance_id = od.instance_id AND o.id = od.org_id
+        FROM projections.orgs o
+        INNER JOIN projections.org_domains od ON o.instance_id = od.instance_id AND o.id = od.org_id
         WHERE od.domain = $1 AND od.is_verified = TRUE AND o.state != 'removed'`;
     
     const params = instanceID ? [instanceID, domain] : [domain];
@@ -122,7 +122,7 @@ export class OrgQueries {
       if (query.instanceID) {
         conditions.push(
           `id IN (
-            SELECT org_id FROM org_domains_projection 
+            SELECT org_id FROM projections.org_domains 
             WHERE instance_id = $${paramIndex++} AND domain ILIKE $${paramIndex++} AND is_verified = TRUE
           )`
         );
@@ -130,7 +130,7 @@ export class OrgQueries {
       } else {
         conditions.push(
           `id IN (
-            SELECT org_id FROM org_domains_projection 
+            SELECT org_id FROM projections.org_domains 
             WHERE domain ILIKE $${paramIndex++} AND is_verified = TRUE
           )`
         );
@@ -142,7 +142,7 @@ export class OrgQueries {
     
     // Get total count
     const countResult = await this.database.query(
-      `SELECT COUNT(*) as count FROM orgs_projection ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.orgs ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count, 10);
@@ -162,7 +162,7 @@ export class OrgQueries {
         created_at as "createdAt",
         updated_at as "updatedAt",
         sequence
-      FROM orgs_projection
+      FROM projections.orgs
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
@@ -208,7 +208,7 @@ export class OrgQueries {
           created_at as "createdAt",
           updated_at as "updatedAt",
           sequence
-        FROM org_domains_projection
+        FROM projections.org_domains
         WHERE instance_id = $1 AND org_id = $2
         ORDER BY is_primary DESC, created_at ASC`
       : `SELECT 
@@ -222,7 +222,7 @@ export class OrgQueries {
           created_at as "createdAt",
           updated_at as "updatedAt",
           sequence
-        FROM org_domains_projection
+        FROM projections.org_domains
         WHERE org_id = $1
         ORDER BY is_primary DESC, created_at ASC`;
     
@@ -270,7 +270,7 @@ export class OrgQueries {
     
     // Get total count
     const countResult = await this.database.query(
-      `SELECT COUNT(*) as count FROM org_domains_projection ${whereClause}`,
+      `SELECT COUNT(*) as count FROM projections.org_domains ${whereClause}`,
       params
     );
     const total = parseInt(countResult.rows[0].count, 10);
@@ -292,7 +292,7 @@ export class OrgQueries {
         created_at as "createdAt",
         updated_at as "updatedAt",
         sequence
-      FROM org_domains_projection
+      FROM projections.org_domains
       ${whereClause}
       ORDER BY created_at DESC
       LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
@@ -310,8 +310,8 @@ export class OrgQueries {
    */
   async isDomainAvailable(domain: string, instanceID?: string): Promise<boolean> {
     const query = instanceID
-      ? `SELECT COUNT(*) as count FROM org_domains_projection WHERE instance_id = $1 AND domain = $2`
-      : `SELECT COUNT(*) as count FROM org_domains_projection WHERE domain = $1`;
+      ? `SELECT COUNT(*) as count FROM projections.org_domains WHERE instance_id = $1 AND domain = $2`
+      : `SELECT COUNT(*) as count FROM projections.org_domains WHERE domain = $1`;
     
     const params = instanceID ? [instanceID, domain] : [domain];
     const result = await this.database.query(query, params);
@@ -335,7 +335,7 @@ export class OrgQueries {
           created_at as "createdAt",
           updated_at as "updatedAt",
           sequence
-        FROM org_domains_projection
+        FROM projections.org_domains
         WHERE instance_id = $1 AND org_id = $2 AND is_primary = TRUE`
       : `SELECT 
           instance_id as "instanceID",
@@ -348,7 +348,7 @@ export class OrgQueries {
           created_at as "createdAt",
           updated_at as "updatedAt",
           sequence
-        FROM org_domains_projection
+        FROM projections.org_domains
         WHERE org_id = $1 AND is_primary = TRUE`;
     
     const params = instanceID ? [instanceID, orgID] : [orgID];

@@ -1,0 +1,2 @@
+-- Migration: 001_06 - No-op (removed in Go v2 simplification)
+-- Instance queries are covered by idx_events_active_instances and idx_events_projection

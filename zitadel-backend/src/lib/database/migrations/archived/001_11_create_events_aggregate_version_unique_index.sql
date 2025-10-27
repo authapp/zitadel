@@ -1,0 +1,2 @@
+-- Migration: 001_11 - No-op (uniqueness enforced by primary key)
+-- Primary key (instance_id, aggregate_type, aggregate_id, aggregate_version) ensures uniqueness

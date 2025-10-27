@@ -8,7 +8,7 @@ import { Event } from '../../eventstore/types';
 
 export class AuthRequestProjection extends Projection {
   readonly name = 'auth_request_projection';
-  readonly tables = ['auth_requests'];
+  readonly tables = ['projections.auth_requests'];
 
   /**
    * Initialize projection - table created by migration 002_56

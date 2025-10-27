@@ -15,7 +15,7 @@ import { ProjectionConfig } from '../projection/projection-config';
  */
 export class ProjectProjection extends Projection {
   readonly name = 'project_projection';
-  readonly tables = ['projects_projection'];
+  readonly tables = ['projections.projects'];
 
   /**
    * Initialize the projection
@@ -67,7 +67,7 @@ export class ProjectProjection extends Projection {
     }
 
     await this.database.query(
-      `INSERT INTO projects_projection (
+      `INSERT INTO projections.projects (
         id, instance_id, name, resource_owner, state, 
         project_role_assertion, project_role_check, has_project_check,
         private_labeling_setting,
@@ -82,7 +82,7 @@ export class ProjectProjection extends Projection {
         private_labeling_setting = EXCLUDED.private_labeling_setting,
         updated_at = EXCLUDED.updated_at,
         change_date = EXCLUDED.change_date,
-        sequence = GREATEST(projects_projection.sequence, EXCLUDED.sequence)`,
+        sequence = GREATEST(projections.projects.sequence, EXCLUDED.sequence)`,
       [
         event.aggregateID,
         event.instanceID || 'default',
@@ -146,7 +146,7 @@ export class ProjectProjection extends Projection {
     values.push(event.aggregateID);
 
     await this.database.query(
-      `UPDATE projects_projection 
+      `UPDATE projections.projects 
        SET ${updates.join(', ')}
        WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
       values
@@ -158,7 +158,7 @@ export class ProjectProjection extends Projection {
    */
   private async handleProjectDeactivated(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE projects_projection 
+      `UPDATE projections.projects 
        SET state = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
       ['inactive', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
@@ -170,7 +170,7 @@ export class ProjectProjection extends Projection {
    */
   private async handleProjectReactivated(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE projects_projection 
+      `UPDATE projections.projects 
        SET state = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
       ['active', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
@@ -182,7 +182,7 @@ export class ProjectProjection extends Projection {
    */
   private async handleProjectRemoved(event: Event): Promise<void> {
     await this.database.query(
-      `UPDATE projects_projection 
+      `UPDATE projections.projects 
        SET state = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
       ['removed', event.createdAt, event.createdAt, event.aggregateVersion, event.instanceID || 'default', event.aggregateID]
@@ -206,7 +206,7 @@ export function createProjectProjection(
 export function createProjectProjectionConfig(): ProjectionConfig {
   return {
     name: 'project_projection',
-    tables: ['projects_projection'],
+    tables: ['projections.projects'],
     eventTypes: [
       'project.added',
       'project.created',

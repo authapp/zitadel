@@ -9,7 +9,7 @@ import { Projection } from '../projection/projection';
 
 export class UserAddressProjection extends Projection {
   readonly name = 'user_address_projection';
-  readonly tables = ['user_addresses'];
+  readonly tables = ['projections.user_addresses'];
 
   async init(): Promise<void> {
     // Table created by migration 002_14
@@ -42,7 +42,7 @@ export class UserAddressProjection extends Projection {
     const addressId = `${event.aggregateID}_address`;
 
     await this.database.query(
-      `INSERT INTO user_addresses (
+      `INSERT INTO projections.user_addresses (
         id, user_id, instance_id, country, locality, postal_code,
         region, street_address, formatted_address, address_type,
         is_primary, created_at, updated_at
@@ -89,7 +89,7 @@ export class UserAddressProjection extends Projection {
 
   private async handleUserRemoved(event: Event): Promise<void> {
     await this.database.query(
-      `DELETE FROM user_addresses 
+      `DELETE FROM projections.user_addresses 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
     );
@@ -98,9 +98,9 @@ export class UserAddressProjection extends Projection {
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Remove addresses for all users in this organization
     await this.database.query(
-      `DELETE FROM user_addresses 
+      `DELETE FROM projections.user_addresses 
        WHERE instance_id = $1 AND user_id IN (
-         SELECT id FROM users_projection 
+         SELECT id FROM projections.users 
          WHERE instance_id = $1 AND resource_owner = $2
        )`,
       [event.instanceID, event.aggregateID]
@@ -110,7 +110,7 @@ export class UserAddressProjection extends Projection {
   private async handleInstanceRemoved(event: Event): Promise<void> {
     // Remove all addresses for this instance
     await this.database.query(
-      `DELETE FROM user_addresses WHERE instance_id = $1`,
+      `DELETE FROM projections.user_addresses WHERE instance_id = $1`,
       [event.instanceID]
     );
   }
@@ -122,7 +122,7 @@ export class UserAddressProjection extends Projection {
 export function createUserAddressProjectionConfig() {
   return {
     name: 'user_address_projection',
-    tables: ['user_addresses'],
+    tables: ['projections.user_addresses'],
     eventTypes: [
       'user.human.address.changed',
       'user.v1.address.changed',

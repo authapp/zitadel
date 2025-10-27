@@ -16,7 +16,7 @@ import { ProjectionConfig } from '../projection/projection-config';
  */
 export class OrgDomainProjection extends Projection {
   readonly name = 'org_domain_projection';
-  readonly tables = ['org_domains_projection'];
+  readonly tables = ['projections.org_domains'];
 
   /**
    * Initialize the projection
@@ -66,7 +66,7 @@ export class OrgDomainProjection extends Projection {
     }
     
     await this.database.query(
-      `INSERT INTO org_domains_projection (
+      `INSERT INTO projections.org_domains (
         instance_id, org_id, domain, is_verified, is_primary, validation_type, validation_code,
         created_at, updated_at, sequence, change_date
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -74,7 +74,7 @@ export class OrgDomainProjection extends Projection {
         validation_type = EXCLUDED.validation_type,
         validation_code = EXCLUDED.validation_code,
         updated_at = EXCLUDED.updated_at,
-        sequence = GREATEST(org_domains_projection.sequence, EXCLUDED.sequence),
+        sequence = GREATEST(projections.org_domains.sequence, EXCLUDED.sequence),
         change_date = EXCLUDED.change_date`,
       [
         event.instanceID,
@@ -104,7 +104,7 @@ export class OrgDomainProjection extends Projection {
     }
     
     await this.database.query(
-      `UPDATE org_domains_projection 
+      `UPDATE projections.org_domains 
        SET is_verified = $1, updated_at = $2, sequence = $3, change_date = $4
        WHERE instance_id = $5 AND org_id = $6 AND domain = $7`,
       [true, event.createdAt, event.aggregateVersion, event.createdAt, event.instanceID, event.aggregateID, data.domain]
@@ -124,7 +124,7 @@ export class OrgDomainProjection extends Projection {
     
     // Unset all other primary domains for this org
     await this.database.query(
-      `UPDATE org_domains_projection 
+      `UPDATE projections.org_domains 
        SET is_primary = FALSE, updated_at = $1, change_date = $2
        WHERE instance_id = $3 AND org_id = $4 AND is_primary = TRUE`,
       [event.createdAt, event.createdAt, event.instanceID, event.aggregateID]
@@ -132,15 +132,15 @@ export class OrgDomainProjection extends Projection {
     
     // Set new primary domain
     await this.database.query(
-      `UPDATE org_domains_projection 
+      `UPDATE projections.org_domains 
        SET is_primary = TRUE, updated_at = $1, sequence = $2, change_date = $3
        WHERE instance_id = $4 AND org_id = $5 AND domain = $6`,
       [event.createdAt, event.aggregateVersion, event.createdAt, event.instanceID, event.aggregateID, data.domain]
     );
     
-    // Update org's primary_domain field (orgs_projection already has instance_id from Phase 1)
+    // Update org's primary_domain field (projections.orgs already has instance_id from Phase 1)
     await this.database.query(
-      `UPDATE orgs_projection 
+      `UPDATE projections.orgs 
        SET primary_domain = $1, updated_at = $2, change_date = $3
        WHERE instance_id = $4 AND id = $5`,
       [data.domain, event.createdAt, event.createdAt, event.instanceID, event.aggregateID]
@@ -160,7 +160,7 @@ export class OrgDomainProjection extends Projection {
     
     // Check if this was the primary domain
     const result = await this.database.query(
-      `SELECT is_primary FROM org_domains_projection 
+      `SELECT is_primary FROM projections.org_domains 
        WHERE instance_id = $1 AND org_id = $2 AND domain = $3`,
       [event.instanceID, event.aggregateID, data.domain]
     );
@@ -169,7 +169,7 @@ export class OrgDomainProjection extends Projection {
     
     // Delete the domain
     await this.database.query(
-      `DELETE FROM org_domains_projection 
+      `DELETE FROM projections.org_domains 
        WHERE instance_id = $1 AND org_id = $2 AND domain = $3`,
       [event.instanceID, event.aggregateID, data.domain]
     );
@@ -177,7 +177,7 @@ export class OrgDomainProjection extends Projection {
     // If this was primary, clear org's primary_domain
     if (wasPrimary) {
       await this.database.query(
-        `UPDATE orgs_projection 
+        `UPDATE projections.orgs 
          SET primary_domain = NULL, updated_at = $1, change_date = $2
          WHERE instance_id = $3 AND id = $4`,
         [event.createdAt, event.createdAt, event.instanceID, event.aggregateID]
@@ -202,7 +202,7 @@ export function createOrgDomainProjection(
 export function createOrgDomainProjectionConfig(): ProjectionConfig {
   return {
     name: 'org_domain_projection',
-    tables: ['org_domains_projection'],
+    tables: ['projections.org_domains'],
     eventTypes: [
       'org.domain.added',
       'org.domain.verified',

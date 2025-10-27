@@ -1,0 +1,2 @@
+-- Migration: 001_05 - No-op (removed in Go v2 simplification)
+-- Owner queries are covered by composite indexes

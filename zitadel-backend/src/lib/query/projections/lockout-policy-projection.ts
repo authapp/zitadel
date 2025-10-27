@@ -8,7 +8,7 @@ import { Projection } from '../projection/projection';
 
 export class LockoutPolicyProjection extends Projection {
   readonly name = 'lockout_policy_projection';
-  readonly tables = ['lockout_policies_projection'];
+  readonly tables = ['projections.lockout_policies'];
 
   async init(): Promise<void> {
     // Table created by migration 002_46
@@ -39,31 +39,30 @@ export class LockoutPolicyProjection extends Projection {
     const isInstance = event.eventType.startsWith('instance.');
     
     await this.database.query(
-      `INSERT INTO lockout_policies_projection (
-        id, instance_id, resource_owner, max_password_attempts, max_otp_attempts,
-        show_failure, is_default, created_at, updated_at, change_date, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (instance_id, id) DO UPDATE SET
-        max_password_attempts = EXCLUDED.max_password_attempts,
-        max_otp_attempts = EXCLUDED.max_otp_attempts,
-        show_failure = EXCLUDED.show_failure,
-        updated_at = EXCLUDED.updated_at,
-        change_date = EXCLUDED.change_date,
-        sequence = GREATEST(lockout_policies_projection.sequence, EXCLUDED.sequence)`,
-      [
-        data.id || event.aggregateID,
-        event.instanceID || 'default',
-        event.owner,
-        data.maxPasswordAttempts || 5,
-        data.maxOTPAttempts || data.maxOtpAttempts || 5,  // Support both naming conventions
-        data.showFailures !== undefined ? data.showFailures : (data.showFailure !== false),  // Support both field names
-        isInstance,
-        event.createdAt,
-        event.createdAt,
-        event.createdAt,
-        event.aggregateVersion,
-      ]
-    );
+        `INSERT INTO projections.lockout_policies (
+          id, instance_id, organization_id, resource_owner, max_password_attempts, max_otp_attempts,
+          show_failures, is_default, creation_date, change_date, sequence
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (instance_id, id) DO UPDATE SET
+          max_password_attempts = EXCLUDED.max_password_attempts,
+          max_otp_attempts = EXCLUDED.max_otp_attempts,
+          show_failures = EXCLUDED.show_failures,
+          change_date = EXCLUDED.change_date,
+          sequence = GREATEST(projections.lockout_policies.sequence, EXCLUDED.sequence)`,
+        [
+          data.id || event.aggregateID,
+          event.instanceID || 'default',
+          event.owner,  // organization_id
+          event.owner,  // resource_owner (same value)
+          data.maxPasswordAttempts || 5,
+          data.maxOTPAttempts || data.maxOtpAttempts || 5,  // Support both naming conventions
+          data.showFailures !== undefined ? data.showFailures : (data.showFailure !== false),  // Support both field names
+          isInstance,
+          event.createdAt,
+          event.createdAt,
+          event.aggregateVersion,
+        ]
+      );
   }
 
   private async handleLockoutPolicyChanged(event: Event): Promise<void> {
@@ -81,13 +80,11 @@ export class LockoutPolicyProjection extends Projection {
       values.push(data.maxOTPAttempts || data.maxOtpAttempts);
     }
     if (data.showFailures !== undefined || data.showFailure !== undefined) {
-      updates.push(`show_failure = $${paramIndex++}`);
+      updates.push(`show_failures = $${paramIndex++}`);
       values.push(data.showFailures !== undefined ? data.showFailures : data.showFailure);
     }
 
     if (updates.length > 0) {
-      updates.push(`updated_at = $${paramIndex++}`);
-      values.push(event.createdAt);
       updates.push(`change_date = $${paramIndex++}`);
       values.push(event.createdAt);
       updates.push(`sequence = $${paramIndex++}`);
@@ -97,7 +94,7 @@ export class LockoutPolicyProjection extends Projection {
       values.push(data.id || event.aggregateID);
 
       await this.database.query(
-        `UPDATE lockout_policies_projection SET ${updates.join(', ')} 
+        `UPDATE projections.lockout_policies SET ${updates.join(', ')} 
          WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
         values
       );
@@ -107,7 +104,7 @@ export class LockoutPolicyProjection extends Projection {
   private async handleLockoutPolicyRemoved(event: Event): Promise<void> {
     const data = event.payload as any;
     await this.database.query(
-      `DELETE FROM lockout_policies_projection 
+      `DELETE FROM projections.lockout_policies 
        WHERE instance_id = $1 AND id = $2`,
       [event.instanceID || 'default', data.id || event.aggregateID]
     );
@@ -116,7 +113,7 @@ export class LockoutPolicyProjection extends Projection {
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Delete all policies for the removed organization
     await this.database.query(
-      `DELETE FROM lockout_policies_projection 
+      `DELETE FROM projections.lockout_policies 
        WHERE instance_id = $1 AND resource_owner = $2 AND is_default = false`,
       [event.instanceID || 'default', event.aggregateID]
     );

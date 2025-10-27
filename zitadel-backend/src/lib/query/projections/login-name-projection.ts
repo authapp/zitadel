@@ -1,6 +1,6 @@
 /**
  * Login Name projection for Zitadel query layer
- * Projects user, org, and instance events into login_names_projection table
+ * Projects user, org, and instance events into projections.login_names table
  * 
  * This is a denormalized table for fast login name lookups.
  * Login names are generated from: username/email + org/instance domain
@@ -12,7 +12,7 @@ import { Event } from '../../eventstore/types';
 
 export class LoginNameProjection extends Projection {
   readonly name = 'login_name_projection';
-  readonly tables = ['login_names_projection'];
+  readonly tables = ['projections.login_names'];
 
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
@@ -149,11 +149,11 @@ export class LoginNameProjection extends Projection {
       return;
     }
 
-    // Get user's email from users_projection (may not exist yet)
+    // Get user's email from projections.users (may not exist yet)
     let email: string | undefined;
     try {
       const userResults = await this.database.queryMany(
-        `SELECT email FROM users_projection WHERE id = $1 AND instance_id = $2`,
+        `SELECT email FROM projections.users WHERE id = $1 AND instance_id = $2`,
         [userId, instanceId]
       );
       email = userResults[0]?.email;
@@ -172,7 +172,7 @@ export class LoginNameProjection extends Projection {
     
     // Remove old login names
     await this.database.query(
-      `DELETE FROM login_names_projection 
+      `DELETE FROM projections.login_names 
        WHERE user_id = $1 AND instance_id = $2`,
       [userId, instanceId]
     );
@@ -219,7 +219,7 @@ export class LoginNameProjection extends Projection {
     const instanceId = event.instanceID;
     
     await this.database.query(
-      `DELETE FROM login_names_projection 
+      `DELETE FROM projections.login_names 
        WHERE user_id = $1 AND instance_id = $2`,
       [userId, instanceId]
     );
@@ -301,7 +301,7 @@ export class LoginNameProjection extends Projection {
 
     // Mark all login names with this domain as primary
     await this.database.query(
-      `UPDATE login_names_projection 
+      `UPDATE projections.login_names 
        SET is_primary = TRUE, updated_at = $1
        WHERE resource_owner = $2 AND instance_id = $3 AND domain_name = $4`,
       [event.createdAt, orgId, instanceId, domainName]
@@ -309,7 +309,7 @@ export class LoginNameProjection extends Projection {
     
     // Mark all other org domain login names as non-primary
     await this.database.query(
-      `UPDATE login_names_projection 
+      `UPDATE projections.login_names 
        SET is_primary = FALSE, updated_at = $1
        WHERE resource_owner = $2 AND instance_id = $3 AND domain_name != $4`,
       [event.createdAt, orgId, instanceId, domainName]
@@ -329,7 +329,7 @@ export class LoginNameProjection extends Projection {
 
     // Remove all login names with this domain
     await this.database.query(
-      `DELETE FROM login_names_projection 
+      `DELETE FROM projections.login_names 
        WHERE resource_owner = $1 AND instance_id = $2 AND domain_name = $3`,
       [orgId, instanceId, domainName]
     );
@@ -388,7 +388,7 @@ export class LoginNameProjection extends Projection {
 
     // Mark all login names with this instance domain as primary
     await this.database.query(
-      `UPDATE login_names_projection 
+      `UPDATE projections.login_names 
        SET is_primary = TRUE, updated_at = $1
        WHERE instance_id = $2 AND domain_name = $3`,
       [event.createdAt, instanceId, domainName]
@@ -402,7 +402,7 @@ export class LoginNameProjection extends Projection {
     try {
       const result = await this.database.queryMany(
         `SELECT domain, is_primary 
-         FROM org_domains_projection 
+         FROM projections.org_domains 
          WHERE org_id = $1 AND is_verified = TRUE`,
         [orgId]
       );
@@ -412,7 +412,7 @@ export class LoginNameProjection extends Projection {
         isPrimary: r.is_primary,
       }));
     } catch (error) {
-      // If org_domains_projection doesn't have the domain yet, return empty array
+      // If projections.org_domains doesn't have the domain yet, return empty array
       // This can happen due to projection timing or database closing
       return [];
     }
@@ -422,11 +422,10 @@ export class LoginNameProjection extends Projection {
    * Helper: Get instance domains
    * @internal - Reserved for future instance domain support
    */
-  // @ts-expect-error - Reserved for future use
   private async getInstanceDomains(instanceId: string): Promise<Array<{name: string, isPrimary: boolean}>> {
     const result = await this.database.queryMany(
       `SELECT domain 
-       FROM instance_domains_projection 
+       FROM projections.instance_domains 
        WHERE instance_id = $1`,
       [instanceId]
     );
@@ -444,7 +443,7 @@ export class LoginNameProjection extends Projection {
     try {
       const result = await this.database.queryMany(
         `SELECT id, username, email 
-         FROM users_projection 
+         FROM projections.users 
          WHERE resource_owner = $1 AND instance_id = $2 AND state != 'deleted'`,
         [orgId, instanceId]
       );
@@ -467,7 +466,7 @@ export class LoginNameProjection extends Projection {
     try {
       const result = await this.database.queryMany(
         `SELECT id, username, email, resource_owner 
-         FROM users_projection 
+         FROM projections.users 
          WHERE instance_id = $1 AND state != 'deleted'`,
         [instanceId]
       );
@@ -503,7 +502,7 @@ export class LoginNameProjection extends Projection {
     const sequenceValue = sequence || 0;
     
     await this.database.query(
-      `INSERT INTO login_names_projection (
+      `INSERT INTO projections.login_names (
         user_id, instance_id, resource_owner, login_name, domain_name,
         is_primary, created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -537,7 +536,7 @@ export class LoginNameProjection extends Projection {
 export function createLoginNameProjectionConfig(): ProjectionConfig {
   return {
     name: 'login_name_projection',
-    tables: ['login_names_projection'],
+    tables: ['projections.login_names'],
     eventTypes: [
       // User events
       'user.added',
