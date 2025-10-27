@@ -5,45 +5,6 @@
 -- Schema: public and projections
 -- =============================================================================
 
--- Create projections schema if it doesn't exist
-CREATE SCHEMA IF NOT EXISTS projections;
-
--- ============================================================================
--- PROJECTION SYSTEM INFRASTRUCTURE
--- ============================================================================
-
--- Table: projections.projection_states
--- Description: Track projection processing state with all required columns
-CREATE TABLE IF NOT EXISTS projections.projection_states (
-    -- Core identification and tracking
-    name VARCHAR(255) PRIMARY KEY,
-    position DECIMAL NOT NULL DEFAULT 0,
-    position_offset INT NOT NULL DEFAULT 0,
-    
-    -- Timestamps
-    last_processed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    
-    -- Status tracking
-    status VARCHAR(50) NOT NULL DEFAULT 'stopped',
-    error_count INTEGER NOT NULL DEFAULT 0,
-    last_error TEXT,
-    
-    -- Enhanced tracking fields (optional, nullable for backward compatibility)
-    event_timestamp TIMESTAMPTZ,
-    instance_id TEXT,
-    aggregate_type TEXT,
-    aggregate_id TEXT,
-    sequence BIGINT
-);
-
--- Add indexes for projection_states common queries
-CREATE INDEX IF NOT EXISTS idx_projection_states_status ON projections.projection_states(status);
-CREATE INDEX IF NOT EXISTS idx_projection_states_position ON projections.projection_states(position);
-CREATE INDEX IF NOT EXISTS idx_projection_states_position_offset ON projections.projection_states(name, position, position_offset);
-CREATE INDEX IF NOT EXISTS idx_projection_states_updated_at ON projections.projection_states(updated_at DESC);
-
 -- ============================================================================
 -- EVENT STORE INFRASTRUCTURE
 -- ============================================================================
@@ -194,32 +155,6 @@ CREATE TABLE IF NOT EXISTS public.quota_notifications (
     percent SMALLINT NOT NULL,
     call_url TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- PROJECTION SYSTEM SUPPORT
--- ============================================================================
-
--- Table: public.projection_locks
--- Description: Distributed locks for projection processing
-CREATE TABLE IF NOT EXISTS public.projection_locks (
-    projection_name TEXT PRIMARY KEY,
-    instance_id TEXT,
-    acquired_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMP WITH TIME ZONE NOT NULL
-);
-
--- Table: public.projection_failed_events
--- Description: Track events that failed projection processing
-CREATE TABLE IF NOT EXISTS public.projection_failed_events (
-    projection_name TEXT NOT NULL,
-    failed_sequence BIGINT NOT NULL,
-    failure_count INTEGER NOT NULL DEFAULT 1,
-    error TEXT NOT NULL,
-    event_data JSONB NOT NULL,
-    last_failed TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    instance_id TEXT NOT NULL,
-    UNIQUE(projection_name, failed_sequence)
 );
 
 -- ============================================================================
