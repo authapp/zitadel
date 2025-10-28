@@ -47,6 +47,8 @@ describe('User Auth Method Projection Integration Tests', () => {
     
     // Register user auth method projection
     const projection = new UserAuthMethodProjection(eventstore, pool);
+    await projection.init();
+    
     registry.register({
       name: 'user_auth_method_projection',
       tables: ['projections.user_auth_methods'],

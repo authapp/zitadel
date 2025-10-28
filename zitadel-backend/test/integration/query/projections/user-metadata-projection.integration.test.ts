@@ -36,9 +36,12 @@ describe('User Metadata Projection Integration Tests', () => {
 
     await registry.init();
 
+    const projection = new UserMetadataProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createUserMetadataProjectionConfig();
     config.interval = 50;
-    registry.register(config, new UserMetadataProjection(eventstore, pool));
+    registry.register(config, projection);
 
     await registry.start('user_metadata_projection');
 

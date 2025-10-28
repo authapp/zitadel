@@ -41,7 +41,7 @@ export class UserAddressProjection extends Projection {
     const payload = event.payload as any;
     const addressId = `${event.aggregateID}_address`;
 
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.user_addresses (
         id, user_id, instance_id, country, locality, postal_code,
         region, street_address, formatted_address, address_type,
@@ -88,7 +88,7 @@ export class UserAddressProjection extends Projection {
   }
 
   private async handleUserRemoved(event: Event): Promise<void> {
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_addresses 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
@@ -97,7 +97,7 @@ export class UserAddressProjection extends Projection {
 
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Remove addresses for all users in this organization
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_addresses 
        WHERE instance_id = $1 AND user_id IN (
          SELECT id FROM projections.users 
@@ -109,7 +109,7 @@ export class UserAddressProjection extends Projection {
 
   private async handleInstanceRemoved(event: Event): Promise<void> {
     // Remove all addresses for this instance
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_addresses WHERE instance_id = $1`,
       [event.instanceID]
     );
@@ -131,6 +131,9 @@ export function createUserAddressProjectionConfig() {
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['user', 'org', 'instance'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }

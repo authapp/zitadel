@@ -47,6 +47,8 @@ describe('Personal Access Token Projection Integration Tests', () => {
     
     // Register PAT projection
     const projection = new PersonalAccessTokenProjection(eventstore, pool);
+    await projection.init();
+    
     registry.register({
       name: 'personal_access_token_projection',
       tables: ['projections.personal_access_tokens'],

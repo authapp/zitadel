@@ -66,7 +66,7 @@ export class UserMetadataProjection extends Projection {
       ? JSON.stringify(metadataValue)
       : JSON.stringify(metadataValue);
 
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.user_metadata (
         id, user_id, instance_id, metadata_key, metadata_value,
         metadata_type, scope, created_at, updated_at, created_by, updated_by
@@ -105,14 +105,14 @@ export class UserMetadataProjection extends Projection {
     
     if (scope) {
       // Remove specific scoped metadata
-      await this.database.query(
+      await this.query(
         `DELETE FROM projections.user_metadata 
          WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope = $4`,
         [event.instanceID, event.aggregateID, metadataKey, scope]
       );
     } else {
       // Remove metadata with null scope
-      await this.database.query(
+      await this.query(
         `DELETE FROM projections.user_metadata 
          WHERE instance_id = $1 AND user_id = $2 AND metadata_key = $3 AND scope IS NULL`,
         [event.instanceID, event.aggregateID, metadataKey]
@@ -122,7 +122,7 @@ export class UserMetadataProjection extends Projection {
 
   private async handleAllMetadataRemoved(event: Event): Promise<void> {
     // Remove all metadata for this user
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
@@ -130,7 +130,7 @@ export class UserMetadataProjection extends Projection {
   }
 
   private async handleUserRemoved(event: Event): Promise<void> {
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id = $2`,
       [event.instanceID, event.aggregateID]
@@ -139,7 +139,7 @@ export class UserMetadataProjection extends Projection {
 
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Remove metadata for all users in this organization
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_metadata 
        WHERE instance_id = $1 AND user_id IN (
          SELECT id FROM projections.users 
@@ -151,7 +151,7 @@ export class UserMetadataProjection extends Projection {
 
   private async handleInstanceRemoved(event: Event): Promise<void> {
     // Remove all metadata for this instance
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.user_metadata WHERE instance_id = $1`,
       [event.instanceID]
     );
@@ -177,6 +177,9 @@ export function createUserMetadataProjectionConfig() {
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['user', 'org', 'instance'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }

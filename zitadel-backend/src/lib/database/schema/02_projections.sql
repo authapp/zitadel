@@ -626,7 +626,8 @@ CREATE TABLE IF NOT EXISTS projections.personal_access_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    sequence BIGINT NOT NULL DEFAULT 0
+    sequence BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.privacy_policies
@@ -820,7 +821,8 @@ CREATE TABLE IF NOT EXISTS projections.user_addresses (
     is_primary BOOLEAN DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    change_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    change_date TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.user_auth_methods
@@ -836,7 +838,8 @@ CREATE TABLE IF NOT EXISTS projections.user_auth_methods (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    sequence BIGINT NOT NULL DEFAULT 0
+    sequence BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.user_grants
@@ -868,7 +871,8 @@ CREATE TABLE IF NOT EXISTS projections.user_metadata (
     updated_by VARCHAR(255),
     change_date TIMESTAMPTZ,
     sequence BIGINT NOT NULL DEFAULT 0,
-    resource_owner TEXT
+    resource_owner TEXT,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.users

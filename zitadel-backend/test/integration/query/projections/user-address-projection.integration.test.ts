@@ -36,9 +36,12 @@ describe('User Address Projection Integration Tests', () => {
 
     await registry.init();
 
+    const projection = new UserAddressProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createUserAddressProjectionConfig();
     config.interval = 50;
-    registry.register(config, new UserAddressProjection(eventstore, pool));
+    registry.register(config, projection);
 
     await registry.start('user_address_projection');
 

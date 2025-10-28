@@ -39,7 +39,7 @@ export class UserAuthMethodProjection extends Projection {
 
   private async handleOTPAdded(event: Event): Promise<void> {
     const data = event.payload as any;
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.user_auth_methods (
         id, instance_id, user_id, method_type, state, token_id, name,
         created_at, updated_at, change_date, sequence
@@ -62,7 +62,7 @@ export class UserAuthMethodProjection extends Projection {
   }
 
   private async handleOTPRemoved(event: Event): Promise<void> {
-    await this.database.query(
+    await this.query(
       `UPDATE projections.user_auth_methods 
        SET state = 'inactive', updated_at = $1, change_date = $2
        WHERE instance_id = $3 AND user_id = $4 AND method_type = 'otp'`,
@@ -72,7 +72,7 @@ export class UserAuthMethodProjection extends Projection {
 
   private async handleU2FAdded(event: Event): Promise<void> {
     const data = event.payload as any;
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.user_auth_methods (
         id, instance_id, user_id, method_type, state, token_id, public_key, name,
         created_at, updated_at, change_date, sequence
@@ -97,7 +97,7 @@ export class UserAuthMethodProjection extends Projection {
 
   private async handleU2FRemoved(event: Event): Promise<void> {
     const data = event.payload as any;
-    await this.database.query(
+    await this.query(
       `UPDATE projections.user_auth_methods 
        SET state = 'inactive', updated_at = $1, change_date = $2
        WHERE instance_id = $3 AND user_id = $4 AND token_id = $5`,
@@ -107,7 +107,7 @@ export class UserAuthMethodProjection extends Projection {
 
   private async handlePasswordlessAdded(event: Event): Promise<void> {
     const data = event.payload as any;
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.user_auth_methods (
         id, instance_id, user_id, method_type, state, token_id, public_key, name,
         created_at, updated_at, change_date, sequence
@@ -132,7 +132,7 @@ export class UserAuthMethodProjection extends Projection {
 
   private async handlePasswordlessRemoved(event: Event): Promise<void> {
     const data = event.payload as any;
-    await this.database.query(
+    await this.query(
       `UPDATE projections.user_auth_methods 
        SET state = 'inactive', updated_at = $1, change_date = $2
        WHERE instance_id = $3 AND user_id = $4 AND token_id = $5`,
