@@ -674,8 +674,14 @@ CREATE TABLE IF NOT EXISTS projections.project_grants (
     granted_roles TEXT[] NOT NULL DEFAULT '{}'::text[],
     creation_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    sequence BIGINT NOT NULL DEFAULT 0
+    sequence BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (instance_id, id)
 );
+
+CREATE INDEX IF NOT EXISTS project_grants_project_id_idx ON projections.project_grants(project_id);
+CREATE INDEX IF NOT EXISTS project_grants_granted_org_id_idx ON projections.project_grants(granted_org_id);
+CREATE INDEX IF NOT EXISTS project_grants_resource_owner_idx ON projections.project_grants(resource_owner);
+CREATE INDEX IF NOT EXISTS project_grants_state_idx ON projections.project_grants(state);
 
 -- Table: projections.project_grants_projection
 CREATE TABLE IF NOT EXISTS projections.project_grants_projection (
@@ -847,14 +853,21 @@ CREATE TABLE IF NOT EXISTS projections.user_grants (
     id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     project_id TEXT NOT NULL,
+    project_grant_id TEXT,
     resource_owner TEXT NOT NULL,
     instance_id TEXT NOT NULL,
     state SMALLINT NOT NULL DEFAULT 1,
     roles TEXT[] NOT NULL DEFAULT '{}'::text[],
     creation_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    sequence BIGINT NOT NULL DEFAULT 0
+    sequence BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (instance_id, id)
 );
+
+CREATE INDEX IF NOT EXISTS user_grants_user_id_idx ON projections.user_grants(user_id);
+CREATE INDEX IF NOT EXISTS user_grants_project_id_idx ON projections.user_grants(project_id);
+CREATE INDEX IF NOT EXISTS user_grants_resource_owner_idx ON projections.user_grants(resource_owner);
+CREATE INDEX IF NOT EXISTS user_grants_state_idx ON projections.user_grants(state);
 
 -- Table: projections.user_metadata
 CREATE TABLE IF NOT EXISTS projections.user_metadata (

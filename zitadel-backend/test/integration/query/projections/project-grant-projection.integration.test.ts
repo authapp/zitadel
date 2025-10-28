@@ -11,7 +11,7 @@ import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/even
 import { Event } from '../../../../src/lib/eventstore/types';
 import { State } from '../../../../src/lib/query/converters/state-converter';
 
-describe.skip('ProjectGrantProjection Integration - SKIPPED: Constraint issue, needs fresh DB setup', () => {
+describe('ProjectGrantProjection Integration', () => {
   let database: DatabasePool;
   let projection: ProjectGrantProjection;
   let eventstore: PostgresEventstore;

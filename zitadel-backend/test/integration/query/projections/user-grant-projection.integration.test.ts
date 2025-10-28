@@ -11,7 +11,7 @@ import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/even
 import { Event } from '../../../../src/lib/eventstore/types';
 import { State } from '../../../../src/lib/query/converters/state-converter';
 
-describe.skip('UserGrantProjection Integration - SKIPPED: Missing table projections.user_grants', () => {
+describe('UserGrantProjection Integration', () => {
   let database: DatabasePool;
   let projection: UserGrantProjection;
   let eventstore: PostgresEventstore;
