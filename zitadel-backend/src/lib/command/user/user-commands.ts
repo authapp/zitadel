@@ -10,6 +10,7 @@ import { Commands } from '../commands';
 import { validateEmail, validateUsername, validatePassword, DEFAULT_PASSWORD_POLICY } from '../validation';
 import { throwInvalidArgument, throwAlreadyExists, throwNotFound, throwPreconditionFailed } from '@/zerrors/errors';
 import { UserWriteModel, UserState, UserType } from './user-write-model';
+import { OrgUsersWriteModel } from './org-users-write-model';
 import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../write-model';
 
 // Use event repository for type-safe events
@@ -81,7 +82,19 @@ export async function addHumanUser(
   // 3. Check permissions
   await this.checkPermission(ctx, 'user', 'create', data.orgID);
   
-  // 4. Load write model to check if user exists
+  // 4. Check username uniqueness within organization (Option 3: Write Model Validation)
+  const orgUsersWM = new OrgUsersWriteModel(data.orgID);
+  await orgUsersWM.load(this.getEventstore(), data.orgID);
+  
+  if (orgUsersWM.isUsernameTaken(data.username)) {
+    const existingUserID = orgUsersWM.getUserIDByUsername(data.username);
+    throwAlreadyExists(
+      `username '${data.username}' is already taken by user ${existingUserID}`, 
+      'COMMAND-User14'
+    );
+  }
+  
+  // 5. Load write model to check if user ID exists
   const wm = new UserWriteModel();
   await wm.load(this.getEventstore(), data.userID, data.orgID);
   
@@ -89,7 +102,7 @@ export async function addHumanUser(
     throwAlreadyExists('user already exists', 'COMMAND-User13');
   }
   
-  // 5. Create command using event factory
+  // 6. Create command using event factory
   const payload: HumanAddedPayload = {
     username: data.username,
     email: data.email,
@@ -110,10 +123,10 @@ export async function addHumanUser(
     ctx.userID || 'system'
   );
   
-  // 6. Push to eventstore
+  // 7. Push to eventstore
   const event = await this.getEventstore().push(command);
   
-  // 7. Update write model
+  // 8. Update write model
   appendAndReduce(wm, event);
   
   return {

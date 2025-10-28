@@ -39,7 +39,7 @@ describe('Logout Commands - Complete Stack', () => {
     await ctx.clearEvents();
     
     // Clear projection data
-    await pool.query('TRUNCATE sessions_projection CASCADE');
+    await pool.query('TRUNCATE projections.sessions CASCADE');
   });
   
   /**

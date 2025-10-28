@@ -63,11 +63,8 @@ describe('User Integration Commands', () => {
       expect(event.payload?.email).toBe('john.doe@example.com');
     });
 
-    it.skip('should reject duplicate username (requires query layer)', async () => {
-      // NOTE: This test is skipped because username uniqueness checking
-      // requires the query layer to check existing usernames.
-      // The current command implementation only checks userID uniqueness.
-      // This will be implemented when the query/projection layer is complete.
+    it('should reject duplicate username', async () => {
+      // NOTE: Uses Option 3 (Write Model Validation) - loads all org users before validating
       
       // Arrange
       const context = ctx.createContext();
@@ -83,7 +80,7 @@ describe('User Integration Commands', () => {
         password: 'SecurePassword123!',
       });
 
-      await ctx.clearEvents();
+      // NOTE: Don't clear events - OrgUsersWriteModel needs to see the first user's event
 
       // Act & Assert - Try to create second user with same username
       await expect(

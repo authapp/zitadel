@@ -61,8 +61,8 @@ describe('Instance Commands - Complete Flow', () => {
     await ctx.clearEvents();
     
     // Clear projection data
-    await pool.query('TRUNCATE instances_projection CASCADE');
-    await pool.query('TRUNCATE instance_domains_projection CASCADE');
+    await pool.query('TRUNCATE projections.instances CASCADE');
+    await pool.query('TRUNCATE projections.instance_domains CASCADE');
     await pool.query('TRUNCATE projections.instance_members CASCADE');
   });
 

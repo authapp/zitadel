@@ -919,6 +919,8 @@ CREATE TABLE IF NOT EXISTS projections.users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     deleted_at TIMESTAMPTZ,
     change_date TIMESTAMPTZ,
-    sequence BIGINT NOT NULL DEFAULT 0
+    sequence BIGINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (instance_id, id),
+    UNIQUE (instance_id, resource_owner, username)
 );
 
