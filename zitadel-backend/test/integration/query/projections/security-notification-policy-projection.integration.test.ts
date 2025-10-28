@@ -44,18 +44,27 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     await registry.init();
     
     // Register projections
+    const projection = new SecurityNotificationPolicyProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createSecurityNotificationPolicyProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
-    registry.register(config, new SecurityNotificationPolicyProjection(eventstore, pool));
+    registry.register(config, projection);
     
     // Also register lockout policy projection since this test suite tests lockout policies
+    const lockoutProjection = new LockoutPolicyProjection(eventstore, pool);
+    await lockoutProjection.init();
+    
     const lockoutConfig = {
       name: 'lockout_policy_projection',
       tables: ['projections.lockout_policies'],
       eventTypes: ['instance.lockout.policy.added', 'instance.lockout.policy.changed', 'org.lockout.policy.added', 'org.lockout.policy.changed', 'org.removed'],
+      aggregateTypes: ['org', 'instance'],
+      batchSize: 100,
       interval: 50,
+      enableLocking: false,
     };
-    registry.register(lockoutConfig, new LockoutPolicyProjection(eventstore, pool));
+    registry.register(lockoutConfig, lockoutProjection);
     
     await registry.start('security_notification_policy_projection');
     await registry.start('lockout_policy_projection');

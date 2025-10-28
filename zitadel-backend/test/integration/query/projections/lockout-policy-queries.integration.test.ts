@@ -41,6 +41,8 @@ describe('Lockout Policy Queries Integration Tests', () => {
     
     // Register lockout policy projection
     const projection = new LockoutPolicyProjection(eventstore, pool);
+    await projection.init();
+    
     registry.register({
       name: 'lockout_policy_projection',
       tables: ['projections.lockout_policies'],

@@ -214,7 +214,8 @@ CREATE TABLE IF NOT EXISTS projections.domain_policies (
     user_login_must_be_domain BOOLEAN NOT NULL DEFAULT false,
     validate_org_domains BOOLEAN NOT NULL DEFAULT false,
     smtp_sender_address_matches_instance_domain BOOLEAN NOT NULL DEFAULT false,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.email_configs
@@ -395,7 +396,8 @@ CREATE TABLE IF NOT EXISTS projections.label_policies (
     error_msg_popup BOOLEAN NOT NULL DEFAULT false,
     disable_watermark BOOLEAN NOT NULL DEFAULT false,
     theme_mode TEXT NOT NULL DEFAULT 'auto'::text,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.lockout_policies
@@ -410,7 +412,8 @@ CREATE TABLE IF NOT EXISTS projections.lockout_policies (
     max_password_attempts BIGINT NOT NULL DEFAULT 10,
     max_otp_attempts BIGINT NOT NULL DEFAULT 5,
     show_failures BOOLEAN NOT NULL DEFAULT true,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.lockout_policies_projection
@@ -517,7 +520,8 @@ CREATE TABLE IF NOT EXISTS projections.notification_policies (
     sequence BIGINT NOT NULL,
     resource_owner TEXT NOT NULL,
     password_change BOOLEAN NOT NULL DEFAULT true,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.oidc_settings
@@ -586,7 +590,8 @@ CREATE TABLE IF NOT EXISTS projections.password_age_policies (
     resource_owner TEXT NOT NULL,
     max_age_days INTEGER NOT NULL DEFAULT 0,
     expire_warn_days INTEGER NOT NULL DEFAULT 0,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.password_complexity_policies
@@ -603,7 +608,8 @@ CREATE TABLE IF NOT EXISTS projections.password_complexity_policies (
     has_lowercase BOOLEAN NOT NULL DEFAULT true,
     has_number BOOLEAN NOT NULL DEFAULT true,
     has_symbol BOOLEAN NOT NULL DEFAULT false,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.personal_access_tokens
@@ -637,7 +643,8 @@ CREATE TABLE IF NOT EXISTS projections.privacy_policies (
     docs_link TEXT,
     custom_link TEXT,
     custom_link_text TEXT,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.project_grant_members
@@ -733,7 +740,8 @@ CREATE TABLE IF NOT EXISTS projections.security_policies (
     resource_owner TEXT NOT NULL,
     enable_iframe_embedding BOOLEAN NOT NULL DEFAULT false,
     allowed_origins TEXT[],
-    enable_impersonation BOOLEAN NOT NULL DEFAULT false
+    enable_impersonation BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, aggregate_id)
 );
 
 -- Table: projections.sessions

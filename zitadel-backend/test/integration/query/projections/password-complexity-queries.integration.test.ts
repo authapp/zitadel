@@ -41,6 +41,8 @@ describe('Password Complexity Queries Integration Tests', () => {
     
     // Register password policy projection
     const projection = new PasswordPolicyProjection(eventstore, pool);
+    await projection.init();
+    
     registry.register({
       name: 'password_policy_projection',
       tables: ['password_complexity_policies'],

@@ -40,9 +40,12 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
     await registry.init();
     
     // Register domain/label policy projection
+    const projection = new DomainLabelPolicyProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createDomainLabelPolicyProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
-    registry.register(config, new DomainLabelPolicyProjection(eventstore, pool));
+    registry.register(config, projection);
     
     await registry.start('domain_label_policy_projection');
 

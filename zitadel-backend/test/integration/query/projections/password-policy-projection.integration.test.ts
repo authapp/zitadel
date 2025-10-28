@@ -39,9 +39,12 @@ describe('Password Policy Projection Integration Tests', () => {
     await registry.init();
     
     // Register password policy projection
+    const projection = new PasswordPolicyProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createPasswordPolicyProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
-    registry.register(config, new PasswordPolicyProjection(eventstore, pool));
+    registry.register(config, projection);
     
     await registry.start('password_policy_projection');
 

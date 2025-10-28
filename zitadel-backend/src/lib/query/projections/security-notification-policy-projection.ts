@@ -392,14 +392,14 @@ export class SecurityNotificationPolicyProjection extends Projection {
         aggregate_id, instance_id, creation_date, change_date, sequence, resource_owner,
         enable_iframe_embedding, allowed_origins, enable_impersonation
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (instance_id) DO UPDATE SET
+      ON CONFLICT (instance_id, aggregate_id) DO UPDATE SET
         change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence,
         enable_iframe_embedding = EXCLUDED.enable_iframe_embedding,
         allowed_origins = EXCLUDED.allowed_origins,
         enable_impersonation = EXCLUDED.enable_impersonation`,
       [
-        event.instanceID,
+        event.aggregateID,
         event.instanceID,
         event.createdAt,
         event.createdAt,
@@ -438,11 +438,12 @@ export class SecurityNotificationPolicyProjection extends Projection {
     }
 
     values.push(event.instanceID);
+    values.push(event.aggregateID);
 
     await this.query(
       `UPDATE projections.security_policies SET
         ${updates.join(', ')}
-      WHERE instance_id = $${paramIndex}`,
+      WHERE instance_id = $${paramIndex} AND aggregate_id = $${paramIndex + 1}`,
       values
     );
   }
@@ -524,6 +525,9 @@ export function createSecurityNotificationPolicyProjectionConfig(): ProjectionCo
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['org', 'instance'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }
