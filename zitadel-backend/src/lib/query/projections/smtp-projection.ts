@@ -266,6 +266,9 @@ export function createSMTPProjectionConfig(): ProjectionConfig {
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['org', 'instance'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }

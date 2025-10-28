@@ -39,9 +39,12 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     await registry.init();
     
     // Register projection
+    const projection = new MailOIDCProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createMailOIDCProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
-    registry.register(config, new MailOIDCProjection(eventstore, pool));
+    registry.register(config, projection);
     
     await registry.start('mail_oidc_projection');
 

@@ -490,7 +490,8 @@ CREATE TABLE IF NOT EXISTS projections.mail_templates (
     change_date TIMESTAMPTZ NOT NULL,
     sequence BIGINT NOT NULL,
     template TEXT NOT NULL,
-    is_default BOOLEAN NOT NULL DEFAULT false
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    PRIMARY KEY (instance_id, aggregate_id)
 );
 
 -- Table: projections.milestones
@@ -535,7 +536,8 @@ CREATE TABLE IF NOT EXISTS projections.oidc_settings (
     access_token_lifetime BIGINT NOT NULL DEFAULT 43200,
     id_token_lifetime BIGINT NOT NULL DEFAULT 43200,
     refresh_token_idle_expiration BIGINT NOT NULL DEFAULT 1296000,
-    refresh_token_expiration BIGINT NOT NULL DEFAULT 2592000
+    refresh_token_expiration BIGINT NOT NULL DEFAULT 2592000,
+    PRIMARY KEY (instance_id, aggregate_id)
 );
 
 -- Table: projections.org_domains
@@ -780,7 +782,8 @@ CREATE TABLE IF NOT EXISTS projections.sms_configs (
     twilio_sid TEXT,
     twilio_sender_number TEXT,
     twilio_verify_service_sid TEXT,
-    http_endpoint TEXT
+    http_endpoint TEXT,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.smtp_configs
@@ -798,7 +801,8 @@ CREATE TABLE IF NOT EXISTS projections.smtp_configs (
     sender_name TEXT,
     reply_to_address TEXT,
     host TEXT NOT NULL,
-    smtp_user TEXT
+    smtp_user TEXT,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.user_addresses

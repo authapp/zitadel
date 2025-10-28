@@ -37,9 +37,12 @@ describe('SMTP Projection Integration Tests', () => {
     
     await registry.init();
     
+    const projection = new SMTPProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createSMTPProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
-    registry.register(config, new SMTPProjection(eventstore, pool));
+    registry.register(config, projection);
     
     await registry.start('smtp_projection');
 

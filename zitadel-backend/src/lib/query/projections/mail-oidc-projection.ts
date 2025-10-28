@@ -171,7 +171,7 @@ export class MailOIDCProjection extends Projection {
         aggregate_id, instance_id, creation_date, change_date, sequence, resource_owner,
         access_token_lifetime, id_token_lifetime, refresh_token_idle_expiration, refresh_token_expiration
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (instance_id) DO UPDATE SET
+      ON CONFLICT (instance_id, aggregate_id) DO UPDATE SET
         change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence,
         access_token_lifetime = EXCLUDED.access_token_lifetime,
@@ -179,7 +179,7 @@ export class MailOIDCProjection extends Projection {
         refresh_token_idle_expiration = EXCLUDED.refresh_token_idle_expiration,
         refresh_token_expiration = EXCLUDED.refresh_token_expiration`,
       [
-        event.instanceID,
+        event.aggregateID,
         event.instanceID,
         event.createdAt,
         event.createdAt,
@@ -225,11 +225,12 @@ export class MailOIDCProjection extends Projection {
     }
 
     values.push(event.instanceID);
+    values.push(event.aggregateID);
 
     await this.query(
       `UPDATE projections.oidc_settings SET
         ${updates.join(', ')}
-      WHERE instance_id = $${paramIndex}`,
+      WHERE instance_id = $${paramIndex} AND aggregate_id = $${paramIndex + 1}`,
       values
     );
   }
@@ -281,6 +282,9 @@ export function createMailOIDCProjectionConfig(): ProjectionConfig {
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['org', 'instance'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }
