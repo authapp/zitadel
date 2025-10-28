@@ -467,6 +467,28 @@ export class Commands {
     require('./user/user-phone-commands').removeUserPhone;
   
   // --------------------------------------------------------------------------
+  // User Grant Commands
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Add user grant - grant user access to a project
+   */
+  addUserGrant: typeof import('./user/user-grant-commands').addUserGrant = 
+    require('./user/user-grant-commands').addUserGrant;
+  
+  /**
+   * Change user grant roles
+   */
+  changeUserGrant: typeof import('./user/user-grant-commands').changeUserGrant = 
+    require('./user/user-grant-commands').changeUserGrant;
+  
+  /**
+   * Remove user grant
+   */
+  removeUserGrant: typeof import('./user/user-grant-commands').removeUserGrant = 
+    require('./user/user-grant-commands').removeUserGrant;
+  
+  // --------------------------------------------------------------------------
   // User Email Verification Commands
   // --------------------------------------------------------------------------
   

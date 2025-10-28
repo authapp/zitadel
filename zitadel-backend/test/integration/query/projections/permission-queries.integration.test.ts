@@ -26,6 +26,7 @@ import {
   ConditionType,
 } from '../../../../src/lib/query/permission/permission-types';
 import { generateId } from '../../../../src/lib/id';
+import { setupCommandTest, CommandTestContext } from '../../../helpers/command-test-helpers';
 
 describe('Permission Queries Integration Tests', () => {
   let pool: DatabasePool;
@@ -33,6 +34,7 @@ describe('Permission Queries Integration Tests', () => {
   let registry: ProjectionRegistry;
   let permissionQueries: PermissionQueries;
   let systemQueries: SystemPermissionQueries;
+  let commandCtx: CommandTestContext;
 
   const TEST_INSTANCE_ID = 'test-instance';
 
@@ -85,6 +87,22 @@ describe('Permission Queries Integration Tests', () => {
 
     permissionQueries = new PermissionQueries(pool);
     systemQueries = new SystemPermissionQueries(pool);
+    commandCtx = await setupCommandTest(pool);
+
+    // Setup instance (required for command API to work)
+    await eventstore.push({
+      eventType: 'instance.setup',
+      aggregateType: 'instance',
+      aggregateID: TEST_INSTANCE_ID,
+      payload: {
+        instanceName: 'Test Instance',
+        defaultLanguage: 'en',
+      },
+      creator: 'system',
+      owner: TEST_INSTANCE_ID,
+      instanceID: TEST_INSTANCE_ID,
+    });
+    await new Promise(resolve => setTimeout(resolve, 200));
   }, 30000);
 
   afterAll(async () => {
@@ -108,102 +126,131 @@ describe('Permission Queries Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  // Helper: Add user grant
-  async function addUserGrant(userId: string, projectId: string, orgId: string, roles: string[]): Promise<string> {
-    const grantId = generateId();
+  // Helper: Setup org (required for command API)
+  async function setupOrg(orgId: string): Promise<void> {
     await eventstore.push({
-      eventType: 'user.grant.added',
-      aggregateType: 'user',
-      aggregateID: userId,
+      eventType: 'org.added',
+      aggregateType: 'org',
+      aggregateID: orgId,
       payload: {
-        userGrantID: grantId,
-        userID: userId,
-        projectID: projectId,
-        roleKeys: roles,
+        name: 'Test Org',
       },
       creator: 'system',
       owner: orgId,
       instanceID: TEST_INSTANCE_ID,
     });
-    
     await processProjections();
-    return grantId;
   }
 
-  // Helper: Add instance member
+  // Helper: Setup project (required for command API)
+  async function setupProject(projectId: string, orgId: string): Promise<void> {
+    await eventstore.push({
+      eventType: 'project.added',
+      aggregateType: 'project',
+      aggregateID: projectId,
+      payload: {
+        name: 'Test Project',
+        projectRoleAssertion: false,
+        projectRoleCheck: false,
+        hasProjectCheck: false,
+        privateLabelingSetting: 0,
+      },
+      creator: 'system',
+      owner: orgId,
+      instanceID: TEST_INSTANCE_ID,
+    });
+    await processProjections();
+  }
+
+  // Helper: Add user grant (using Command API)
+  async function addUserGrant(userId: string, projectId: string, orgId: string, roles: string[]): Promise<string> {
+    await setupOrg(orgId);
+    await setupProject(projectId, orgId);
+    
+    const ctx = commandCtx.createContext({
+      instanceID: TEST_INSTANCE_ID,
+      orgID: orgId,
+      userID: 'system-admin',
+    });
+    
+    const result = await commandCtx.commands.addUserGrant(ctx, {
+      userID: userId,
+      projectID: projectId,
+      roleKeys: roles,
+    });
+    
+    await processProjections();
+    return result.grantID;
+  }
+
+  // Helper: Add instance member (using Command API)
   async function addInstanceMember(userId: string, roles: string[]): Promise<void> {
-    await eventstore.push({
-      eventType: 'instance.member.added',
-      aggregateType: 'instance',
-      aggregateID: TEST_INSTANCE_ID,
-      payload: {
-        userId,
-        roles,
-      },
-      creator: 'system',
-      owner: TEST_INSTANCE_ID,
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: TEST_INSTANCE_ID,
+      userID: 'system-admin',
     });
     
+    await commandCtx.commands.addInstanceMember(ctx, TEST_INSTANCE_ID, userId, roles);
     await processProjections();
   }
 
-  // Helper: Add org member
+  // Helper: Add org member (using Command API)
   async function addOrgMember(userId: string, orgId: string, roles: string[]): Promise<void> {
-    await eventstore.push({
-      eventType: 'org.member.added',
-      aggregateType: 'org',
-      aggregateID: orgId,
-      payload: {
-        userId,
-        roles,
-      },
-      creator: 'system',
-      owner: TEST_INSTANCE_ID,
+    await setupOrg(orgId);
+    
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: orgId,
+      userID: 'system-admin',
     });
     
+    await commandCtx.commands.addOrgMember(ctx, orgId, {
+      userID: userId,
+      roles,
+    });
     await processProjections();
   }
 
-  // Helper: Add project member
+  // Helper: Add project member (using Command API)
   async function addProjectMember(userId: string, projectId: string, roles: string[]): Promise<void> {
-    await eventstore.push({
-      eventType: 'project.member.added',
-      aggregateType: 'project',
-      aggregateID: projectId,
-      payload: {
-        userId,
-        roles,
-      },
-      creator: 'system',
-      owner: TEST_INSTANCE_ID,
+    const orgId = generateId();
+    await setupOrg(orgId);
+    await setupProject(projectId, orgId);
+    
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: orgId,
+      userID: 'system-admin',
     });
     
+    await commandCtx.commands.addProjectMember(ctx, projectId, orgId, {
+      userID: userId,
+      roles,
+    });
     await processProjections();
   }
 
-  // Helper: Add project grant
+  // Helper: Add project grant (using Command API)
   async function addProjectGrant(projectId: string, grantedOrgId: string, roles: string[]): Promise<string> {
-    const grantId = generateId();
-    await eventstore.push({
-      eventType: 'project.grant.added',
-      aggregateType: 'project',
-      aggregateID: projectId,
-      payload: {
-        grantID: grantId,
-        projectID: projectId,
-        grantedOrgID: grantedOrgId,
-        roleKeys: roles,
-      },
-      creator: 'system',
-      owner: TEST_INSTANCE_ID,
+    const ownerOrgId = generateId();
+    await setupOrg(ownerOrgId);
+    await setupOrg(grantedOrgId);
+    await setupProject(projectId, ownerOrgId);
+    
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: ownerOrgId,
+      userID: 'system-admin',
+    });
+    
+    const result = await commandCtx.commands.addProjectGrant(ctx, projectId, ownerOrgId, {
+      grantedOrgID: grantedOrgId,
+      roleKeys: roles,
     });
     
     await processProjections();
-    return grantId;
+    return result.grantID;
   }
 
   describe('User Grant Permissions', () => {
