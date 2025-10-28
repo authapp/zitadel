@@ -16,17 +16,14 @@ CREATE TABLE IF NOT EXISTS public.events (
     owner TEXT NOT NULL,
     aggregate_type TEXT NOT NULL,
     aggregate_id TEXT NOT NULL,
-    revision TEXT NOT NULL DEFAULT '1',
-    creator TEXT,
+    revision INTEGER NOT NULL DEFAULT 1,
+    creator TEXT NOT NULL,
     event_type TEXT NOT NULL,
-    payload JSONB NOT NULL,
+    payload JSONB,
     aggregate_version BIGINT NOT NULL,
     in_tx_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    position BIGINT NOT NULL,
-    sequence BIGINT,
-    previous_aggregate_sequence BIGINT,
-    previous_aggregate_type_sequence BIGINT,
+    position DECIMAL NOT NULL,
     PRIMARY KEY (instance_id, aggregate_type, aggregate_id, aggregate_version)
 );
 
@@ -132,29 +129,45 @@ CREATE TABLE IF NOT EXISTS public.notification_config_changes (
 -- ============================================================================
 
 -- Table: public.quotas
--- Description: Resource quotas per instance/org
+-- Description: Resource quotas per instance (Zitadel Go v2 compatible)
+-- Primary Key: (instance_id, unit) - one quota per resource type per instance
 CREATE TABLE IF NOT EXISTS public.quotas (
-    id TEXT PRIMARY KEY,
+    id TEXT NOT NULL,
     instance_id TEXT NOT NULL,
-    resource_owner TEXT NOT NULL,
     unit TEXT NOT NULL,
-    amount BIGINT NOT NULL,
-    from_anchor TIMESTAMP WITH TIME ZONE,
-    interval_duration TEXT,
-    limit_usage BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    amount BIGINT,                           -- Nullable: quota can be set without limit
+    from_anchor TIMESTAMP WITH TIME ZONE,    -- Nullable: optional period start
+    interval INTERVAL,                       -- Nullable: optional reset period
+    limit_usage BOOLEAN,                     -- Nullable: whether to enforce
+    PRIMARY KEY (instance_id, unit)          -- Zitadel Go compatible PK
 );
 
 -- Table: public.quota_notifications
--- Description: Quota usage notifications
+-- Description: Quota usage notifications (Zitadel Go v2 compatible)
+-- Primary Key: (instance_id, unit, id) - multiple notifications per quota
 CREATE TABLE IF NOT EXISTS public.quota_notifications (
-    id TEXT PRIMARY KEY,
     instance_id TEXT NOT NULL,
-    quota_id TEXT NOT NULL,
-    percent SMALLINT NOT NULL,
+    unit TEXT NOT NULL,
+    id TEXT NOT NULL,
     call_url TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+    percent INTEGER NOT NULL,
+    repeat BOOLEAN NOT NULL,
+    latest_due_period_start TIMESTAMP WITH TIME ZONE,  -- Last period when notification was due
+    next_due_threshold INTEGER,                        -- Next usage threshold to trigger
+    PRIMARY KEY (instance_id, unit, id),
+    FOREIGN KEY (instance_id, unit) REFERENCES public.quotas(instance_id, unit) ON DELETE CASCADE
+);
+
+-- Table: public.quotas_periods
+-- Description: Tracks quota usage per time period (Zitadel Go v2 compatible)
+-- Primary Key: (instance_id, unit, start) - usage per period per quota
+CREATE TABLE IF NOT EXISTS public.quotas_periods (
+    instance_id TEXT NOT NULL,
+    unit TEXT NOT NULL,
+    start TIMESTAMP WITH TIME ZONE NOT NULL,  -- Period start timestamp
+    usage BIGINT NOT NULL DEFAULT 0,          -- Usage counter for this period
+    PRIMARY KEY (instance_id, unit, start),
+    FOREIGN KEY (instance_id, unit) REFERENCES public.quotas(instance_id, unit) ON DELETE CASCADE
 );
 
 -- ============================================================================

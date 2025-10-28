@@ -1,7 +1,8 @@
 /**
  * Quota Projection
  * Handles quota and resource limit events
- * Based on Zitadel Go internal/query/quota.go
+ * Based on Zitadel Go internal/query/projection/quota.go
+ * Updated to match Zitadel Go v2 schema (Oct 28, 2025)
  */
 
 import { Event } from '../../eventstore/types';
@@ -9,10 +10,10 @@ import { Projection } from '../projection/projection';
 
 export class QuotaProjection extends Projection {
   readonly name = 'quota_projection';
-  readonly tables = ['quotas', 'quota_notifications'];
+  readonly tables = ['quotas', 'quota_notifications', 'quotas_periods'];
 
   async init(): Promise<void> {
-    // Tables created by migration 002_50
+    // Tables created by migration schema
   }
 
   async reduce(event: Event): Promise<void> {
@@ -35,41 +36,43 @@ export class QuotaProjection extends Projection {
       case 'quota.notification.removed':
         await this.handleNotificationRemoved(event);
         break;
+      case 'quota.usage.incremented':
+        await this.handleUsageIncremented(event);
+        break;
+      case 'instance.removed':
+        await this.handleInstanceRemoved(event);
+        break;
       default:
-        console.warn(`Unhandled event type in quota projection: ${event.eventType}`);
+        // Silently ignore unhandled events
+        break;
     }
   }
 
   /**
    * Handle quota.added event
+   * Zitadel Go: Uses ON CONFLICT (instance_id, unit) for upsert
    */
   private async handleQuotaAdded(event: Event): Promise<void> {
     const data = event.payload as any;
     
     await this.database.query(
       `INSERT INTO quotas (
-        id, instance_id, resource_owner, unit, amount, limit_usage,
-        from_anchor, interval, creation_date, change_date, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-      ON CONFLICT (instance_id, id) DO UPDATE SET
+        id, instance_id, unit, amount, limit_usage, from_anchor, interval
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (instance_id, unit) DO UPDATE SET
+        id = EXCLUDED.id,
         amount = EXCLUDED.amount,
         limit_usage = EXCLUDED.limit_usage,
         from_anchor = EXCLUDED.from_anchor,
-        interval = EXCLUDED.interval,
-        change_date = EXCLUDED.change_date,
-        sequence = EXCLUDED.sequence`,
+        interval = EXCLUDED.interval`,
       [
         data.id || event.aggregateID,
         event.instanceID || 'default',
-        event.owner || event.aggregateID,
         data.unit,
-        data.amount || 0,
-        data.limitUsage !== undefined ? data.limitUsage : false,
-        data.fromAnchor || event.createdAt,
+        data.amount !== undefined ? data.amount : null,
+        data.limitUsage !== undefined ? data.limitUsage : null,
+        data.fromAnchor || null,
         data.interval || null,
-        event.createdAt,
-        event.createdAt,
-        event.aggregateVersion || 0,
       ]
     );
   }
@@ -83,6 +86,11 @@ export class QuotaProjection extends Projection {
     const updates: string[] = [];
     const values: any[] = [];
     let paramIndex = 1;
+
+    if (data.id !== undefined) {
+      updates.push(`id = $${paramIndex++}`);
+      values.push(data.id);
+    }
 
     if (data.amount !== undefined) {
       updates.push(`amount = $${paramIndex++}`);
@@ -108,64 +116,58 @@ export class QuotaProjection extends Projection {
       return; // No changes
     }
 
-    updates.push(`change_date = $${paramIndex++}`);
-    values.push(event.createdAt);
-    
-    updates.push(`sequence = $${paramIndex++}`);
-    values.push(event.aggregateVersion || 0);
-
     values.push(event.instanceID || 'default');
-    values.push(data.id || event.aggregateID);
+    values.push(data.unit);
 
     await this.database.query(
       `UPDATE quotas 
        SET ${updates.join(', ')}
-       WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
+       WHERE instance_id = $${paramIndex++} AND unit = $${paramIndex}`,
       values
     );
   }
 
   /**
    * Handle quota.removed event
+   * Cascade delete will remove notifications and periods
    */
   private async handleQuotaRemoved(event: Event): Promise<void> {
     const data = event.payload as any;
     
     await this.database.query(
       `DELETE FROM quotas 
-       WHERE instance_id = $1 AND id = $2`,
-      [event.instanceID || 'default', data.id || event.aggregateID]
+       WHERE instance_id = $1 AND unit = $2`,
+      [event.instanceID || 'default', data.unit]
     );
   }
 
   /**
    * Handle quota.notification.added event
+   * Zitadel Go: Uses ON CONFLICT (instance_id, unit, id) for upsert
    */
   private async handleNotificationAdded(event: Event): Promise<void> {
     const data = event.payload as any;
     
     await this.database.query(
       `INSERT INTO quota_notifications (
-        id, instance_id, quota_id, call_url, percent, repeat,
-        latest_notified_at, creation_date, change_date, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (instance_id, id) DO UPDATE SET
+        instance_id, unit, id, call_url, percent, repeat,
+        latest_due_period_start, next_due_threshold
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      ON CONFLICT (instance_id, unit, id) DO UPDATE SET
         call_url = EXCLUDED.call_url,
         percent = EXCLUDED.percent,
         repeat = EXCLUDED.repeat,
-        change_date = EXCLUDED.change_date,
-        sequence = EXCLUDED.sequence`,
+        latest_due_period_start = EXCLUDED.latest_due_period_start,
+        next_due_threshold = EXCLUDED.next_due_threshold`,
       [
-        data.id || `notif_${Date.now()}`,
         event.instanceID || 'default',
-        data.quotaId,
+        data.unit,
+        data.id || `notif_${Date.now()}`,
         data.callURL,
         data.percent || 100,
         data.repeat !== undefined ? data.repeat : false,
-        null,
-        event.createdAt,
-        event.createdAt,
-        event.aggregateVersion || 0,
+        data.latestDuePeriodStart || null,
+        data.nextDueThreshold || null,
       ]
     );
   }
@@ -195,23 +197,28 @@ export class QuotaProjection extends Projection {
       values.push(data.repeat);
     }
 
+    if (data.latestDuePeriodStart !== undefined) {
+      updates.push(`latest_due_period_start = $${paramIndex++}`);
+      values.push(data.latestDuePeriodStart);
+    }
+
+    if (data.nextDueThreshold !== undefined) {
+      updates.push(`next_due_threshold = $${paramIndex++}`);
+      values.push(data.nextDueThreshold);
+    }
+
     if (updates.length === 0) {
       return;
     }
 
-    updates.push(`change_date = $${paramIndex++}`);
-    values.push(event.createdAt);
-    
-    updates.push(`sequence = $${paramIndex++}`);
-    values.push(event.aggregateVersion || 0);
-
     values.push(event.instanceID || 'default');
+    values.push(data.unit);
     values.push(data.id);
 
     await this.database.query(
       `UPDATE quota_notifications 
        SET ${updates.join(', ')}
-       WHERE instance_id = $${paramIndex++} AND id = $${paramIndex}`,
+       WHERE instance_id = $${paramIndex++} AND unit = $${paramIndex++} AND id = $${paramIndex}`,
       values
     );
   }
@@ -224,20 +231,74 @@ export class QuotaProjection extends Projection {
     
     await this.database.query(
       `DELETE FROM quota_notifications 
-       WHERE instance_id = $1 AND id = $2`,
-      [event.instanceID || 'default', data.id]
+       WHERE instance_id = $1 AND unit = $2 AND id = $3`,
+      [event.instanceID || 'default', data.unit, data.id]
     );
   }
 
   /**
-   * Mark notification as sent
+   * Handle quota.usage.incremented event
+   * Matches Zitadel Go incrementQuotaStatement
    */
-  async markNotificationSent(instanceID: string, notificationID: string): Promise<void> {
+  private async handleUsageIncremented(event: Event): Promise<void> {
+    const data = event.payload as any;
+    
+    await this.database.query(
+      `INSERT INTO quotas_periods (instance_id, unit, start, usage)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (instance_id, unit, start)
+       DO UPDATE SET usage = quotas_periods.usage + EXCLUDED.usage`,
+      [
+        event.instanceID || 'default',
+        data.unit,
+        data.periodStart || event.createdAt,
+        data.usage || 1,
+      ]
+    );
+  }
+
+  /**
+   * Handle instance.removed event
+   * Clean up all quotas for the instance (cascade handles rest)
+   */
+  private async handleInstanceRemoved(event: Event): Promise<void> {
+    await this.database.query(
+      `DELETE FROM quotas WHERE instance_id = $1`,
+      [event.instanceID || 'default']
+    );
+  }
+
+  /**
+   * Update notification tracking fields
+   * Used for notification scheduling
+   */
+  async updateNotificationTracking(
+    instanceID: string,
+    unit: string,
+    notificationID: string,
+    latestDuePeriodStart: Date,
+    nextDueThreshold: number
+  ): Promise<void> {
     await this.database.query(
       `UPDATE quota_notifications 
-       SET latest_notified_at = NOW()
-       WHERE instance_id = $1 AND id = $2`,
-      [instanceID, notificationID]
+       SET latest_due_period_start = $1, next_due_threshold = $2
+       WHERE instance_id = $3 AND unit = $4 AND id = $5`,
+      [latestDuePeriodStart, nextDueThreshold, instanceID, unit, notificationID]
+    );
+  }
+
+  /**
+   * Delete old periods (for cleanup/archival)
+   */
+  async deletePeriodsBeforeDate(
+    instanceID: string,
+    unit: string,
+    beforeDate: Date
+  ): Promise<void> {
+    await this.database.query(
+      `DELETE FROM quotas_periods 
+       WHERE instance_id = $1 AND unit = $2 AND start < $3`,
+      [instanceID, unit, beforeDate]
     );
   }
 }

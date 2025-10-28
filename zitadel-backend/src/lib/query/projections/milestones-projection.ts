@@ -80,7 +80,7 @@ export class MilestonesProjection extends Projection {
   private async handleMilestonePushed(event: Event): Promise<void> {
     const payload = event.payload as any;
 
-    await this.database.query(
+    await this.query(
       `INSERT INTO projections.milestones (
         id, instance_id, milestone_type, aggregate_type, aggregate_id,
         name, pushed_date, primary_domain, creation_date, change_date, sequence
@@ -108,7 +108,7 @@ export class MilestonesProjection extends Projection {
   private async handleMilestoneReached(event: Event): Promise<void> {
     const payload = event.payload as any;
 
-    await this.database.query(
+    await this.query(
       `UPDATE projections.milestones 
        SET reached_date = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
@@ -131,13 +131,13 @@ export class MilestonesProjection extends Projection {
     const milestoneId = `${event.aggregateType}_${event.aggregateID}_${milestoneName}`;
 
     // Check if milestone already exists
-    const existing = await this.database.queryOne(
+    const existing = await this.query(
       'SELECT id FROM projections.milestones WHERE instance_id = $1 AND id = $2',
       [event.instanceID, milestoneId]
     );
 
-    if (!existing) {
-      await this.database.query(
+    if (existing.rows.length === 0) {
+      await this.query(
         `INSERT INTO projections.milestones (
           id, instance_id, milestone_type, aggregate_type, aggregate_id,
           name, reached_date, creation_date, change_date, sequence
@@ -157,7 +157,7 @@ export class MilestonesProjection extends Projection {
       );
     } else if (autoReach) {
       // Update reached date if not already reached
-      await this.database.query(
+      await this.query(
         `UPDATE projections.milestones 
          SET reached_date = COALESCE(reached_date, $1), change_date = $2, sequence = $3
          WHERE instance_id = $4 AND id = $5`,
@@ -184,7 +184,7 @@ export class MilestonesProjection extends Projection {
 
   private async handleOrgRemoved(event: Event): Promise<void> {
     // Remove all milestones for this organization
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.milestones 
        WHERE instance_id = $1 AND aggregate_type = 'org' AND aggregate_id = $2`,
       [event.instanceID, event.aggregateID]
@@ -193,7 +193,7 @@ export class MilestonesProjection extends Projection {
 
   private async handleInstanceRemoved(event: Event): Promise<void> {
     // Remove all milestones for this instance
-    await this.database.query(
+    await this.query(
       `DELETE FROM projections.milestones WHERE instance_id = $1`,
       [event.instanceID]
     );
@@ -238,6 +238,9 @@ export function createMilestonesProjectionConfig() {
       'org.removed',
       'instance.removed',
     ],
+    aggregateTypes: ['instance', 'org', 'project', 'user'],
+    batchSize: 100,
     interval: 1000,
+    enableLocking: false,
   };
 }

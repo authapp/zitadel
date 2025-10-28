@@ -35,9 +35,9 @@ CREATE INDEX IF NOT EXISTS idx_events_projection ON public.events USING btree (
     created_at DESC
 );
 
--- Index: idx_failed_events_last_failed on public.projection_failed_events
+-- Index: idx_failed_events_last_failed on projections.projection_failed_events
 -- Description: Failed events tracking by time
-CREATE INDEX IF NOT EXISTS idx_failed_events_last_failed ON public.projection_failed_events USING btree (
+CREATE INDEX IF NOT EXISTS idx_failed_events_last_failed ON projections.projection_failed_events USING btree (
     last_failed DESC
 );
 

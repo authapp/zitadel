@@ -93,9 +93,8 @@ describe('Instance Projection Integration Tests', () => {
         owner: instanceID,
       }];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -145,9 +144,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -188,9 +186,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -234,9 +231,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -281,9 +277,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -328,9 +323,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -394,9 +388,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -453,9 +446,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -496,9 +488,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -550,9 +541,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -581,9 +571,8 @@ describe('Instance Projection Integration Tests', () => {
         owner: instanceID,
       }];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 
@@ -636,9 +625,8 @@ describe('Instance Projection Integration Tests', () => {
         },
       ];
 
-      for (const cmd of commands) {
-        await eventstore.push(cmd);
-      }
+      // Push all commands in one transaction to get proper in_tx_order
+      await eventstore.pushMany(commands);
 
       await waitForProjection();
 

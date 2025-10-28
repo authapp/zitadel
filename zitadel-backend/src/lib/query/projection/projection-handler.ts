@@ -13,7 +13,7 @@ import { Projection } from './projection';
 import { ProjectionHandlerConfig } from './projection-config';
 import { FailedEventHandler } from './failed-events';
 import { CurrentState } from './current-state';
-import { Event, Eventstore, EventFilter } from '../../eventstore/types';
+import { Event, Eventstore } from '../../eventstore/types';
 import { DatabasePool, QueryExecutor } from '../../database/pool';
 
 /**
@@ -261,12 +261,8 @@ export class ProjectionHandler {
           currentState.eventTimestamp = event.createdAt;
           currentState.instanceID = this.config.instanceID || undefined;
 
-          // Increment offset if same position
-          if (i > 0 && eventsToProcess[i-1].position.position === event.position.position) {
-            positionOffset++;
-          } else {
-            positionOffset = 0;
-          }
+          // Use inTxOrder from event as position offset
+          positionOffset = event.position.inTxOrder;
           currentState.positionOffset = positionOffset;
 
           lastProcessedIndex = i;
@@ -406,28 +402,29 @@ export class ProjectionHandler {
     offset: number
   ): Promise<Event[]> {
     try {
-      const filter: EventFilter = {
-        aggregateTypes: this.config.aggregateTypes.length > 0 ? this.config.aggregateTypes : undefined,
-        eventTypes: this.config.eventTypes.length > 0 ? this.config.eventTypes : undefined,
-        // Note: config.instanceID is for tracking which handler instance is processing,
-        // not for filtering events. Projections process all events regardless of instanceID.
-        limit: this.config.batchSize,
-      };
+      // Zitadel Go v2 pattern: Use eventsAfterPosition for exclusive (>) filtering
+      // SQL: position > $1 OR (position = $1 AND in_tx_order > $2)
+      // This ensures we don't reprocess the event we just completed
+      const allEvents = await this.eventstore.eventsAfterPosition(
+        { position: fromPosition, inTxOrder: offset },
+        this.config.batchSize
+      );
 
-      const result = await this.eventstore.query(filter);
+      // Apply projection-specific filters (aggregate types and event types)
+      let filteredEvents = allEvents;
       
-      // Filter events after current position
-      let filteredEvents = result.filter((e: Event) => e.position.position > fromPosition);
-
-      // If offset > 0, we need to skip events at the same position
-      if (offset > 0 && filteredEvents.length > 0) {
-        const firstEvent = filteredEvents[0];
-        if (firstEvent.position.position === fromPosition) {
-          // Skip 'offset' events at this position
-          filteredEvents = filteredEvents.slice(offset);
-        }
+      if (this.config.aggregateTypes.length > 0) {
+        filteredEvents = filteredEvents.filter(e => 
+          this.config.aggregateTypes.includes(e.aggregateType)
+        );
       }
-
+      
+      if (this.config.eventTypes.length > 0) {
+        filteredEvents = filteredEvents.filter(e => 
+          this.config.eventTypes.includes(e.eventType)
+        );
+      }
+      
       return filteredEvents;
     } catch (error) {
       console.error(`Error fetching events for ${this.config.name}:`, error);
@@ -480,7 +477,7 @@ export class ProjectionHandler {
 
     // Check if this event has failed before
     const existing = await tx.query(
-      `SELECT failure_count FROM projection_failed_events 
+      `SELECT failure_count FROM projections.projection_failed_events 
        WHERE projection_name = $1 AND failed_sequence = $2`,
       [this.config.name, failedSequence]
     );
@@ -488,7 +485,7 @@ export class ProjectionHandler {
     if (existing.rows.length > 0) {
       // Increment failure count
       await tx.query(
-        `UPDATE projection_failed_events 
+        `UPDATE projections.projection_failed_events 
          SET failure_count = failure_count + 1,
              error = $1,
              last_failed = NOW()
@@ -498,7 +495,7 @@ export class ProjectionHandler {
     } else {
       // Insert new failed event
       await tx.query(
-        `INSERT INTO projection_failed_events (
+        `INSERT INTO projections.projection_failed_events (
           id, projection_name, failed_sequence, failure_count, error, 
           event_data, last_failed, instance_id
         ) VALUES ($1, $2, $3, 1, $4, $5, NOW(), $6)`,

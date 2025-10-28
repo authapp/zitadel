@@ -2,6 +2,7 @@
  * Quota Queries
  * Handles querying resource quotas and limits
  * Based on Zitadel Go internal/query/quota.go
+ * Aligned with Zitadel Go v2 schema
  */
 
 import { DatabasePool } from '../../database';
@@ -9,44 +10,45 @@ import { DatabasePool } from '../../database';
 export interface Quota {
   id: string;
   instanceID: string;
-  resourceOwner: string;
   unit: string;
-  amount: number;
-  limitUsage: boolean;
-  fromAnchor: Date;
+  amount: number | null;
+  limitUsage: boolean | null;
+  fromAnchor: Date | null;
   interval: string | null;
-  creationDate: Date;
-  changeDate: Date;
-  sequence: number;
 }
 
 export interface QuotaNotification {
   id: string;
   instanceID: string;
-  quotaID: string;
+  unit: string;
   callURL: string;
   percent: number;
   repeat: boolean;
-  latestNotifiedAt: Date | null;
-  creationDate: Date;
-  changeDate: Date;
-  sequence: number;
+  latestDuePeriodStart: Date | null;
+  nextDueThreshold: number | null;
+}
+
+export interface QuotaPeriod {
+  instanceID: string;
+  unit: string;
+  start: Date;
+  usage: number;
 }
 
 export class QuotaQueries {
   constructor(private readonly database: DatabasePool) {}
 
   /**
-   * Get quota by ID
+   * Get quota by unit (primary lookup in Zitadel Go)
+   * PK: (instance_id, unit)
    */
-  async getQuota(instanceID: string, quotaID: string): Promise<Quota | null> {
+  async getQuotaByUnit(instanceID: string, unit: string): Promise<Quota | null> {
     const result = await this.database.queryOne(
       `SELECT 
-        id, instance_id, resource_owner, unit, amount, limit_usage,
-        from_anchor, interval, creation_date, change_date, sequence
+        id, instance_id, unit, amount, limit_usage, from_anchor, interval
       FROM quotas
-      WHERE instance_id = $1 AND id = $2`,
-      [instanceID, quotaID]
+      WHERE instance_id = $1 AND unit = $2`,
+      [instanceID, unit]
     );
 
     if (!result) {
@@ -57,44 +59,19 @@ export class QuotaQueries {
   }
 
   /**
-   * Get all quotas for a resource owner (instance or org)
+   * Get all quotas for an instance
    */
-  async getQuotasByOwner(instanceID: string, resourceOwner: string): Promise<Quota[]> {
+  async getQuotasByInstance(instanceID: string): Promise<Quota[]> {
     const result = await this.database.queryMany(
       `SELECT 
-        id, instance_id, resource_owner, unit, amount, limit_usage,
-        from_anchor, interval, creation_date, change_date, sequence
+        id, instance_id, unit, amount, limit_usage, from_anchor, interval
       FROM quotas
-      WHERE instance_id = $1 AND resource_owner = $2
+      WHERE instance_id = $1
       ORDER BY unit ASC`,
-      [instanceID, resourceOwner]
+      [instanceID]
     );
 
     return result.map(row => this.mapToQuota(row));
-  }
-
-  /**
-   * Get quota by unit type for a resource owner
-   */
-  async getQuotaByUnit(
-    instanceID: string,
-    resourceOwner: string,
-    unit: string
-  ): Promise<Quota | null> {
-    const result = await this.database.queryOne(
-      `SELECT 
-        id, instance_id, resource_owner, unit, amount, limit_usage,
-        from_anchor, interval, creation_date, change_date, sequence
-      FROM quotas
-      WHERE instance_id = $1 AND resource_owner = $2 AND unit = $3`,
-      [instanceID, resourceOwner, unit]
-    );
-
-    if (!result) {
-      return null;
-    }
-
-    return this.mapToQuota(result);
   }
 
   /**
@@ -103,11 +80,10 @@ export class QuotaQueries {
   async getActiveQuotas(instanceID: string): Promise<Quota[]> {
     const result = await this.database.queryMany(
       `SELECT 
-        id, instance_id, resource_owner, unit, amount, limit_usage,
-        from_anchor, interval, creation_date, change_date, sequence
+        id, instance_id, unit, amount, limit_usage, from_anchor, interval
       FROM quotas
       WHERE instance_id = $1 AND limit_usage = true
-      ORDER BY resource_owner ASC, unit ASC`,
+      ORDER BY unit ASC`,
       [instanceID]
     );
 
@@ -118,8 +94,8 @@ export class QuotaQueries {
    * Check if resource usage would exceed quota
    */
   checkQuotaExceeded(currentUsage: number, quota: Quota): boolean {
-    if (!quota.limitUsage) {
-      return false; // Quota not enforced
+    if (!quota.limitUsage || quota.amount === null) {
+      return false; // Quota not enforced or no limit set
     }
     return currentUsage >= quota.amount;
   }
@@ -128,6 +104,9 @@ export class QuotaQueries {
    * Calculate remaining quota amount
    */
   getRemainingQuota(currentUsage: number, quota: Quota): number {
+    if (quota.amount === null) {
+      return Number.MAX_SAFE_INTEGER; // Unlimited
+    }
     return Math.max(0, quota.amount - currentUsage);
   }
 
@@ -135,24 +114,24 @@ export class QuotaQueries {
    * Calculate quota usage percentage
    */
   getQuotaUsagePercent(currentUsage: number, quota: Quota): number {
-    if (quota.amount === 0) {
+    if (quota.amount === null || quota.amount === 0) {
       return 100;
     }
     return Math.min(100, (currentUsage / quota.amount) * 100);
   }
 
   /**
-   * Get notifications for a quota
+   * Get notifications for a quota by unit
    */
-  async getQuotaNotifications(instanceID: string, quotaID: string): Promise<QuotaNotification[]> {
+  async getQuotaNotifications(instanceID: string, unit: string): Promise<QuotaNotification[]> {
     const result = await this.database.queryMany(
       `SELECT 
-        id, instance_id, quota_id, call_url, percent, repeat,
-        latest_notified_at, creation_date, change_date, sequence
+        id, instance_id, unit, call_url, percent, repeat,
+        latest_due_period_start, next_due_threshold
       FROM quota_notifications
-      WHERE instance_id = $1 AND quota_id = $2
+      WHERE instance_id = $1 AND unit = $2
       ORDER BY percent ASC`,
-      [instanceID, quotaID]
+      [instanceID, unit]
     );
 
     return result.map(row => this.mapToNotification(row));
@@ -163,21 +142,106 @@ export class QuotaQueries {
    */
   async getTriggeredNotifications(
     instanceID: string,
-    quotaID: string,
+    unit: string,
     usagePercent: number
   ): Promise<QuotaNotification[]> {
     const result = await this.database.queryMany(
       `SELECT 
-        id, instance_id, quota_id, call_url, percent, repeat,
-        latest_notified_at, creation_date, change_date, sequence
+        id, instance_id, unit, call_url, percent, repeat,
+        latest_due_period_start, next_due_threshold
       FROM quota_notifications
-      WHERE instance_id = $1 AND quota_id = $2 AND percent <= $3
-      AND (repeat = true OR latest_notified_at IS NULL)
+      WHERE instance_id = $1 AND unit = $2 AND percent <= $3
+      AND (repeat = true OR latest_due_period_start IS NULL)
       ORDER BY percent DESC`,
-      [instanceID, quotaID, Math.floor(usagePercent)]
+      [instanceID, unit, Math.floor(usagePercent)]
     );
 
     return result.map(row => this.mapToNotification(row));
+  }
+
+  /**
+   * Get usage for a specific period
+   */
+  async getPeriodUsage(
+    instanceID: string,
+    unit: string,
+    periodStart: Date
+  ): Promise<QuotaPeriod | null> {
+    const result = await this.database.queryOne(
+      `SELECT 
+        instance_id, unit, start, usage
+      FROM quotas_periods
+      WHERE instance_id = $1 AND unit = $2 AND start = $3`,
+      [instanceID, unit, periodStart]
+    );
+
+    if (!result) {
+      return null;
+    }
+
+    return this.mapToPeriod(result);
+  }
+
+  /**
+   * Get all periods for a quota
+   */
+  async getQuotaPeriods(
+    instanceID: string,
+    unit: string,
+    limit?: number
+  ): Promise<QuotaPeriod[]> {
+    const limitClause = limit ? `LIMIT ${limit}` : '';
+    const result = await this.database.queryMany(
+      `SELECT 
+        instance_id, unit, start, usage
+      FROM quotas_periods
+      WHERE instance_id = $1 AND unit = $2
+      ORDER BY start DESC
+      ${limitClause}`,
+      [instanceID, unit]
+    );
+
+    return result.map(row => this.mapToPeriod(row));
+  }
+
+  /**
+   * Increment usage for a period (matches Zitadel Go incrementQuotaStatement)
+   */
+  async incrementPeriodUsage(
+    instanceID: string,
+    unit: string,
+    periodStart: Date,
+    usage: number
+  ): Promise<number> {
+    const result = await this.database.queryOne(
+      `INSERT INTO quotas_periods (instance_id, unit, start, usage)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (instance_id, unit, start)
+       DO UPDATE SET usage = quotas_periods.usage + EXCLUDED.usage
+       RETURNING usage`,
+      [instanceID, unit, periodStart, usage]
+    );
+
+    return result ? Number(result.usage) : 0;
+  }
+
+  /**
+   * Get remaining quota for current period
+   */
+  async getRemainingQuotaForPeriod(
+    instanceID: string,
+    unit: string,
+    periodStart: Date
+  ): Promise<number> {
+    const quota = await this.getQuotaByUnit(instanceID, unit);
+    if (!quota || quota.amount === null) {
+      return Number.MAX_SAFE_INTEGER; // Unlimited
+    }
+
+    const period = await this.getPeriodUsage(instanceID, unit, periodStart);
+    const currentUsage = period ? period.usage : 0;
+
+    return Math.max(0, quota.amount - currentUsage);
   }
 
   /**
@@ -187,15 +251,11 @@ export class QuotaQueries {
     return {
       id: row.id,
       instanceID: row.instance_id,
-      resourceOwner: row.resource_owner,
       unit: row.unit,
-      amount: Number(row.amount),
+      amount: row.amount !== null ? Number(row.amount) : null,
       limitUsage: row.limit_usage,
       fromAnchor: row.from_anchor,
       interval: row.interval,
-      creationDate: row.creation_date,
-      changeDate: row.change_date,
-      sequence: Number(row.sequence),
     };
   }
 
@@ -206,14 +266,24 @@ export class QuotaQueries {
     return {
       id: row.id,
       instanceID: row.instance_id,
-      quotaID: row.quota_id,
+      unit: row.unit,
       callURL: row.call_url,
       percent: row.percent,
       repeat: row.repeat,
-      latestNotifiedAt: row.latest_notified_at,
-      creationDate: row.creation_date,
-      changeDate: row.change_date,
-      sequence: Number(row.sequence),
+      latestDuePeriodStart: row.latest_due_period_start,
+      nextDueThreshold: row.next_due_threshold,
+    };
+  }
+
+  /**
+   * Map database row to QuotaPeriod
+   */
+  private mapToPeriod(row: any): QuotaPeriod {
+    return {
+      instanceID: row.instance_id,
+      unit: row.unit,
+      start: row.start,
+      usage: Number(row.usage),
     };
   }
 }

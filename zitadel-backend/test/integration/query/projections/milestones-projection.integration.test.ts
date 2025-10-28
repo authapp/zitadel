@@ -36,11 +36,18 @@ describe('Milestones Projection Integration Tests', () => {
 
     await registry.init();
 
+    // Register milestone projection
+    const projection = new MilestonesProjection(eventstore, pool);
+    await projection.init();
+    
     const config = createMilestonesProjectionConfig();
     config.interval = 50;
-    registry.register(config, new MilestonesProjection(eventstore, pool));
+    registry.register(config, projection);
 
     await registry.start('milestones_projection');
+
+    // Wait for projection to be ready
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Initialize query layer
     milestoneQueries = new MilestoneQueries(pool);

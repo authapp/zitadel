@@ -56,9 +56,10 @@ CREATE TABLE IF NOT EXISTS public.projection_locks (
     expires_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
--- Table: public.projection_failed_events
+-- Table: projections.projection_failed_events
 -- Description: Track events that failed projection processing
-CREATE TABLE IF NOT EXISTS public.projection_failed_events (
+CREATE TABLE IF NOT EXISTS projections.projection_failed_events (
+    id TEXT PRIMARY KEY,
     projection_name TEXT NOT NULL,
     failed_sequence BIGINT NOT NULL,
     failure_count INTEGER NOT NULL DEFAULT 1,
@@ -502,7 +503,8 @@ CREATE TABLE IF NOT EXISTS projections.milestones (
     primary_domain TEXT,
     creation_date TIMESTAMPTZ NOT NULL DEFAULT now(),
     change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    sequence BIGINT NOT NULL
+    sequence BIGINT NOT NULL,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.notification_policies
