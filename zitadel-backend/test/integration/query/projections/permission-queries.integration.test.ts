@@ -126,40 +126,49 @@ describe('Permission Queries Integration Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 200));
   }
 
-  // Helper: Setup org (required for command API)
+  // Cache to track already setup entities (to avoid duplicate creation errors)
+  const setupOrgs = new Set<string>();
+  const setupProjects = new Set<string>();
+
+  // Helper: Setup org (using Command API)
   async function setupOrg(orgId: string): Promise<void> {
-    await eventstore.push({
-      eventType: 'org.added',
-      aggregateType: 'org',
-      aggregateID: orgId,
-      payload: {
-        name: 'Test Org',
-      },
-      creator: 'system',
-      owner: orgId,
+    if (setupOrgs.has(orgId)) return; // Already setup
+    
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: TEST_INSTANCE_ID,
+      userID: 'system-admin',
+    });
+    
+    await commandCtx.commands.addOrg(ctx, {
+      orgID: orgId,
+      name: 'Test Org',
     });
     await processProjections();
+    setupOrgs.add(orgId);
   }
 
-  // Helper: Setup project (required for command API)
+  // Helper: Setup project (using Command API)
   async function setupProject(projectId: string, orgId: string): Promise<void> {
-    await eventstore.push({
-      eventType: 'project.added',
-      aggregateType: 'project',
-      aggregateID: projectId,
-      payload: {
-        name: 'Test Project',
-        projectRoleAssertion: false,
-        projectRoleCheck: false,
-        hasProjectCheck: false,
-        privateLabelingSetting: 0,
-      },
-      creator: 'system',
-      owner: orgId,
+    if (setupProjects.has(projectId)) return; // Already setup
+    
+    const ctx = commandCtx.createContext({
       instanceID: TEST_INSTANCE_ID,
+      orgID: orgId,
+      userID: 'system-admin',
+    });
+    
+    await commandCtx.commands.addProject(ctx, {
+      projectID: projectId,
+      orgID: orgId,
+      name: 'Test Project',
+      projectRoleAssertion: false,
+      projectRoleCheck: false,
+      hasProjectCheck: false,
+      privateLabelingSetting: 0,
     });
     await processProjections();
+    setupProjects.add(projectId);
   }
 
   // Helper: Add user grant (using Command API)
