@@ -106,9 +106,11 @@ describe('Application Projection Integration Tests', () => {
     await registry.init();
     
     // Register and start projection
+    const appProjection = createAppProjection(eventstore, pool);
+    await appProjection.init();
+    
     const appConfig = createAppProjectionConfig();
     appConfig.interval = 50;
-    const appProjection = createAppProjection(eventstore, pool);
     registry.register(appConfig, appProjection);
     await registry.start('app_projection');
     
