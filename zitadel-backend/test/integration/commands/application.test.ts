@@ -10,7 +10,7 @@
  * - OAuth/OIDC settings validation
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
@@ -349,19 +349,26 @@ describe('Application Commands', () => {
     });
   });
 
-  describe.skip('SAML Applications (requires SAML command signature fixes)', () => {
+  describe('SAML Applications', () => {
+    // Helper: Create minimal SAML metadata XML
+    const createSAMLMetadata = (entityID: string) => `
+      <?xml version="1.0"?>
+      <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="${entityID}">
+        <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+          <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                                    Location="https://example.com/saml/acs" index="0"/>
+        </SPSSODescriptor>
+      </EntityDescriptor>
+    `;
+
     describe('addSAMLApp', () => {
       it('should create SAML application', async () => {
-        // TODO: Fix SAML command signatures to match expected types
-        // Issue: AddSAMLAppData interface mismatch with actual command
-        /*
         const { orgID, projectID } = await createTestProject();
 
         const appData = {
           projectID,
-          orgID,
           name: 'Test SAML App',
-          entityID: 'https://example.com/saml',
+          metadata: createSAMLMetadata('https://example.com/saml'),
           metadataURL: 'https://example.com/saml/metadata',
         };
 
@@ -369,36 +376,32 @@ describe('Application Commands', () => {
 
         expect(result).toBeDefined();
         expect(result.appID).toBeDefined();
-        */
 
-        // Tests commented out due to type mismatches
+        const event = await ctx.assertEventPublished('application.saml.config.added');
+        expect(event.payload).toBeDefined();
+        expect(event.payload).toHaveProperty('appID', result.appID);
       });
     });
 
     describe('updateSAMLApp', () => {
       it('should update SAML app configuration', async () => {
-        // TODO: Fix SAML command signatures
-        /*
         const { orgID, projectID } = await createTestProject();
 
         const app = await ctx.commands.addSAMLApp(ctx.createContext(), {
           projectID,
-          orgID,
           name: 'SAML to Update',
-          entityID: 'https://example.com/saml',
+          metadata: createSAMLMetadata('https://example.com/saml'),
         });
 
         await ctx.commands.updateSAMLApp(ctx.createContext(), {
           appID: app.appID,
           projectID,
-          orgID,
-          name: 'Updated SAML Name',
-          entityID: 'https://new.example.com/saml',
+          metadata: createSAMLMetadata('https://new.example.com/saml'),
         });
 
-        const event = await ctx.assertEventPublished('application.saml.changed');
-        expect(event.payload).toHaveProperty('name', 'Updated SAML Name');
-        */
+        const event = await ctx.assertEventPublished('application.saml.config.changed');
+        expect(event.payload).toBeDefined();
+        expect(event.payload).toHaveProperty('appID', app.appID);
       });
     });
   });
@@ -726,17 +729,22 @@ describe('Application Commands', () => {
         authMethodType: 'jwt' as any,
       });
 
-      // Create SAML app - TODO: Fix SAML signature
-      // const samlApp = await ctx.commands.addSAMLApp(ctx.createContext(), {
-      //   projectID,
-      //   orgID,
-      //   name: 'Enterprise SSO',
-      //   entityID: 'https://example.com/saml',
-      // });
+      // Create SAML app
+      const samlApp = await ctx.commands.addSAMLApp(ctx.createContext(), {
+        projectID,
+        name: 'Enterprise SSO',
+        metadata: `<?xml version="1.0"?>
+          <EntityDescriptor xmlns="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://example.com/saml">
+            <SPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+              <AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+                                        Location="https://example.com/saml/acs" index="0"/>
+            </SPSSODescriptor>
+          </EntityDescriptor>`,
+      });
 
       expect(oidcApp.appID).not.toBe(apiApp.appID);
-      // expect(apiApp.appID).not.toBe(samlApp.appID);
-      // expect(oidcApp.appID).not.toBe(samlApp.appID);
+      expect(apiApp.appID).not.toBe(samlApp.appID);
+      expect(oidcApp.appID).not.toBe(samlApp.appID);
     });
   });
 });

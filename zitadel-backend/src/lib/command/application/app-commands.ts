@@ -560,17 +560,17 @@ export async function addSAMLApp(
   const commands: Command[] = [
     {
       eventType: 'application.added',
-      aggregateType: 'project',
-      aggregateID: data.projectID,
+      aggregateType: 'application',
+      aggregateID: appID,
       owner: ctx.orgID,
       instanceID: ctx.instanceID,
       creator: ctx.userID || 'system',
-      payload: { appID, name: data.name },
+      payload: { projectID: data.projectID, appID, name: data.name },
     },
     {
       eventType: 'application.saml.config.added',
-      aggregateType: 'project',
-      aggregateID: data.projectID,
+      aggregateType: 'application',
+      aggregateID: appID,
       owner: ctx.orgID,
       instanceID: ctx.instanceID,
       creator: ctx.userID || 'system',
@@ -624,8 +624,8 @@ export async function updateSAMLApp(
   
   const command: Command = {
     eventType: 'application.saml.config.changed',
-    aggregateType: 'project',
-    aggregateID: data.projectID,
+    aggregateType: 'application',
+    aggregateID: data.appID,
     owner: ctx.orgID,
     instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',

@@ -47,6 +47,10 @@ export class AppWriteModel extends WriteModel {
   // API specific
   apiAuthMethodType?: OIDCAuthMethodType;
   
+  // SAML specific
+  samlMetadata?: string;
+  samlMetadataURL?: string;
+  
   constructor() {
     super('application');
   }
@@ -138,6 +142,29 @@ export class AppWriteModel extends WriteModel {
         }
         if (event.payload?.authMethodType !== undefined) {
           this.apiAuthMethodType = event.payload.authMethodType;
+        }
+        break;
+        
+      // SAML App events
+      case 'application.added':
+        // Generic application.added event (used by SAML)
+        this.state = AppState.ACTIVE;
+        this.name = event.payload?.name;
+        this.projectID = event.payload?.projectID;
+        break;
+        
+      case 'application.saml.config.added':
+        this.appType = AppType.SAML;
+        this.samlMetadata = event.payload?.metadata;
+        this.samlMetadataURL = event.payload?.metadataURL;
+        break;
+        
+      case 'application.saml.config.changed':
+        if (event.payload?.metadata !== undefined) {
+          this.samlMetadata = event.payload.metadata;
+        }
+        if (event.payload?.metadataURL !== undefined) {
+          this.samlMetadataURL = event.payload.metadataURL;
         }
         break;
         
