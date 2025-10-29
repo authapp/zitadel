@@ -8,7 +8,7 @@
  * - Security constraints
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
@@ -110,8 +110,8 @@ describe('User Password Management Commands', () => {
 
       beforeEach(async () => {
         const userData = new UserBuilder()
-          .withUsername('test.user')
-          .withEmail('test@example.com')
+          .withUsername(`test.user${Date.now()}`)
+          .withEmail(`test${Date.now()}@example.com`)
           .withPassword('ValidPassword123!')
           .build();
 
@@ -393,8 +393,8 @@ describe('User Password Management Commands', () => {
 
       beforeEach(async () => {
         const userData = new UserBuilder()
-          .withUsername('security.test')
-          .withEmail('security@example.com')
+          .withUsername(`security.test${Date.now()}`)
+          .withEmail(`security${Date.now()}@example.com`)
           .withPassword('ValidPassword123!')
           .build();
 
@@ -457,8 +457,8 @@ describe('User Password Management Commands', () => {
 
       beforeEach(async () => {
         const userData = new UserBuilder()
-          .withUsername('edge.test')
-          .withEmail('edge@example.com')
+          .withUsername(`edge.test${Date.now()}`)
+          .withEmail(`edge${Date.now()}@example.com`)
           .withPassword('ValidPassword123!')
           .build();
 
