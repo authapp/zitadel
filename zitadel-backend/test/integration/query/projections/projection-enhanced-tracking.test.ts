@@ -65,7 +65,7 @@ describe('Enhanced Projection State Tracking', () => {
 
   beforeEach(async () => {
     await pool.query('TRUNCATE TABLE events CASCADE');
-    await pool.query('DELETE FROM projection_states');
+    await pool.query('DELETE FROM projections.projection_states');
     await pool.query('DROP TABLE IF EXISTS enhanced_tracking_data CASCADE');
     await pool.query('DROP TABLE IF EXISTS enhanced_tracking_data_2 CASCADE');
     try {
@@ -74,7 +74,7 @@ describe('Enhanced Projection State Tracking', () => {
       // Table may not exist
     }
     try {
-      await pool.query('DELETE FROM projection_failed_events');
+      await pool.query('DELETE FROM projections.projection_failed_events');
     } catch (err) {
       // Table may not exist
     }
@@ -474,7 +474,7 @@ describe('Enhanced Projection State Tracking', () => {
       // Query using the index (ORDER BY updated_at DESC)
       const result = await pool.query(`
         SELECT name, updated_at
-        FROM projection_states
+        FROM projections.projection_states
         ORDER BY updated_at DESC
         LIMIT 1
       `);

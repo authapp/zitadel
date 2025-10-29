@@ -100,13 +100,13 @@ describe('Projection Production-Readiness Tests', () => {
 
   beforeEach(async () => {
     await pool.query('TRUNCATE TABLE events CASCADE');
-    await pool.query('DELETE FROM projection_states');
+    await pool.query('DELETE FROM projections.projection_states');
     try {
       await pool.query('DELETE FROM projection_locks');
     } catch (err) {
       // Table may not exist, that's ok
     }
-    await pool.query('DELETE FROM projection_failed_events');
+    await pool.query('DELETE FROM projections.projection_failed_events');
     await pool.query('DROP TABLE IF EXISTS test_data CASCADE');
   });
 
@@ -415,6 +415,10 @@ describe('Projection Production-Readiness Tests', () => {
 
       await handler.start();
       await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced: Test continuous processing (2 batches)
+      
+      // Check state before stopping
+      const stateBeforeStop = handler.getState();
+      
       await handler.stop();
 
       const duration = Date.now() - startTime;
@@ -425,7 +429,7 @@ describe('Projection Production-Readiness Tests', () => {
       
       // If all batches processed (continuous catch-up working)
       if (data.rows.length === 20) {
-        expect(handler.getState()).toBe('live');
+        expect(stateBeforeStop).toBe('live');
         console.log(`✓ Continuous catch-up: All 20 events in ${duration}ms`);
       } else {
         console.log(`→ Processed ${data.rows.length}/20 events in ${duration}ms (may need more time)`);

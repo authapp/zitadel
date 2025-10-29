@@ -1,110 +1,78 @@
 /**
  * Custom Text Commands
  * 
- * Commands for managing custom text and translations:
- * - Organization-level text customization
- * - Login screen text customization
- * - Email template text customization
- * - Multi-language support (i18n)
- * 
- * Based on Zitadel Go:
- * - internal/command/org_custom_text.go
- * - internal/command/instance_custom_text.go
+ * Organization-level text customization for i18n/localization
+ * Based on Zitadel Go implementation
  */
 
-import { Commands } from '../commands';
 import { Context } from '../context';
+import { Commands } from '../commands';
+import { ObjectDetails } from '../write-model';
 import { Command } from '../../eventstore/types';
+import { validateRequired } from '../validation';
 import { throwInvalidArgument } from '../../zerrors/errors';
 
 /**
- * Custom text data for organization
+ * Custom Text Data
  */
 export interface CustomTextData {
-  language: string;          // Language code (e.g., 'en', 'de', 'fr')
-  key: string;               // Text key (e.g., 'Login.Title', 'Login.Description')
-  text: string;              // Custom text value
+  language: string;  // ISO 639-1 language code (e.g., 'en', 'de', 'fr')
+  key: string;       // Text key (e.g., 'Login.Title', 'Login.Subtitle')
+  text: string;      // Custom text value
 }
 
 /**
- * Custom login text data
- */
-export interface CustomLoginTextData {
-  language: string;
-  screen: string;            // Screen name (e.g., 'login', 'register', 'password_reset')
-  key: string;               // Text key for the screen
-  text: string;              // Custom text value
-}
-
-/**
- * Custom init message text data
- */
-export interface CustomInitMessageTextData {
-  language: string;
-  title: string;
-  preHeader: string;
-  subject: string;
-  greeting: string;
-  text: string;
-  buttonText?: string;
-}
-
-/**
- * Custom message text data
- */
-export interface CustomMessageTextData {
-  language: string;
-  messageType: string;       // e.g., 'InitCode', 'PasswordReset', 'VerifyEmail'
-  title?: string;
-  preHeader?: string;
-  subject?: string;
-  greeting?: string;
-  text?: string;
-  buttonText?: string;
-  footerText?: string;
-}
-
-/**
- * Set custom text for organization
+ * Set Custom Text for Organization
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param orgID - Organization ID
- * @param data - Custom text data
+ * Allows customizing UI text per organization and language
+ * Example: Change login screen title from default to custom text
  */
 export async function setCustomText(
   this: Commands,
   ctx: Context,
   orgID: string,
   data: CustomTextData
-): Promise<void> {
-  // 1. Validate input
-  if (!orgID) {
-    throwInvalidArgument('orgID is required', 'COMMAND-CustomText01');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(orgID, 'orgID');
+  validateRequired(data.language, 'language');
+  validateRequired(data.key, 'key');
+  validateRequired(data.text, 'text');
+  
+  // Validate language is ISO 639-1 format (2 characters)
+  if (data.language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-01'
+    );
   }
-  if (!data.language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText02');
+  
+  // Validate key is not empty and has reasonable length
+  if (data.key.length > 200) {
+    throwInvalidArgument(
+      'key must be less than 200 characters',
+      'CUSTOM-TEXT-02'
+    );
   }
-  if (!data.key) {
-    throwInvalidArgument('key is required', 'COMMAND-CustomText03');
+  
+  // Validate text has reasonable length (10KB max)
+  if (data.text.length > 10000) {
+    throwInvalidArgument(
+      'text must be less than 10000 characters',
+      'CUSTOM-TEXT-03'
+    );
   }
-  if (!data.text) {
-    throwInvalidArgument('text is required', 'COMMAND-CustomText04');
-  }
-
-  // 2. Validate language code format (ISO 639-1)
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(data.language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText05');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'org', 'write', orgID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'org.custom.text.set',
     aggregateType: 'org',
     aggregateID: orgID,
     owner: orgID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language: data.language,
@@ -112,55 +80,109 @@ export async function setCustomText(
       text: data.text,
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: orgID,
+  };
 }
 
 /**
- * Set custom login text (instance-level)
+ * Reset Custom Text for Organization
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param instanceID - Instance ID
- * @param data - Custom login text data
+ * Removes all custom text for a specific language, reverting to defaults
+ */
+export async function resetCustomText(
+  this: Commands,
+  ctx: Context,
+  orgID: string,
+  language: string
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(orgID, 'orgID');
+  validateRequired(language, 'language');
+  
+  if (language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-04'
+    );
+  }
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'org', 'write', orgID);
+  
+  // 3. Create event
+  const command: Command = {
+    eventType: 'org.custom.text.reset',
+    aggregateType: 'org',
+    aggregateID: orgID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      language,
+    },
+  };
+  
+  // 4. Push event
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: orgID,
+  };
+}
+
+// ============================================================================
+// Instance-level Custom Text Commands
+// ============================================================================
+
+/**
+ * Set Custom Login Text for Instance
+ * 
+ * Customizes login screen UI text at instance level
  */
 export async function setCustomLoginText(
   this: Commands,
   ctx: Context,
   instanceID: string,
-  data: CustomLoginTextData
-): Promise<void> {
-  // 1. Validate input
-  if (!instanceID) {
-    throwInvalidArgument('instanceID is required', 'COMMAND-CustomText11');
+  data: {
+    language: string;
+    screen: string;  // e.g., 'login', 'register', 'password-reset'
+    key: string;     // e.g., 'Title', 'Subtitle'
+    text: string;
   }
-  if (!data.language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText12');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(instanceID, 'instanceID');
+  validateRequired(data.language, 'language');
+  validateRequired(data.screen, 'screen');
+  validateRequired(data.key, 'key');
+  validateRequired(data.text, 'text');
+  
+  if (data.language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-10'
+    );
   }
-  if (!data.screen) {
-    throwInvalidArgument('screen is required', 'COMMAND-CustomText13');
-  }
-  if (!data.key) {
-    throwInvalidArgument('key is required', 'COMMAND-CustomText14');
-  }
-  if (!data.text) {
-    throwInvalidArgument('text is required', 'COMMAND-CustomText15');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(data.language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText16');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'write', instanceID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'instance.login.custom.text.set',
     aggregateType: 'instance',
     aggregateID: instanceID,
     owner: instanceID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language: data.language,
@@ -169,275 +191,270 @@ export async function setCustomLoginText(
       text: data.text,
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: instanceID,
+  };
 }
 
 /**
- * Set custom init message text (instance-level)
+ * Set Custom Init Message Text for Instance
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param instanceID - Instance ID
- * @param data - Custom init message text data
+ * Customizes initialization/welcome email templates
  */
 export async function setCustomInitMessageText(
   this: Commands,
   ctx: Context,
   instanceID: string,
-  data: CustomInitMessageTextData
-): Promise<void> {
-  // 1. Validate input
-  if (!instanceID) {
-    throwInvalidArgument('instanceID is required', 'COMMAND-CustomText21');
+  data: {
+    language: string;
+    title?: string;
+    preHeader?: string;
+    subject?: string;
+    greeting?: string;
+    text?: string;
+    buttonText?: string;
   }
-  if (!data.language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText22');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(instanceID, 'instanceID');
+  validateRequired(data.language, 'language');
+  
+  if (data.language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-11'
+    );
   }
-  if (!data.title) {
-    throwInvalidArgument('title is required', 'COMMAND-CustomText23');
+  
+  // Validate that if fields are provided, they are not empty
+  if (data.title !== undefined && data.title === '') {
+    throwInvalidArgument('title is required', 'CUSTOM-TEXT-11a');
   }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(data.language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText24');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'write', instanceID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'instance.init.message.text.set',
     aggregateType: 'instance',
     aggregateID: instanceID,
     owner: instanceID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language: data.language,
-      title: data.title,
-      preHeader: data.preHeader,
-      subject: data.subject,
-      greeting: data.greeting,
-      text: data.text,
-      buttonText: data.buttonText,
+      ...(data.title && { title: data.title }),
+      ...(data.preHeader && { preHeader: data.preHeader }),
+      ...(data.subject && { subject: data.subject }),
+      ...(data.greeting && { greeting: data.greeting }),
+      ...(data.text && { text: data.text }),
+      ...(data.buttonText && { buttonText: data.buttonText }),
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: instanceID,
+  };
 }
 
 /**
- * Reset custom text to defaults (organization-level)
+ * Reset Custom Login Text for Instance
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param orgID - Organization ID
- * @param language - Language code
- */
-export async function resetCustomText(
-  this: Commands,
-  ctx: Context,
-  orgID: string,
-  language: string
-): Promise<void> {
-  // 1. Validate input
-  if (!orgID) {
-    throwInvalidArgument('orgID is required', 'COMMAND-CustomText31');
-  }
-  if (!language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText32');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText33');
-  }
-
-  // 3. Create command
-  const command: Command = {
-    instanceID: ctx.instanceID,
-    eventType: 'org.custom.text.reset',
-    aggregateType: 'org',
-    aggregateID: orgID,
-    owner: orgID,
-    creator: ctx.userID || 'system',
-    payload: {
-      language,
-    },
-  };
-
-  // 4. Push event
-  await this.getEventstore().push(command);
-}
-
-/**
- * Reset custom login text to defaults (instance-level)
- * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param instanceID - Instance ID
- * @param language - Language code
+ * Removes all custom login text for a specific language
  */
 export async function resetCustomLoginText(
   this: Commands,
   ctx: Context,
   instanceID: string,
   language: string
-): Promise<void> {
-  // 1. Validate input
-  if (!instanceID) {
-    throwInvalidArgument('instanceID is required', 'COMMAND-CustomText41');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(instanceID, 'instanceID');
+  validateRequired(language, 'language');
+  
+  if (language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-12'
+    );
   }
-  if (!language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText42');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText43');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'write', instanceID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'instance.login.custom.text.reset',
     aggregateType: 'instance',
     aggregateID: instanceID,
     owner: instanceID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language,
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: instanceID,
+  };
 }
 
 /**
- * Set custom message text (instance-level)
+ * Set Custom Message Text for Instance
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param instanceID - Instance ID
- * @param data - Custom message text data
+ * Customizes email/SMS message templates (e.g., password reset, verification)
  */
 export async function setCustomMessageText(
   this: Commands,
   ctx: Context,
   instanceID: string,
-  data: CustomMessageTextData
-): Promise<void> {
-  // 1. Validate input
-  if (!instanceID) {
-    throwInvalidArgument('instanceID is required', 'COMMAND-CustomText51');
+  data: {
+    language: string;
+    messageType: string;  // e.g., 'PasswordReset', 'VerifyEmail', 'InitCode'
+    title?: string;
+    preHeader?: string;
+    subject?: string;
+    greeting?: string;
+    text?: string;
+    buttonText?: string;
+    footerText?: string;
   }
-  if (!data.language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText52');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(instanceID, 'instanceID');
+  validateRequired(data.language, 'language');
+  validateRequired(data.messageType, 'messageType');
+  
+  if (data.language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-13'
+    );
   }
-  if (!data.messageType) {
-    throwInvalidArgument('messageType is required', 'COMMAND-CustomText53');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(data.language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText54');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'write', instanceID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'instance.custom.message.text.set',
     aggregateType: 'instance',
     aggregateID: instanceID,
     owner: instanceID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language: data.language,
       messageType: data.messageType,
-      title: data.title,
-      preHeader: data.preHeader,
-      subject: data.subject,
-      greeting: data.greeting,
-      text: data.text,
-      buttonText: data.buttonText,
-      footerText: data.footerText,
+      ...(data.title && { title: data.title }),
+      ...(data.preHeader && { preHeader: data.preHeader }),
+      ...(data.subject && { subject: data.subject }),
+      ...(data.greeting && { greeting: data.greeting }),
+      ...(data.text && { text: data.text }),
+      ...(data.buttonText && { buttonText: data.buttonText }),
+      ...(data.footerText && { footerText: data.footerText }),
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: instanceID,
+  };
 }
 
 /**
- * Set custom message text (organization-level)
+ * Set Custom Message Text for Organization
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param orgID - Organization ID
- * @param data - Custom message text data
+ * Customizes email/SMS message templates at org level
  */
 export async function setOrgCustomMessageText(
   this: Commands,
   ctx: Context,
   orgID: string,
-  data: CustomMessageTextData
-): Promise<void> {
-  // 1. Validate input
-  if (!orgID) {
-    throwInvalidArgument('orgID is required', 'COMMAND-CustomText61');
+  data: {
+    language: string;
+    messageType: string;
+    title?: string;
+    preHeader?: string;
+    subject?: string;
+    greeting?: string;
+    text?: string;
+    buttonText?: string;
+    footerText?: string;
   }
-  if (!data.language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText62');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(orgID, 'orgID');
+  validateRequired(data.language, 'language');
+  validateRequired(data.messageType, 'messageType');
+  
+  if (data.language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-14'
+    );
   }
-  if (!data.messageType) {
-    throwInvalidArgument('messageType is required', 'COMMAND-CustomText63');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(data.language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText64');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'org', 'write', orgID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'org.custom.message.text.set',
     aggregateType: 'org',
     aggregateID: orgID,
     owner: orgID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language: data.language,
       messageType: data.messageType,
-      title: data.title,
-      preHeader: data.preHeader,
-      subject: data.subject,
-      greeting: data.greeting,
-      text: data.text,
-      buttonText: data.buttonText,
-      footerText: data.footerText,
+      ...(data.title && { title: data.title }),
+      ...(data.preHeader && { preHeader: data.preHeader }),
+      ...(data.subject && { subject: data.subject }),
+      ...(data.greeting && { greeting: data.greeting }),
+      ...(data.text && { text: data.text }),
+      ...(data.buttonText && { buttonText: data.buttonText }),
+      ...(data.footerText && { footerText: data.footerText }),
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: orgID,
+  };
 }
 
 /**
- * Reset custom message text to defaults (instance-level)
+ * Reset Custom Message Text for Instance
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param instanceID - Instance ID
- * @param language - Language code
- * @param messageType - Message type
+ * Removes custom message text for a specific message type and language
  */
 export async function resetCustomMessageText(
   this: Commands,
@@ -445,50 +462,50 @@ export async function resetCustomMessageText(
   instanceID: string,
   language: string,
   messageType: string
-): Promise<void> {
-  // 1. Validate input
-  if (!instanceID) {
-    throwInvalidArgument('instanceID is required', 'COMMAND-CustomText71');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(instanceID, 'instanceID');
+  validateRequired(language, 'language');
+  validateRequired(messageType, 'messageType');
+  
+  if (language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-15'
+    );
   }
-  if (!language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText72');
-  }
-  if (!messageType) {
-    throwInvalidArgument('messageType is required', 'COMMAND-CustomText73');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText74');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'write', instanceID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'instance.custom.message.text.reset',
     aggregateType: 'instance',
     aggregateID: instanceID,
     owner: instanceID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language,
       messageType,
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: instanceID,
+  };
 }
 
 /**
- * Reset custom message text to defaults (organization-level)
+ * Reset Custom Message Text for Organization
  * 
- * @param this - Commands instance
- * @param ctx - Command context
- * @param orgID - Organization ID
- * @param language - Language code
- * @param messageType - Message type
+ * Removes custom message text for a specific message type and language at org level
  */
 export async function resetOrgCustomMessageText(
   this: Commands,
@@ -496,38 +513,42 @@ export async function resetOrgCustomMessageText(
   orgID: string,
   language: string,
   messageType: string
-): Promise<void> {
-  // 1. Validate input
-  if (!orgID) {
-    throwInvalidArgument('orgID is required', 'COMMAND-CustomText81');
+): Promise<ObjectDetails> {
+  // 1. Validation
+  validateRequired(orgID, 'orgID');
+  validateRequired(language, 'language');
+  validateRequired(messageType, 'messageType');
+  
+  if (language.length !== 2) {
+    throwInvalidArgument(
+      'invalid language code format',
+      'CUSTOM-TEXT-16'
+    );
   }
-  if (!language) {
-    throwInvalidArgument('language is required', 'COMMAND-CustomText82');
-  }
-  if (!messageType) {
-    throwInvalidArgument('messageType is required', 'COMMAND-CustomText83');
-  }
-
-  // 2. Validate language code
-  const languageRegex = /^[a-z]{2}$/;
-  if (!languageRegex.test(language)) {
-    throwInvalidArgument('invalid language code format', 'COMMAND-CustomText84');
-  }
-
-  // 3. Create command
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'org', 'write', orgID);
+  
+  // 3. Create event
   const command: Command = {
-    instanceID: ctx.instanceID,
     eventType: 'org.custom.message.text.reset',
     aggregateType: 'org',
     aggregateID: orgID,
     owner: orgID,
+    instanceID: ctx.instanceID,
     creator: ctx.userID || 'system',
     payload: {
       language,
       messageType,
     },
   };
-
+  
   // 4. Push event
-  await this.getEventstore().push(command);
+  const event = await this.getEventstore().push(command);
+  
+  return {
+    sequence: BigInt(Math.floor(event.position.position)),
+    eventDate: event.createdAt,
+    resourceOwner: orgID,
+  };
 }

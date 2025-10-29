@@ -101,7 +101,7 @@ export class CustomTextProjection extends Projection {
     }
 
     await this.query(
-      `INSERT INTO projections.projections.custom_texts (
+      `INSERT INTO projections.custom_texts (
         instance_id, aggregate_id, aggregate_type, language, key, text,
         creation_date, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -130,7 +130,7 @@ export class CustomTextProjection extends Projection {
 
     // Delete all custom texts for this language
     await this.query(
-      `DELETE FROM projections.projections.custom_texts
+      `DELETE FROM projections.custom_texts
        WHERE instance_id = $1
          AND aggregate_id = $2
          AND aggregate_type = $3
@@ -156,7 +156,7 @@ export class CustomTextProjection extends Projection {
     for (const field of fields) {
       if (field.text) {
         await this.query(
-          `INSERT INTO projections.projections.custom_texts (
+          `INSERT INTO projections.custom_texts (
             instance_id, aggregate_id, aggregate_type, language, key, text,
             creation_date, change_date, sequence
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -201,7 +201,7 @@ export class CustomTextProjection extends Projection {
     for (const field of fields) {
       if (field.text) {
         await this.query(
-          `INSERT INTO projections.projections.custom_texts (
+          `INSERT INTO projections.custom_texts (
             instance_id, aggregate_id, aggregate_type, language, key, text,
             creation_date, change_date, sequence
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -234,7 +234,7 @@ export class CustomTextProjection extends Projection {
 
     // Delete all custom message texts for this message type and language
     await this.query(
-      `DELETE FROM projections.projections.custom_texts
+      `DELETE FROM projections.custom_texts
        WHERE instance_id = $1
          AND aggregate_id = $2
          AND aggregate_type = $3
