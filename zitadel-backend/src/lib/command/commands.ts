@@ -707,6 +707,62 @@ export class Commands {
     require('./org/org-flow-commands').setTriggerActions;
   
   // --------------------------------------------------------------------------
+  // Target Commands (Phase 3)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Add target (external endpoint)
+   */
+  addTarget: typeof import('./org/target-commands').addTarget = 
+    require('./org/target-commands').addTarget;
+  
+  /**
+   * Change target
+   */
+  changeTarget: typeof import('./org/target-commands').changeTarget = 
+    require('./org/target-commands').changeTarget;
+  
+  /**
+   * Remove target
+   */
+  removeTarget: typeof import('./org/target-commands').removeTarget = 
+    require('./org/target-commands').removeTarget;
+  
+  // --------------------------------------------------------------------------
+  // Execution Commands (Phase 3)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Set execution for gRPC request
+   */
+  setExecutionRequest: typeof import('./org/execution-commands').setExecutionRequest = 
+    require('./org/execution-commands').setExecutionRequest;
+  
+  /**
+   * Set execution for gRPC response
+   */
+  setExecutionResponse: typeof import('./org/execution-commands').setExecutionResponse = 
+    require('./org/execution-commands').setExecutionResponse;
+  
+  /**
+   * Set execution for domain event
+   */
+  setExecutionEvent: typeof import('./org/execution-commands').setExecutionEvent = 
+    require('./org/execution-commands').setExecutionEvent;
+  
+  /**
+   * Set execution for function
+   */
+  setExecutionFunction: typeof import('./org/execution-commands').setExecutionFunction = 
+    require('./org/execution-commands').setExecutionFunction;
+  
+  /**
+   * Remove execution
+   */
+  removeExecution: typeof import('./org/execution-commands').removeExecution = 
+    require('./org/execution-commands').removeExecution;
+  
+  // --------------------------------------------------------------------------
   // Organization Policy Commands (Phase 3)
   // --------------------------------------------------------------------------
   
