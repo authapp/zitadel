@@ -87,9 +87,9 @@ describe('Migration System Integration', () => {
       );
 
       expect(migrations.length).toBe(3); // Clean schema: 3 consolidated files
-      expect(migrations[0].name).toBe('Infrastructure (Events, Projections, Keys)');
-      expect(migrations[1].name).toBe('Projection Tables (All 50 projections)');
-      expect(migrations[2].name).toBe('Indexes and Constraints');
+      expect(migrations[0].name).toBe('infrastructure');
+      expect(migrations[1].name).toBe('projections');
+      expect(migrations[2].name).toBe('indexes');
     });
 
     it('should set correct schema version', async () => {

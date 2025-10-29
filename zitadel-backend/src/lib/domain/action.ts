@@ -38,7 +38,8 @@ export function actionStateExists(state: ActionState): boolean {
  * Check if action is valid
  */
 export function isActionValid(action: Action): boolean {
-  return !!action.name && action.name.length > 0;
+  return !!action.name && action.name.length > 0 && 
+         !!action.script && action.script.length > 0;
 }
 
 /**

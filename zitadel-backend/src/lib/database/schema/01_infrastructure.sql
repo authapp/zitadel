@@ -191,5 +191,76 @@ CREATE TABLE IF NOT EXISTS public.enhanced_tracking_data_2 (
 );
 
 -- ============================================================================
+-- LOGSTORE SCHEMA - Audit and Execution Logs
+-- ============================================================================
+
+-- Create logstore schema if not exists
+CREATE SCHEMA IF NOT EXISTS logstore;
+
+-- Grant permissions on logstore schema
+GRANT ALL ON SCHEMA logstore TO postgres;
+GRANT ALL ON SCHEMA logstore TO PUBLIC;
+
+-- Table: logstore.logs
+-- Description: General audit logs for aggregates
+CREATE TABLE IF NOT EXISTS logstore.logs (
+    instance_id TEXT NOT NULL,
+    log_id TEXT NOT NULL,
+    log_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    aggregate_type TEXT NOT NULL,
+    aggregate_id TEXT NOT NULL,
+    resource_owner TEXT NOT NULL,
+    log_level SMALLINT NOT NULL DEFAULT 0,  -- 0=INFO, 1=WARN, 2=ERROR
+    message TEXT,
+    metadata JSONB,
+    PRIMARY KEY (instance_id, log_id)
+);
+
+-- Index for date range queries
+CREATE INDEX IF NOT EXISTS idx_logstore_logs_date 
+    ON logstore.logs (instance_id, log_date DESC);
+
+-- Index for aggregate lookups
+CREATE INDEX IF NOT EXISTS idx_logstore_logs_aggregate 
+    ON logstore.logs (instance_id, aggregate_type, aggregate_id);
+
+-- Table: logstore.execution_logs
+-- Description: Logs for action executions
+CREATE TABLE IF NOT EXISTS logstore.execution_logs (
+    instance_id TEXT NOT NULL,
+    log_id TEXT NOT NULL,
+    log_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    execution_id TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    log_level SMALLINT NOT NULL DEFAULT 0,  -- 0=INFO, 1=WARN, 2=ERROR
+    message TEXT,
+    error_details JSONB,
+    PRIMARY KEY (instance_id, log_id)
+);
+
+-- Index for execution lookups
+CREATE INDEX IF NOT EXISTS idx_logstore_execution_logs_execution 
+    ON logstore.execution_logs (instance_id, execution_id);
+
+-- Table: logstore.quota_logs
+-- Description: Logs for quota usage and violations
+CREATE TABLE IF NOT EXISTS logstore.quota_logs (
+    instance_id TEXT NOT NULL,
+    log_id TEXT NOT NULL,
+    log_date TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    quota_id TEXT NOT NULL,
+    previous_usage BIGINT NOT NULL,
+    current_usage BIGINT NOT NULL,
+    quota_limit BIGINT NOT NULL,
+    resource_owner TEXT NOT NULL,
+    allowed BOOLEAN NOT NULL DEFAULT true,  -- Whether the action was allowed despite quota
+    PRIMARY KEY (instance_id, log_id)
+);
+
+-- Index for quota lookups
+CREATE INDEX IF NOT EXISTS idx_logstore_quota_logs_quota 
+    ON logstore.quota_logs (instance_id, quota_id);
+
+-- ============================================================================
 -- END OF INFRASTRUCTURE SCHEMA
 -- ============================================================================

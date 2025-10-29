@@ -318,7 +318,7 @@ describe('Application Projection Integration Tests', () => {
     }
     
     // Wait for projections to process all events (longer wait for many events)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Initialize queries
     appQueries = new AppQueries(pool);

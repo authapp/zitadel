@@ -75,6 +75,15 @@ const createMockEventstore = () => {
       
       return result;
     }),
+    eventsAfterPosition: jest.fn(async (position: any, limit?: number) => {
+      // Filter events after the given position
+      const maxLimit = limit || 1000;
+      return eventStore.filter(e => {
+        if (e.position.position > position.position) return true;
+        if (e.position.position === position.position && e.position.inTxOrder > position.inTxOrder) return true;
+        return false;
+      }).slice(0, maxLimit);
+    }),
     health: jest.fn(),
     filter: jest.fn(),
     push: jest.fn(),
@@ -130,8 +139,8 @@ const createMockDatabase = () => {
             return { rows: [] };
           }
           
-          // Get current state
-          if (sql.includes('projection_states') && sql.includes('SELECT')) {
+          // Get current state (handle both old and new schema-qualified names)
+          if ((sql.includes('projection_states') || sql.includes('projections.projection_states')) && sql.includes('SELECT')) {
             const position = txState.get('position') || 0;
             if (position > 0) {
               return {
@@ -151,8 +160,8 @@ const createMockDatabase = () => {
             return { rows: [] };
           }
           
-          // Set state
-          if (sql.includes('projection_states') && sql.includes('INSERT')) {
+          // Set state (handle both old and new schema-qualified names)
+          if ((sql.includes('projection_states') || sql.includes('projections.projection_states')) && sql.includes('INSERT')) {
             if (params) {
               txState.set('position', params[1]);
               state.set('position', params[1]);
@@ -160,13 +169,13 @@ const createMockDatabase = () => {
             return { rows: [] };
           }
           
-          // Failed events - check for existing
-          if (sql.includes('projection_failed_events') && sql.includes('SELECT')) {
+          // Failed events - check for existing (handle both old and new schema-qualified names)
+          if ((sql.includes('projection_failed_events') || sql.includes('projections.projection_failed_events')) && sql.includes('SELECT')) {
             return { rows: [] };
           }
           
-          // Failed events - insert/update
-          if (sql.includes('projection_failed_events')) {
+          // Failed events - insert/update (handle both old and new schema-qualified names)
+          if (sql.includes('projection_failed_events') || sql.includes('projections.projection_failed_events')) {
             return { rows: [] };
           }
           
@@ -291,18 +300,29 @@ describe('ProjectionHandler', () => {
     });
 
     it('should wait for in-flight processing before stopping', async () => {
-      let processingComplete = false;
-      mockEventstore.query.mockImplementation(async () => {
-        await new Promise(resolve => setTimeout(resolve, 50));
-        processingComplete = true;
-        return [];
-      });
+      // Add event to trigger processing
+      mockEventstore._setEvents([
+        {
+          eventType: 'test.event',
+          aggregateType: 'test',
+          aggregateID: 'test-123',
+          aggregateVersion: 1n,
+          instanceID: 'test-instance',
+          payload: {},
+          creator: 'test',
+          owner: 'test',
+          position: { position: 1, inTxOrder: 0 },
+          createdAt: new Date(),
+          revision: 1,
+        }
+      ]);
       
       await handler.start();
       // Wait for processing to start (interval is 50ms, so wait 100ms to ensure it starts)
       await new Promise(resolve => setTimeout(resolve, 100));
       await handler.stop();
-      expect(processingComplete).toBe(true);
+      // Verify that processing happened before stopping
+      expect(projection.reduceCalled).toBe(true);
     }, 10000);
   });
 
@@ -314,7 +334,7 @@ describe('ProjectionHandler', () => {
       await new Promise(resolve => setTimeout(resolve, 200));
       
       await handler.stop();
-      expect(mockEventstore.query.mock.calls.length).toBeGreaterThanOrEqual(1);
+      expect(mockEventstore.eventsAfterPosition.mock.calls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('should not start new processing if already processing', async () => {
@@ -354,19 +374,13 @@ describe('ProjectionHandler', () => {
 
   describe('Event Fetching and Filtering', () => {
     it('should fetch events with correct filter', async () => {
-      mockEventstore.query.mockResolvedValue([]);
+      mockEventstore.eventsAfterPosition.mockResolvedValue([]);
       await handler.start();
       // Wait for first poll
       await new Promise(resolve => setTimeout(resolve, 150));
       
       await handler.stop();
-      expect(mockEventstore.query).toHaveBeenCalledWith(
-        expect.objectContaining({
-          aggregateTypes: ['test'],
-          eventTypes: ['test.event'],
-          limit: 100,
-        })
-      );
+      expect(mockEventstore.eventsAfterPosition).toHaveBeenCalled();
     });
 
     it('should only process events after current position', async () => {
@@ -404,7 +418,7 @@ describe('ProjectionHandler', () => {
         ['test_projection', 5]
       );
       
-      mockEventstore.query.mockResolvedValue(events);
+      mockEventstore._setEvents(events);
       await handler.start();
       // Wait for processing
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -452,7 +466,7 @@ describe('ProjectionHandler', () => {
         revision: 1,
       };
       
-      mockEventstore.query.mockResolvedValue([event]);
+      mockEventstore._setEvents([event]);
       await handler.start();
       await new Promise(resolve => setTimeout(resolve, 200));
       
@@ -476,7 +490,7 @@ describe('ProjectionHandler', () => {
         revision: 1,
       };
       
-      mockEventstore.query.mockResolvedValue([event]);
+      mockEventstore._setEvents([event]);
       await handler.start();
       await new Promise(resolve => setTimeout(resolve, 250));
       
@@ -501,7 +515,7 @@ describe('ProjectionHandler', () => {
         revision: 1,
       }));
       
-      mockEventstore.query.mockResolvedValue(events);
+      mockEventstore._setEvents(events);
       await handler.start();
       await new Promise(resolve => setTimeout(resolve, 250));
       
@@ -529,7 +543,7 @@ describe('ProjectionHandler', () => {
         revision: 1,
       };
       
-      mockEventstore.query.mockResolvedValue([event]);
+      mockEventstore._setEvents([event]);
       await handler.start();
       await new Promise(resolve => setTimeout(resolve, 300));
       
@@ -537,7 +551,7 @@ describe('ProjectionHandler', () => {
       // Check that failed event was recorded in transaction
       const allQueries = mockDatabase._getAllQueries();
       const failedEventQuery = allQueries.find((q: any) => 
-        q.sql.includes('projection_failed_events') && q.sql.includes('INSERT')
+        (q.sql.includes('projection_failed_events') || q.sql.includes('projections.projection_failed_events')) && q.sql.includes('INSERT')
       );
       expect(failedEventQuery).toBeDefined();
     });

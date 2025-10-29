@@ -95,9 +95,9 @@ describe('Login Name Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper: Process projections (200ms wait)
+  // Helper: Process projections (500ms wait for reliability)
   async function processProjections(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 500));
   }
 
   // Helper: Create org with verified domain

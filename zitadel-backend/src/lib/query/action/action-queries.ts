@@ -32,7 +32,9 @@ export class ActionQueries {
     const query = `
       SELECT 
         id, instance_id, resource_owner, creation_date, change_date, sequence,
-        name, script, timeout, allowed_to_fail, state
+        name, script, 
+        EXTRACT(epoch FROM timeout) * 1000 as timeout_ms,
+        allowed_to_fail, state
       FROM projections.actions
       WHERE instance_id = $1 AND id = $2
       LIMIT 1
@@ -52,7 +54,9 @@ export class ActionQueries {
     let query = `
       SELECT 
         id, instance_id, resource_owner, creation_date, change_date, sequence,
-        name, script, timeout, allowed_to_fail, state
+        name, script, 
+        EXTRACT(epoch FROM timeout) * 1000 as timeout_ms,
+        allowed_to_fail, state
       FROM projections.actions
       WHERE instance_id = $1
     `;
@@ -297,6 +301,26 @@ export class ActionQueries {
   // ===== Private Mapping Methods =====
 
   private mapToAction(row: any): Action {
+    // Use timeout_ms if available (from EXTRACT), otherwise try to parse timeout interval
+    let timeoutMs = 10000; // default
+    if (row.timeout_ms !== undefined && row.timeout_ms !== null) {
+      timeoutMs = Math.floor(Number(row.timeout_ms));
+    } else if (row.timeout) {
+      // Fallback: Parse PostgreSQL interval if timeout_ms not available
+      if (typeof row.timeout === 'object' && row.timeout.milliseconds !== undefined) {
+        timeoutMs = row.timeout.milliseconds;
+      } else if (typeof row.timeout === 'string') {
+        const match = row.timeout.match(/(\d+):(\d+):(\d+)\.?(\d+)?/);
+        if (match) {
+          const hours = parseInt(match[1]) || 0;
+          const minutes = parseInt(match[2]) || 0;
+          const seconds = parseInt(match[3]) || 0;
+          const ms = parseInt(match[4]) || 0;
+          timeoutMs = (hours * 3600 + minutes * 60 + seconds) * 1000 + ms;
+        }
+      }
+    }
+    
     return {
       id: row.id,
       instanceID: row.instance_id,
@@ -306,7 +330,7 @@ export class ActionQueries {
       sequence: Number(row.sequence),
       name: row.name || '',
       script: row.script || '',
-      timeout: Number(row.timeout) || 10000,
+      timeout: timeoutMs,
       allowedToFail: row.allowed_to_fail || false,
       state: row.state || ActionState.INACTIVE,
     };

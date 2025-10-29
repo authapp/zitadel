@@ -924,3 +924,75 @@ CREATE TABLE IF NOT EXISTS projections.users (
     UNIQUE (instance_id, resource_owner, username)
 );
 
+-- ============================================================================
+-- REFERENCE VIEWS FOR MILESTONES
+-- ============================================================================
+
+-- View: projections.milestone_types
+-- Description: Reference data for milestone types
+CREATE OR REPLACE VIEW projections.milestone_types AS
+SELECT 
+    1 AS type_id,
+    'INSTANCE' AS type_name,
+    'Instance-level milestones' AS description
+UNION ALL
+SELECT 
+    2 AS type_id,
+    'ORGANIZATION' AS type_name,
+    'Organization-level milestones' AS description
+UNION ALL
+SELECT 
+    3 AS type_id,
+    'PROJECT' AS type_name,
+    'Project-level milestones' AS description
+UNION ALL
+SELECT 
+    4 AS type_id,
+    'USER' AS type_name,
+    'User-level milestones' AS description;
+
+-- View: projections.common_milestones
+-- Description: Common milestone definitions
+CREATE OR REPLACE VIEW projections.common_milestones AS
+SELECT 
+    'instance_created' AS milestone_name,
+    1 AS milestone_type,
+    'instance' AS aggregate_type,
+    'Instance has been created' AS description
+UNION ALL
+SELECT 
+    'org_created' AS milestone_name,
+    2 AS milestone_type,
+    'organization' AS aggregate_type,
+    'Organization has been created' AS description
+UNION ALL
+SELECT 
+    'org_custom_domain' AS milestone_name,
+    2 AS milestone_type,
+    'organization' AS aggregate_type,
+    'Organization has added a custom domain' AS description
+UNION ALL
+SELECT 
+    'project_created' AS milestone_name,
+    3 AS milestone_type,
+    'project' AS aggregate_type,
+    'Project has been created' AS description
+UNION ALL
+SELECT 
+    'user_created' AS milestone_name,
+    4 AS milestone_type,
+    'user' AS aggregate_type,
+    'User has been created' AS description
+UNION ALL
+SELECT 
+    'user_email_verified' AS milestone_name,
+    4 AS milestone_type,
+    'user' AS aggregate_type,
+    'User email has been verified' AS description
+UNION ALL
+SELECT 
+    'user_mfa_enabled' AS milestone_name,
+    4 AS milestone_type,
+    'user' AS aggregate_type,
+    'User has enabled MFA' AS description;
+

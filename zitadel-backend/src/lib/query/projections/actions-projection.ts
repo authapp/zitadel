@@ -60,12 +60,25 @@ export class ActionsProjection extends Projection {
 
   private async handleActionAdded(event: Event): Promise<void> {
     const payload = event.payload as any;
+    
+    // Convert timeout to PostgreSQL interval format
+    let timeoutInterval: string;
+    if (typeof payload.timeout === 'number') {
+      // If it's a number, treat as milliseconds
+      timeoutInterval = `${payload.timeout} milliseconds`;
+    } else if (typeof payload.timeout === 'string') {
+      // If it's already a string, use as-is (e.g., "10 seconds")
+      timeoutInterval = payload.timeout;
+    } else {
+      // Default to 10 seconds
+      timeoutInterval = '10 seconds';
+    }
 
     await this.database.query(
       `INSERT INTO projections.actions (
         id, instance_id, resource_owner, name, script, timeout, 
         allowed_to_fail, state, creation_date, change_date, sequence
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      ) VALUES ($1, $2, $3, $4, $5, $6::interval, $7, $8, $9, $10, $11)
       ON CONFLICT (instance_id, id) DO UPDATE SET
         name = EXCLUDED.name,
         script = EXCLUDED.script,
@@ -74,12 +87,12 @@ export class ActionsProjection extends Projection {
         change_date = EXCLUDED.change_date,
         sequence = GREATEST(projections.actions.sequence, EXCLUDED.sequence)`,
       [
-        payload.id || event.aggregateID,
+        event.aggregateID, // ID is always in aggregateID, not payload
         event.instanceID,
         event.owner,
         payload.name,
         payload.script,
-        payload.timeout || '10 seconds',
+        timeoutInterval, // Convert to interval string
         payload.allowedToFail || false,
         1, // active state
         event.createdAt,
@@ -104,8 +117,13 @@ export class ActionsProjection extends Projection {
       values.push(payload.script);
     }
     if (payload.timeout !== undefined) {
-      updates.push(`timeout = $${paramIndex++}`);
-      values.push(payload.timeout);
+      updates.push(`timeout = $${paramIndex++}::interval`);
+      // Handle both number (milliseconds) and string (interval) formats
+      if (typeof payload.timeout === 'number') {
+        values.push(`${payload.timeout} milliseconds`);
+      } else {
+        values.push(payload.timeout);
+      }
     }
     if (payload.allowedToFail !== undefined) {
       updates.push(`allowed_to_fail = $${paramIndex++}`);
@@ -119,7 +137,7 @@ export class ActionsProjection extends Projection {
       values.push(event.aggregateVersion);
 
       values.push(event.instanceID);
-      values.push(payload.id || event.aggregateID);
+      values.push(event.aggregateID); // ID is always in aggregateID
 
       await this.database.query(
         `UPDATE projections.actions SET ${updates.join(', ')}
@@ -140,7 +158,7 @@ export class ActionsProjection extends Projection {
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,
-        payload.id || event.aggregateID,
+        event.aggregateID, // ID is always in aggregateID
       ]
     );
   }
@@ -156,7 +174,7 @@ export class ActionsProjection extends Projection {
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,
-        payload.id || event.aggregateID,
+        event.aggregateID, // ID is always in aggregateID
       ]
     );
   }
@@ -167,7 +185,7 @@ export class ActionsProjection extends Projection {
     await this.database.query(
       `DELETE FROM projections.actions 
        WHERE instance_id = $1 AND id = $2`,
-      [event.instanceID, payload.id || event.aggregateID]
+      [event.instanceID, event.aggregateID] // ID is always in aggregateID
     );
   }
 
