@@ -14,7 +14,7 @@ import { UserProjection } from '../../../src/lib/query/projections/user-projecti
 import { PersonalAccessTokenProjection } from '../../../src/lib/query/projections/personal-access-token-projection';
 import { AdminQueries } from '../../../src/lib/query/admin/admin-queries';
 
-describe.skip('Personal Access Token Commands - SKIPPED: Implementation needs fixes', () => {
+describe('Personal Access Token Commands', () => {
   let pool: DatabasePool;
   let ctx: CommandTestContext;
   let userProjection: UserProjection;
@@ -46,8 +46,8 @@ describe.skip('Personal Access Token Commands - SKIPPED: Implementation needs fi
     await ctx.clearEvents();
     
     // Clear projection data
-    await pool.query('TRUNCATE personal_access_tokens_projection CASCADE');
-    await pool.query('TRUNCATE users_projection CASCADE');
+    await pool.query('TRUNCATE projections.personal_access_tokens CASCADE');
+    await pool.query('TRUNCATE projections.users CASCADE');
   });
 
   /**

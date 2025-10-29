@@ -67,7 +67,7 @@ export class AdminQueries {
       SELECT 
         id, user_id, instance_id, created_at AS creation_date, change_date, sequence,
         scopes, expiration_date
-      FROM personal_access_tokens_projection
+      FROM projections.personal_access_tokens
       WHERE instance_id = $1 AND id = $2
       LIMIT 1
     `;
