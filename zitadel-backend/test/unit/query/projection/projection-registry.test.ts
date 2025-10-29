@@ -533,6 +533,8 @@ describe('ProjectionRegistry', () => {
       const proj = new TestProjection('proj1', mockEventstore, mockDatabase);
       registry.register({ name: 'proj1', tables: ['t1'] }, proj);
       await registry.init();
+      // Clear mock calls from init() to test only the actual test calls
+      mockDatabase.query.mockClear();
     });
 
     it('should get failed events for projection', async () => {
@@ -553,7 +555,7 @@ describe('ProjectionRegistry', () => {
       await registry.clearFailedEvents('proj1');
       
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM projection_failed_events'),
+        expect.stringContaining('DELETE FROM projections.projection_failed_events'),
         expect.arrayContaining(['proj1'])
       );
     });

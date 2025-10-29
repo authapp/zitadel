@@ -351,7 +351,7 @@ describe('Projection', () => {
       );
       
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('INSERT INTO projection_states'),
+        expect.stringContaining('INSERT INTO projections.projection_states'),
         expect.arrayContaining([
           'test_projection',
           500,
@@ -448,7 +448,7 @@ describe('Projection', () => {
       await projection.reset();
       
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM projection_states'),
+        expect.stringContaining('DELETE FROM projections.projection_states'),
         expect.arrayContaining(['test_projection'])
       );
     });

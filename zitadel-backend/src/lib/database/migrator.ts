@@ -5,9 +5,14 @@
  */
 
 import { DatabasePool } from './pool';
-import { Migration, migrations } from './migrations';
 import { join } from 'path';
-import { readFileSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
+
+export interface Migration {
+  version: number;
+  name: string;
+  filename: string;
+}
 
 export class DatabaseMigrator {
   constructor(private pool: DatabasePool) {}
@@ -36,9 +41,33 @@ export class DatabaseMigrator {
   }
 
   /**
+   * Auto-discover migrations from schema directory
+   */
+  private getMigrations(): Migration[] {
+    const schemaDir = join(__dirname, 'schema');
+    const files = readdirSync(schemaDir)
+      .filter(f => f.endsWith('.sql'))
+      .sort();
+
+    return files.map(filename => {
+      // Extract version from filename (e.g., "01_infrastructure.sql" -> 1)
+      const match = filename.match(/^(\d+)_(.+)\.sql$/);
+      if (!match) {
+        throw new Error(`Invalid migration filename: ${filename}`);
+      }
+      
+      const version = parseInt(match[1], 10);
+      const name = match[2].replace(/_/g, ' ');
+      
+      return { version, name, filename };
+    });
+  }
+
+  /**
    * Get pending migrations
    */
   private getPendingMigrations(appliedVersions: number[]): Migration[] {
+    const migrations = this.getMigrations();
     return migrations.filter(m => !appliedVersions.includes(m.version));
   }
 
@@ -47,7 +76,7 @@ export class DatabaseMigrator {
    * PostgreSQL supports executing multiple statements in a single query
    */
   private async executeMigrationFile(filename: string): Promise<void> {
-    const migrationPath = join(__dirname, 'migrations', filename);
+    const migrationPath = join(__dirname, 'schema', filename);
     
     // Read SQL file
     const sql = readFileSync(migrationPath, 'utf-8');
@@ -126,12 +155,16 @@ export class DatabaseMigrator {
   async reset(): Promise<void> {
     console.log('⚠️  Resetting database...');
     
-    // Drop all tables
+    // Drop all schemas (public and projections)
     await this.pool.query(`
+      DROP SCHEMA IF EXISTS projections CASCADE;
       DROP SCHEMA public CASCADE;
       CREATE SCHEMA public;
+      CREATE SCHEMA projections;
       GRANT ALL ON SCHEMA public TO postgres;
       GRANT ALL ON SCHEMA public TO public;
+      GRANT ALL ON SCHEMA projections TO postgres;
+      GRANT ALL ON SCHEMA projections TO public;
     `);
 
     console.log('✅ Database reset complete');

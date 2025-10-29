@@ -1,2 +1,0 @@
--- Migration: 001_10 - No-op (removed in Go v2 simplification)
--- Covered by idx_events_projection and other composite indexes

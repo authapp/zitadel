@@ -141,7 +141,7 @@ describe('OrgQueries', () => {
       expect(result).toBeDefined();
       expect(result?.id).toBe('org-123');
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('INNER JOIN org_domains_projection'),
+        expect.stringContaining('INNER JOIN projections.org_domains'),
         ['test.com']
       );
     });

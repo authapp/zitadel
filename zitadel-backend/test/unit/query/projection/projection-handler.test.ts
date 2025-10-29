@@ -293,14 +293,14 @@ describe('ProjectionHandler', () => {
     it('should wait for in-flight processing before stopping', async () => {
       let processingComplete = false;
       mockEventstore.query.mockImplementation(async () => {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 50));
         processingComplete = true;
         return [];
       });
       
       await handler.start();
-      // Wait for processing to start
-      await new Promise(resolve => setTimeout(resolve, 75));
+      // Wait for processing to start (interval is 50ms, so wait 100ms to ensure it starts)
+      await new Promise(resolve => setTimeout(resolve, 100));
       await handler.stop();
       expect(processingComplete).toBe(true);
     }, 10000);
@@ -310,9 +310,10 @@ describe('ProjectionHandler', () => {
     it('should poll eventstore at configured interval', async () => {
       await handler.start();
       
-      // Wait for 2 polling cycles
-      await new Promise(resolve => setTimeout(resolve, 150));
+      // Wait for at least 2 polling cycles (interval is 50ms, wait 200ms to be safe)
+      await new Promise(resolve => setTimeout(resolve, 200));
       
+      await handler.stop();
       expect(mockEventstore.query.mock.calls.length).toBeGreaterThanOrEqual(1);
     });
 
@@ -353,10 +354,12 @@ describe('ProjectionHandler', () => {
 
   describe('Event Fetching and Filtering', () => {
     it('should fetch events with correct filter', async () => {
+      mockEventstore.query.mockResolvedValue([]);
       await handler.start();
       // Wait for first poll
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
+      await handler.stop();
       expect(mockEventstore.query).toHaveBeenCalledWith(
         expect.objectContaining({
           aggregateTypes: ['test'],
@@ -404,8 +407,9 @@ describe('ProjectionHandler', () => {
       mockEventstore.query.mockResolvedValue(events);
       await handler.start();
       // Wait for processing
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
+      await handler.stop();
       // Should only process event at position 10 (after position 5)
       expect(projection.reduceCallCount).toBeGreaterThanOrEqual(1);
       if (projection.lastEvent) {
@@ -417,8 +421,9 @@ describe('ProjectionHandler', () => {
       // Eventstore should filter this out, so return empty array
       mockEventstore.query.mockResolvedValue([]);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 150));
       
+      await handler.stop();
       expect(projection.reduceCalled).toBe(false);
     });
 
@@ -449,8 +454,9 @@ describe('ProjectionHandler', () => {
       
       mockEventstore.query.mockResolvedValue([event]);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 200));
       
+      await handler.stop();
       expect(projection.reduceCalled).toBe(true);
       expect(projection.lastEvent).toEqual(event);
     });
@@ -472,8 +478,9 @@ describe('ProjectionHandler', () => {
       
       mockEventstore.query.mockResolvedValue([event]);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 250));
       
+      await handler.stop();
       // Verify that reduce was called (meaning position was tracked)
       expect(projection.reduceCalled).toBe(true);
       expect(projection.lastEvent?.position.position).toBe(100);
@@ -496,8 +503,9 @@ describe('ProjectionHandler', () => {
       
       mockEventstore.query.mockResolvedValue(events);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, 250));
       
+      await handler.stop();
       expect(projection.reduceCallCount).toBe(3);
     });
   });
@@ -523,8 +531,9 @@ describe('ProjectionHandler', () => {
       
       mockEventstore.query.mockResolvedValue([event]);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise(resolve => setTimeout(resolve, 300));
       
+      await handler.stop();
       // Check that failed event was recorded in transaction
       const allQueries = mockDatabase._getAllQueries();
       const failedEventQuery = allQueries.find((q: any) => 

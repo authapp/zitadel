@@ -50,7 +50,7 @@ describe('InstanceQueries', () => {
       expect(result?.id).toBe('inst-123');
       expect(result?.name).toBe('Test Instance');
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('FROM instances_projection'),
+        expect.stringContaining('FROM projections.instances'),
         ['inst-123']
       );
     });

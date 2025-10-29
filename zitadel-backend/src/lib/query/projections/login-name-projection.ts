@@ -419,24 +419,6 @@ export class LoginNameProjection extends Projection {
   }
 
   /**
-   * Helper: Get instance domains
-   * @internal - Reserved for future instance domain support
-   */
-  private async getInstanceDomains(instanceId: string): Promise<Array<{name: string, isPrimary: boolean}>> {
-    const result = await this.database.queryMany(
-      `SELECT domain 
-       FROM projections.instance_domains 
-       WHERE instance_id = $1`,
-      [instanceId]
-    );
-    
-    return result.map(r => ({
-      name: r.domain,
-      isPrimary: r.is_primary || false,
-    }));
-  }
-
-  /**
    * Helper: Get org users
    */
   private async getOrgUsers(orgId: string, instanceId: string): Promise<Array<{id: string, username: string, email: string}>> {

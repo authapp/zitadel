@@ -66,7 +66,7 @@ describe('UserQueries', () => {
       expect(result?.username).toBe('testuser');
       expect(result?.email).toBe('test@example.com');
       expect(mockDatabase.queryOne).toHaveBeenCalledWith(
-        expect.stringContaining('FROM users_projection'),
+        expect.stringContaining('FROM projections.users'),
         ['user-123', 'inst-1']
       );
     });
@@ -481,7 +481,7 @@ describe('UserQueries', () => {
 
       expect(result).toBeDefined();
       expect(mockDatabase.queryOne).toHaveBeenCalledWith(
-        expect.stringContaining('INNER JOIN sessions_projection'),
+        expect.stringContaining('INNER JOIN projections.sessions'),
         ['session-123', 'inst-1']
       );
     });

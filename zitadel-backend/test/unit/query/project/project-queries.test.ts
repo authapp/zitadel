@@ -49,7 +49,7 @@ describe('ProjectQueries', () => {
       expect(result?.id).toBe('project-123');
       expect(result?.name).toBe('Test Project');
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('FROM projects_projection'),
+        expect.stringContaining('FROM projections.projects'),
         ['project-123', 'removed']
       );
     });

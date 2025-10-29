@@ -371,7 +371,7 @@ describe('CurrentStateTracker', () => {
       await tracker.deleteState('test_projection');
       
       expect(mockDatabase.query).toHaveBeenCalledWith(
-        expect.stringContaining('DELETE FROM projection_states WHERE name = $1'),
+        expect.stringContaining('DELETE FROM projections.projection_states WHERE name = $1'),
         ['test_projection']
       );
     });
