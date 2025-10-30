@@ -154,14 +154,13 @@ describe('Actions Schema Integration Tests', () => {
   describe('Executions Table', () => {
     it('should insert and query executions', async () => {
       const executionId = generateId();
-      const actionId = generateId();
-      const aggregateId = generateId();
+      const resourceOwner = generateId();
 
       await pool.query(
         `INSERT INTO projections.executions (
-          id, instance_id, aggregate_type, aggregate_id, action_id, event_type, event_sequence, targets
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [executionId, TEST_INSTANCE_ID, 'user', aggregateId, actionId, 'user.created', 1, JSON.stringify(['webhook'])]
+          id, instance_id, resource_owner, creation_date, change_date, sequence, execution_type, targets, state
+        ) VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7)`,
+        [executionId, TEST_INSTANCE_ID, resourceOwner, 1, 4, JSON.stringify([{type: 1, target: 'webhook-1'}]), 1]
       );
 
       const result = await pool.queryOne(
@@ -170,41 +169,42 @@ describe('Actions Schema Integration Tests', () => {
       );
 
       expect(result).toBeDefined();
-      expect(result.action_id).toBe(actionId);
-      expect(result.event_type).toBe('user.created');
-      expect(result.aggregate_type).toBe('user');
+      expect(result.resource_owner).toBe(resourceOwner);
+      expect(result.execution_type).toBe(4); // EVENT type
+      expect(result.state).toBe(1); // ACTIVE
       // targets is already an array if stored as JSONB, or needs parsing if TEXT
       const targets = typeof result.targets === 'string' ? JSON.parse(result.targets) : result.targets;
-      expect(targets).toEqual(['webhook']);
+      expect(targets).toHaveLength(1);
+      expect(targets[0].target).toBe('webhook-1');
     });
 
-    it('should track execution history for aggregate', async () => {
-      const aggregateId = generateId();
+    it('should track execution history for resource owner', async () => {
+      const resourceOwner = generateId();
       const execution1 = generateId();
       const execution2 = generateId();
 
       await pool.query(
         `INSERT INTO projections.executions (
-          id, instance_id, aggregate_type, aggregate_id, action_id, event_type, event_sequence, targets
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [execution1, TEST_INSTANCE_ID, 'user', aggregateId, generateId(), 'user.created', 1, JSON.stringify([])]
+          id, instance_id, resource_owner, creation_date, change_date, sequence, execution_type, targets, state
+        ) VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7)`,
+        [execution1, TEST_INSTANCE_ID, resourceOwner, 1, 4, JSON.stringify([]), 1]
       );
 
       await pool.query(
         `INSERT INTO projections.executions (
-          id, instance_id, aggregate_type, aggregate_id, action_id, event_type, event_sequence, targets
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [execution2, TEST_INSTANCE_ID, 'user', aggregateId, generateId(), 'user.changed', 2, JSON.stringify([])]
+          id, instance_id, resource_owner, creation_date, change_date, sequence, execution_type, targets, state
+        ) VALUES ($1, $2, $3, NOW(), NOW(), $4, $5, $6, $7)`,
+        [execution2, TEST_INSTANCE_ID, resourceOwner, 2, 4, JSON.stringify([]), 1]
       );
 
       const results = await pool.query(
-        'SELECT * FROM projections.executions WHERE instance_id = $1 AND aggregate_id = $2 ORDER BY event_sequence',
-        [TEST_INSTANCE_ID, aggregateId]
+        'SELECT * FROM projections.executions WHERE instance_id = $1 AND resource_owner = $2 ORDER BY sequence',
+        [TEST_INSTANCE_ID, resourceOwner]
       );
 
       expect(results.rows.length).toBe(2);
-      expect(results.rows[0].event_type).toBe('user.created');
-      expect(results.rows[1].event_type).toBe('user.changed');
+      expect(Number(results.rows[0].sequence)).toBe(1);
+      expect(Number(results.rows[1].sequence)).toBe(2);
     });
   });
 

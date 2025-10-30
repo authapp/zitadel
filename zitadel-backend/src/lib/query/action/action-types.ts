@@ -69,12 +69,13 @@ export interface Flow {
 export interface Execution {
   id: string;
   instanceID: string;
+  resourceOwner: string;
   creationDate: Date;
   changeDate: Date;
   sequence: number;
-  targets: string[]; // Target IDs
-  includes: string[]; // Condition includes
-  excludes: string[]; // Condition excludes
+  executionType: number;
+  targets: any[]; // ExecutionTarget[]
+  state: number;
 }
 
 /**
@@ -89,9 +90,11 @@ export interface Target {
   changeDate: Date;
   sequence: number;
   name: string;
-  targetType: 'webhook' | 'requestResponse' | 'async';
+  targetType: number;
   endpoint: string;
   timeout: number;
+  interruptOnError: boolean;
+  state: number;
 }
 
 /**

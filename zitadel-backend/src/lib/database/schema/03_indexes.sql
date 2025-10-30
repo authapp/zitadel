@@ -144,17 +144,17 @@ CREATE INDEX IF NOT EXISTS idx_execution_states_finished ON projections.executio
 -- Index: idx_execution_states_state on projections.execution_states
 CREATE INDEX IF NOT EXISTS idx_execution_states_state ON projections.execution_states USING btree (instance_id, state);
 
--- Index: idx_executions_action on projections.executions
-CREATE INDEX IF NOT EXISTS idx_executions_action ON projections.executions USING btree (instance_id, action_id);
+-- Index: idx_executions_resource_owner on projections.executions
+CREATE INDEX IF NOT EXISTS idx_executions_resource_owner ON projections.executions USING btree (instance_id, resource_owner);
 
--- Index: idx_executions_aggregate on projections.executions
-CREATE INDEX IF NOT EXISTS idx_executions_aggregate ON projections.executions USING btree (instance_id, aggregate_type, aggregate_id);
+-- Index: idx_executions_state on projections.executions
+CREATE INDEX IF NOT EXISTS idx_executions_state ON projections.executions USING btree (instance_id, state);
+
+-- Index: idx_executions_type on projections.executions
+CREATE INDEX IF NOT EXISTS idx_executions_type ON projections.executions USING btree (instance_id, execution_type);
 
 -- Index: idx_executions_date on projections.executions
 CREATE INDEX IF NOT EXISTS idx_executions_date ON projections.executions USING btree (instance_id, creation_date DESC);
-
--- Index: idx_executions_event on projections.executions
-CREATE INDEX IF NOT EXISTS idx_executions_event ON projections.executions USING btree (instance_id, event_type, event_sequence);
 
 -- Index: idx_idp_login_policy_links_idp_id on projections.idp_login_policy_links
 CREATE INDEX IF NOT EXISTS idx_idp_login_policy_links_idp_id ON projections.idp_login_policy_links USING btree (idp_id, instance_id);

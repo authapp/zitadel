@@ -175,19 +175,28 @@ export class ActionQueries {
   /**
    * Search executions
    * @param instanceID - Instance ID
+   * @param resourceOwner - Optional resource owner filter
    * @returns Array of executions
    */
-  async searchExecutions(instanceID: string): Promise<Execution[]> {
-    const query = `
+  async searchExecutions(instanceID: string, resourceOwner?: string): Promise<Execution[]> {
+    let query = `
       SELECT 
-        id, instance_id, creation_date, change_date, sequence,
-        targets, includes, excludes
+        id, instance_id, resource_owner, creation_date, change_date, sequence,
+        execution_type, targets, state
       FROM projections.executions
       WHERE instance_id = $1
-      ORDER BY creation_date DESC
     `;
 
-    const result = await this.database.query(query, [instanceID]);
+    const params: any[] = [instanceID];
+
+    if (resourceOwner) {
+      query += ` AND resource_owner = $2`;
+      params.push(resourceOwner);
+    }
+
+    query += ` ORDER BY creation_date DESC`;
+
+    const result = await this.database.query(query, params);
     return result.rows.map(row => this.mapToExecution(row));
   }
 
@@ -200,8 +209,8 @@ export class ActionQueries {
   async getExecutionByID(instanceID: string, executionID: string): Promise<Execution | null> {
     const query = `
       SELECT 
-        id, instance_id, creation_date, change_date, sequence,
-        targets, includes, excludes
+        id, instance_id, resource_owner, creation_date, change_date, sequence,
+        execution_type, targets, state
       FROM projections.executions
       WHERE instance_id = $1 AND id = $2
       LIMIT 1
@@ -216,19 +225,28 @@ export class ActionQueries {
   /**
    * Search targets
    * @param instanceID - Instance ID
+   * @param resourceOwner - Optional resource owner filter
    * @returns Array of targets
    */
-  async searchTargets(instanceID: string): Promise<Target[]> {
-    const query = `
+  async searchTargets(instanceID: string, resourceOwner?: string): Promise<Target[]> {
+    let query = `
       SELECT 
         id, instance_id, resource_owner, creation_date, change_date, sequence,
-        name, target_type, endpoint, timeout
+        name, target_type, endpoint, timeout, interrupt_on_error, state
       FROM projections.targets
       WHERE instance_id = $1
-      ORDER BY name
     `;
 
-    const result = await this.database.query(query, [instanceID]);
+    const params: any[] = [instanceID];
+
+    if (resourceOwner) {
+      query += ` AND resource_owner = $2`;
+      params.push(resourceOwner);
+    }
+
+    query += ` ORDER BY name`;
+
+    const result = await this.database.query(query, params);
     return result.rows.map(row => this.mapToTarget(row));
   }
 
@@ -242,7 +260,7 @@ export class ActionQueries {
     const query = `
       SELECT 
         id, instance_id, resource_owner, creation_date, change_date, sequence,
-        name, target_type, endpoint, timeout
+        name, target_type, endpoint, timeout, interrupt_on_error, state
       FROM projections.targets
       WHERE instance_id = $1 AND id = $2
       LIMIT 1
@@ -379,15 +397,21 @@ export class ActionQueries {
   }
 
   private mapToExecution(row: any): Execution {
+    // Parse targets from JSONB
+    const targets = typeof row.targets === 'string' 
+      ? JSON.parse(row.targets) 
+      : (row.targets || []);
+
     return {
       id: row.id,
       instanceID: row.instance_id,
+      resourceOwner: row.resource_owner,
       creationDate: row.creation_date,
       changeDate: row.change_date,
       sequence: Number(row.sequence),
-      targets: row.targets || [],
-      includes: row.includes || [],
-      excludes: row.excludes || [],
+      executionType: row.execution_type || 0,
+      targets: targets,
+      state: row.state || 1,
     };
   }
 
@@ -400,9 +424,11 @@ export class ActionQueries {
       changeDate: row.change_date,
       sequence: Number(row.sequence),
       name: row.name || '',
-      targetType: row.target_type || 'webhook',
+      targetType: row.target_type || 1,
       endpoint: row.endpoint || '',
       timeout: Number(row.timeout) || 10000,
+      interruptOnError: row.interrupt_on_error || false,
+      state: row.state || 1,
     };
   }
 

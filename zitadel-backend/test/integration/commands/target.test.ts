@@ -3,25 +3,48 @@
  * Each test creates its own organization and test data
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
 import { OrganizationBuilder } from '../../helpers/test-data-builders';
-import { TargetType } from '../../../src/lib/domain/target';
+import { TargetType, TargetState } from '../../../src/lib/domain/target';
+import { TargetProjection } from '../../../src/lib/query/projections/target-projection';
+import { ActionQueries } from '../../../src/lib/query/action/action-queries';
 
-describe('Target Commands Integration Tests (Isolated)', () => {
+describe('Target Commands Integration Tests (E2E)', () => {
   let pool: DatabasePool;
   let ctx: CommandTestContext;
+  let projection: TargetProjection;
+  let queries: ActionQueries;
 
   beforeAll(async () => {
     pool = await createTestDatabase();
     ctx = await setupCommandTest(pool);
+    
+    // Initialize projection and queries
+    projection = new TargetProjection(ctx.eventstore, pool);
+    await projection.init();
+    queries = new ActionQueries(pool);
+  });
+
+  beforeEach(async () => {
+    await ctx.clearEvents();
   });
 
   afterAll(async () => {
     await pool.close();
   });
+
+  /**
+   * Helper: Process projections
+   */
+  async function processProjections(): Promise<void> {
+    const events = await ctx.getEvents('*', '*');
+    for (const event of events) {
+      await projection.reduce(event);
+    }
+  }
 
   /**
    * Helper: Create isolated test organization
@@ -37,9 +60,10 @@ describe('Target Commands Integration Tests (Isolated)', () => {
 
   describe('addTarget', () => {
     describe('Success Cases', () => {
-      it('should add webhook target successfully', async () => {
+      it('should add webhook target successfully (E2E)', async () => {
         const testOrg = await createTestOrg();
         
+        // 1. Execute command
         const result = await ctx.commands.addTarget(
           ctx.createContext(),
           testOrg.id,
@@ -56,9 +80,42 @@ describe('Target Commands Integration Tests (Isolated)', () => {
         expect(result.id).toBeDefined();
         expect(result.signingKey).toBeDefined();
         expect(result.signingKey.length).toBeGreaterThan(0);
+
+        // 2. Verify event
+        const events = await ctx.getEvents('target', result.id);
+        const addEvent = events.find(e => e.eventType === 'target.added');
+        expect(addEvent).toBeDefined();
+        expect(addEvent!.payload).toMatchObject({
+          name: 'Test Webhook',
+          targetType: TargetType.WEBHOOK,
+          endpoint: 'https://example.com/webhook',
+          timeout: 10000,
+          interruptOnError: false,
+        });
+
+        // 3. Process projection
+        await processProjections();
+
+        // 4. Verify via query layer
+        const queriedTarget = await queries.getTargetByID(
+          ctx.createContext().instanceID,
+          result.id
+        );
+
+        expect(queriedTarget).not.toBeNull();
+        expect(queriedTarget!.id).toBe(result.id);
+        expect(queriedTarget!.name).toBe('Test Webhook');
+        expect(queriedTarget!.targetType).toBe(TargetType.WEBHOOK);
+        expect(queriedTarget!.endpoint).toBe('https://example.com/webhook');
+        expect(queriedTarget!.timeout).toBe(10000);
+        expect(queriedTarget!.interruptOnError).toBe(false);
+        expect(queriedTarget!.state).toBe(TargetState.ACTIVE);
+        expect(queriedTarget!.resourceOwner).toBe(testOrg.id);
+
+        console.log('✓ E2E verified: Command → Event → Projection → Query');
       });
 
-      it('should add target with interrupt on error', async () => {
+      it('should add target with interrupt on error (E2E)', async () => {
         const testOrg = await createTestOrg();
         const result = await ctx.commands.addTarget(
           ctx.createContext(),
@@ -73,6 +130,21 @@ describe('Target Commands Integration Tests (Isolated)', () => {
         );
 
         expect(result.id).toBeDefined();
+
+        // Process projection
+        await processProjections();
+
+        // Verify via query layer
+        const queriedTarget = await queries.getTargetByID(
+          ctx.createContext().instanceID,
+          result.id
+        );
+
+        expect(queriedTarget).not.toBeNull();
+        expect(queriedTarget!.interruptOnError).toBe(true);
+        expect(queriedTarget!.targetType).toBe(TargetType.REQUEST_RESPONSE);
+
+        console.log('✓ E2E verified: Interrupt on error persisted');
       });
 
       it('should generate unique signing keys for each target', async () => {
@@ -426,7 +498,7 @@ describe('Target Commands Integration Tests (Isolated)', () => {
 
   describe('removeTarget', () => {
     describe('Success Cases', () => {
-      it('should remove target successfully', async () => {
+      it('should remove target successfully (E2E)', async () => {
         const testOrg = await createTestOrg();
         const addResult = await ctx.commands.addTarget(
           ctx.createContext(),
@@ -447,6 +519,24 @@ describe('Target Commands Integration Tests (Isolated)', () => {
         );
 
         expect(result).toBeDefined();
+
+        // Verify event
+        const events = await ctx.getEvents('target', addResult.id);
+        const removeEvent = events.find(e => e.eventType === 'target.removed');
+        expect(removeEvent).toBeDefined();
+
+        // Process projection
+        await processProjections();
+
+        // Verify via query layer - should be deleted
+        const queriedTarget = await queries.getTargetByID(
+          ctx.createContext().instanceID,
+          addResult.id
+        );
+
+        expect(queriedTarget).toBeNull();
+
+        console.log('✓ E2E verified: Deletion reflected in query layer');
       });
     });
 

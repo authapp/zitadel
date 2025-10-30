@@ -148,8 +148,6 @@ export class ActionsProjection extends Projection {
   }
 
   private async handleActionDeactivated(event: Event): Promise<void> {
-    const payload = event.payload as any;
-
     await this.database.query(
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
@@ -164,8 +162,6 @@ export class ActionsProjection extends Projection {
   }
 
   private async handleActionReactivated(event: Event): Promise<void> {
-    const payload = event.payload as any;
-
     await this.database.query(
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
@@ -180,8 +176,6 @@ export class ActionsProjection extends Projection {
   }
 
   private async handleActionRemoved(event: Event): Promise<void> {
-    const payload = event.payload as any;
-
     await this.database.query(
       `DELETE FROM projections.actions 
        WHERE instance_id = $1 AND id = $2`,

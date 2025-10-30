@@ -102,6 +102,23 @@ CREATE TABLE IF NOT EXISTS projections.actions (
     state SMALLINT NOT NULL DEFAULT 1
 );
 
+-- Table: projections.targets
+CREATE TABLE IF NOT EXISTS projections.targets (
+    id TEXT NOT NULL,
+    instance_id TEXT NOT NULL,
+    resource_owner TEXT NOT NULL,
+    creation_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+    change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+    sequence BIGINT NOT NULL,
+    name TEXT NOT NULL,
+    target_type SMALLINT NOT NULL DEFAULT 1,
+    endpoint TEXT NOT NULL,
+    timeout INTEGER NOT NULL DEFAULT 10000,
+    interrupt_on_error BOOLEAN NOT NULL DEFAULT false,
+    state SMALLINT NOT NULL DEFAULT 1,
+    PRIMARY KEY (instance_id, id)
+);
+
 -- Table: projections.applications
 CREATE TABLE IF NOT EXISTS projections.applications (
     id TEXT NOT NULL,
@@ -250,16 +267,18 @@ CREATE TABLE IF NOT EXISTS projections.execution_states (
 );
 
 -- Table: projections.executions
+-- Executions define routing rules: condition -> targets/includes
 CREATE TABLE IF NOT EXISTS projections.executions (
     id TEXT NOT NULL,
     instance_id TEXT NOT NULL,
-    aggregate_type TEXT NOT NULL,
-    aggregate_id TEXT NOT NULL,
-    action_id TEXT NOT NULL,
+    resource_owner TEXT NOT NULL,
     creation_date TIMESTAMPTZ NOT NULL DEFAULT now(),
-    event_type TEXT NOT NULL,
-    event_sequence BIGINT NOT NULL,
-    targets JSONB
+    change_date TIMESTAMPTZ NOT NULL DEFAULT now(),
+    sequence BIGINT NOT NULL,
+    execution_type SMALLINT NOT NULL DEFAULT 0,
+    targets JSONB NOT NULL DEFAULT '[]'::jsonb,
+    state SMALLINT NOT NULL DEFAULT 1,
+    PRIMARY KEY (instance_id, id)
 );
 
 -- Table: projections.idp_login_policy_links

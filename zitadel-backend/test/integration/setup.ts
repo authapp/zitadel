@@ -127,6 +127,8 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     'projection_locks',  // Critical for projection tests
     'unique_constraints',
     'events', // Events table MUST be cleaned
+    'projections.targets', // Sprint 4.2 tables
+    'projections.executions', // Sprint 4.2 tables
   ];
 
   for (const table of tables) {

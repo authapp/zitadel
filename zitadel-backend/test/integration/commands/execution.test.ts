@@ -3,26 +3,54 @@
  * Each test creates its own organization and test data
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
 import { OrganizationBuilder } from '../../helpers/test-data-builders';
-import { ExecutionTargetType } from '../../../src/lib/domain/execution';
+import { ExecutionTargetType, ExecutionState } from '../../../src/lib/domain/execution';
 import { TargetType } from '../../../src/lib/domain/target';
+import { TargetProjection } from '../../../src/lib/query/projections/target-projection';
+import { ExecutionProjection } from '../../../src/lib/query/projections/execution-projection';
+import { ActionQueries } from '../../../src/lib/query/action/action-queries';
 
-describe('Execution Commands Integration Tests (Isolated)', () => {
+describe('Execution Commands Integration Tests (E2E)', () => {
   let pool: DatabasePool;
   let ctx: CommandTestContext;
+  let targetProjection: TargetProjection;
+  let executionProjection: ExecutionProjection;
+  let queries: ActionQueries;
 
   beforeAll(async () => {
     pool = await createTestDatabase();
     ctx = await setupCommandTest(pool);
+    
+    // Initialize projections and queries
+    targetProjection = new TargetProjection(ctx.eventstore, pool);
+    await targetProjection.init();
+    executionProjection = new ExecutionProjection(ctx.eventstore, pool);
+    await executionProjection.init();
+    queries = new ActionQueries(pool);
+  });
+
+  beforeEach(async () => {
+    await ctx.clearEvents();
   });
 
   afterAll(async () => {
     await pool.close();
   });
+
+  /**
+   * Helper: Process projections
+   */
+  async function processProjections(): Promise<void> {
+    const events = await ctx.getEvents('*', '*');
+    for (const event of events) {
+      await targetProjection.reduce(event);
+      await executionProjection.reduce(event);
+    }
+  }
 
   /**
    * Helper: Create isolated test organization with targets
@@ -64,9 +92,10 @@ describe('Execution Commands Integration Tests (Isolated)', () => {
 
   describe('setExecutionEvent', () => {
     describe('Success Cases', () => {
-      it('should set execution for specific event', async () => {
+      it('should set execution for specific event (E2E)', async () => {
         const { orgID, target1 } = await createTestOrgWithTargets();
         
+        // 1. Execute command
         const result = await ctx.commands.setExecutionEvent(
           ctx.createContext(),
           orgID,
@@ -77,9 +106,32 @@ describe('Execution Commands Integration Tests (Isolated)', () => {
         );
 
         expect(result).toBeDefined();
+
+        // 2. Verify event
+        const events = await ctx.getEvents('execution', '*');
+        const setEvent = events.find(e => e.eventType === 'execution.set');
+        expect(setEvent).toBeDefined();
+        expect(setEvent!.payload).toHaveProperty('targets');
+
+        // 3. Process projections
+        await processProjections();
+
+        // 4. Verify via query layer
+        const executions = await queries.searchExecutions(
+          ctx.createContext().instanceID,
+          orgID
+        );
+
+        expect(executions.length).toBeGreaterThan(0);
+        const execution = executions.find(e => e.resourceOwner === orgID);
+        expect(execution).toBeDefined();
+        expect(execution!.state).toBe(ExecutionState.ACTIVE);
+        expect(execution!.targets).toBeDefined();
+
+        console.log('✓ E2E verified: Command → Event → Projection → Query');
       });
 
-      it('should set execution for event group', async () => {
+      it('should set execution for event group (E2E)', async () => {
         const { orgID, target1, target2 } = await createTestOrgWithTargets();
         
         const result = await ctx.commands.setExecutionEvent(
@@ -93,6 +145,22 @@ describe('Execution Commands Integration Tests (Isolated)', () => {
         );
 
         expect(result).toBeDefined();
+
+        // Process projections
+        await processProjections();
+
+        // Verify via query layer
+        const executions = await queries.searchExecutions(
+          ctx.createContext().instanceID,
+          orgID
+        );
+
+        expect(executions.length).toBeGreaterThan(0);
+        const execution = executions.find(e => e.resourceOwner === orgID);
+        expect(execution).toBeDefined();
+        expect(execution!.targets.length).toBe(2);
+
+        console.log('✓ E2E verified: Multiple targets in execution');
       });
 
       it('should set execution for all events', async () => {
@@ -468,7 +536,7 @@ describe('Execution Commands Integration Tests (Isolated)', () => {
   });
 
   describe('removeExecution', () => {
-    it('should remove execution successfully', async () => {
+    it('should remove execution successfully (E2E)', async () => {
       const { orgID, target1 } = await createTestOrgWithTargets();
       
       await ctx.commands.setExecutionEvent(
@@ -488,6 +556,24 @@ describe('Execution Commands Integration Tests (Isolated)', () => {
       );
 
       expect(result).toBeDefined();
+
+      // Verify event
+      const events = await ctx.getEvents('execution', executionID);
+      const removeEvent = events.find(e => e.eventType === 'execution.removed');
+      expect(removeEvent).toBeDefined();
+
+      // Process projections
+      await processProjections();
+
+      // Verify via query layer - should be deleted
+      const execution = await queries.getExecutionByID(
+        ctx.createContext().instanceID,
+        executionID
+      );
+
+      expect(execution).toBeNull();
+
+      console.log('✓ E2E verified: Execution deletion reflected in query layer');
     });
 
     it('should fail with non-existent execution', async () => {
