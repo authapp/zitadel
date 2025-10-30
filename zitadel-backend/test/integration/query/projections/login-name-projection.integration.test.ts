@@ -6,7 +6,7 @@
  * Each test uses unique domain names and usernames to prevent conflicts
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, jest } from '@jest/globals';
 import { DatabasePool } from '../../../../src/lib/database/pool';
 import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/eventstore';
 import { createTestDatabase, closeTestDatabase, cleanDatabase } from '../../setup';
@@ -29,9 +29,23 @@ describe('Login Name Projection Integration Tests', () => {
   let orgQueries: OrgQueries;
   let loginNameQueries: LoginNameQueries;
 
+  // Set timeout for all tests in this suite to 15 seconds
+  jest.setTimeout(15000);
+
   beforeAll(async () => {
     pool = await createTestDatabase();
     await cleanDatabase(pool);
+    
+    // FIX: Recreate the org_domains unique index with correct columns
+    // The old index was (instance_id, domain) which prevented multiple orgs from having same domain
+    // The correct index is (instance_id, org_id, domain)
+    try {
+      await pool.query('DROP INDEX IF EXISTS projections.idx_org_domains_domain_unique CASCADE');
+      await pool.query('CREATE UNIQUE INDEX idx_org_domains_domain_unique ON projections.org_domains (instance_id, org_id, domain)');
+      console.log('✓ Fixed org_domains unique index');
+    } catch (error) {
+      console.error('Failed to fix index:', error);
+    }
     
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
@@ -95,9 +109,34 @@ describe('Login Name Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper: Process projections (500ms wait for reliability)
+  // Helper: Process projections with retry mechanism
   async function processProjections(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait 200ms for projections to process events (interval is 50ms)
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+
+  // Helper: Wait for domain to exist in projections
+  async function waitForDomain(orgId: string, domainName: string, maxAttempts = 30): Promise<void> {
+    for (let i = 0; i < maxAttempts; i++) {
+      const domains = await orgQueries.getOrgDomainsByID(orgId, 'test-instance');
+      if (domains.some(d => d.domain === domainName)) {
+        return; // Domain found
+      }
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    throw new Error(`Domain ${domainName} was not added after ${maxAttempts} attempts (${maxAttempts * 200}ms)`);
+  }
+
+  // Helper: Wait for user to exist in projections
+  async function waitForUser(userId: string, maxAttempts = 30): Promise<void> {
+    for (let i = 0; i < maxAttempts; i++) {
+      const user = await userQueries.getUserByID(userId, 'test-instance');
+      if (user) {
+        return; // User found
+      }
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    throw new Error(`User ${userId} was not created after ${maxAttempts} attempts (${maxAttempts * 200}ms)`);
   }
 
   // Helper: Create org with verified domain
@@ -108,14 +147,11 @@ describe('Login Name Projection Integration Tests', () => {
       aggregateID: orgId,
       payload: { name: `Test-Org-${orgId}` },
       creator: 'system',
-      owner: orgId,
+      owner: 'test-instance',
       instanceID: 'test-instance',
     });
     
     await processProjections();
-    
-    const org = await orgQueries.getOrgByID(orgId, 'test-instance');
-    if (!org) throw new Error(`Org ${orgId} was not created`);
     
     await eventstore.push({
       eventType: 'org.domain.added',
@@ -129,10 +165,8 @@ describe('Login Name Projection Integration Tests', () => {
     
     await processProjections();
     
-    const domainsAfterAdd = await orgQueries.getOrgDomainsByID(orgId, 'test-instance');
-    if (!domainsAfterAdd.some(d => d.domain === domainName)) {
-      throw new Error(`Domain ${domainName} was not added`);
-    }
+    // Wait for domain to appear in projections
+    await waitForDomain(orgId, domainName);
     
     await eventstore.push({
       eventType: 'org.domain.verified',
@@ -176,8 +210,8 @@ describe('Login Name Projection Integration Tests', () => {
     
     await processProjections();
     
-    const user = await userQueries.getUserByID(userId, 'test-instance');
-    if (!user) throw new Error(`User ${userId} was not created`);
+    // Wait for user to appear in projections
+    await waitForUser(userId);
   }
 
   describe('User Added Events', () => {

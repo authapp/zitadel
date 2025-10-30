@@ -307,7 +307,8 @@ CREATE INDEX IF NOT EXISTS oidc_settings_instance_id_idx ON projections.oidc_set
 CREATE INDEX IF NOT EXISTS idx_org_domains_change_date ON projections.org_domains USING btree (instance_id, change_date DESC);
 
 -- Index: idx_org_domains_domain_unique on projections.org_domains
-CREATE UNIQUE INDEX IF NOT EXISTS idx_org_domains_domain_unique ON projections.org_domains USING btree (instance_id, domain);
+-- FIXED: Include org_id to allow multiple orgs to have the same domain
+CREATE UNIQUE INDEX IF NOT EXISTS idx_org_domains_domain_unique ON projections.org_domains USING btree (instance_id, org_id, domain);
 
 -- Index: idx_org_domains_org_id on projections.org_domains
 CREATE INDEX IF NOT EXISTS idx_org_domains_org_id ON projections.org_domains USING btree (instance_id, org_id);

@@ -65,10 +65,11 @@ export class OrgDomainProjection extends Projection {
       return;
     }
     
+    // IMPORTANT: Column order must match table schema - org_id comes BEFORE instance_id
     await this.database.query(
       `INSERT INTO projections.org_domains (
-        instance_id, org_id, domain, is_verified, is_primary, validation_type, validation_code,
-        created_at, updated_at, sequence, change_date
+        org_id, domain, is_verified, is_primary, validation_type, validation_code,
+        created_at, updated_at, sequence, instance_id, change_date
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       ON CONFLICT (instance_id, org_id, domain) DO UPDATE SET
         validation_type = EXCLUDED.validation_type,
@@ -77,8 +78,7 @@ export class OrgDomainProjection extends Projection {
         sequence = GREATEST(projections.org_domains.sequence, EXCLUDED.sequence),
         change_date = EXCLUDED.change_date`,
       [
-        event.instanceID,
-        event.aggregateID,
+        event.aggregateID,  // org_id
         data.domain,
         data.isVerified || false,
         data.isPrimary || false,
@@ -87,7 +87,8 @@ export class OrgDomainProjection extends Projection {
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
-        event.createdAt, // change_date
+        event.instanceID,  // instance_id
+        event.createdAt,  // change_date
       ]
     );
   }

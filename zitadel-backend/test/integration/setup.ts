@@ -111,17 +111,17 @@ async function initializeSchemaWithMigrator(pool: DatabasePool): Promise<void> {
  */
 export async function cleanDatabase(pool: DatabasePool): Promise<void> {
   const tables = [
-    'users_projection',
-    'orgs_projection',
-    'org_domains_projection',
-    'projects_projection',
-    'project_roles_projection',
-    'applications_projection',
-    'instances_projection',
-    'instance_domains_projection',
-    'instance_trusted_domains_projection',
-    'sessions_projection',
-    'login_names_projection',
+    'projections.users',  // FIXED: Correct schema.table format
+    'projections.orgs',
+    'projections.org_domains',
+    'projections.projects',
+    'projections.project_roles',
+    'projections.applications',
+    'projections.instances',
+    'projections.instance_domains',
+    'projections.instance_trusted_domains',
+    'projections.sessions',
+    'projections.login_names',
     'projection_states',
     'projection_failed_events',
     'projection_locks',  // Critical for projection tests
