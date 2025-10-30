@@ -1177,6 +1177,22 @@ export class Commands {
     require('./session/oidc-session-commands').terminateOIDCSession;
 
   // ============================================================================
+  // OAuth Token Commands (Phase 3 - Sprint 2)
+  // ============================================================================
+  
+  /**
+   * Revoke OAuth token
+   */
+  revokeOAuthToken: typeof import('./oauth/oauth-token-commands').revokeOAuthToken = 
+    require('./oauth/oauth-token-commands').revokeOAuthToken;
+  
+  /**
+   * Introspect OAuth token
+   */
+  introspectOAuthToken: typeof import('./oauth/oauth-token-commands').introspectOAuthToken = 
+    require('./oauth/oauth-token-commands').introspectOAuthToken;
+
+  // ============================================================================
   // Logout Commands (Phase 3 - Week 19-20)
   // ============================================================================
   
