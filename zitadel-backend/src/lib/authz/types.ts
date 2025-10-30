@@ -33,6 +33,15 @@ export enum RoleScope {
 }
 
 /**
+ * Token type determines the authentication method
+ */
+export enum TokenType {
+  USER = 'user',                    // Regular user token (human)
+  SERVICE_ACCOUNT = 'service',     // Service account / machine user
+  SYSTEM = 'system',               // System-level API token
+}
+
+/**
  * Subject represents an entity that can have permissions
  */
 export interface Subject {
@@ -40,6 +49,38 @@ export interface Subject {
   orgId?: string;
   roles: string[];
   permissions?: Permission[];
+  tokenType?: TokenType;
+  serviceAccount?: boolean;        // True if this is a machine user
+}
+
+/**
+ * Instance metadata for authorization
+ */
+export interface InstanceMetadata {
+  id: string;
+  name?: string;
+  features?: Record<string, boolean>;
+  quotas?: Record<string, number>;
+}
+
+/**
+ * Organization metadata for authorization
+ */
+export interface OrgMetadata {
+  id: string;
+  name?: string;
+  domain?: string;
+  state?: number;
+}
+
+/**
+ * Project metadata for authorization
+ */
+export interface ProjectMetadata {
+  id: string;
+  name?: string;
+  orgId: string;
+  state?: number;
 }
 
 /**
@@ -50,6 +91,17 @@ export interface AuthContext {
   instanceId: string;
   orgId?: string;
   projectId?: string;
+  
+  // Enhanced metadata
+  instanceMetadata?: InstanceMetadata;
+  orgMetadata?: OrgMetadata;
+  projectMetadata?: ProjectMetadata;
+  
+  // Token information
+  tokenType: TokenType;
+  isSystemToken: boolean;
+  
+  // Legacy metadata for backward compatibility
   metadata?: Record<string, any>;
 }
 

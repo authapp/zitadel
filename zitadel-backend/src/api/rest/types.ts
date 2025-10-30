@@ -2,7 +2,7 @@
  * API types and interfaces
  */
 
-import { AuthContext } from '../authz/types';
+import { AuthContext } from '../../lib/authz/types';
 
 /**
  * API request with auth context

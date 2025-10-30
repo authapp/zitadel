@@ -58,6 +58,10 @@ export enum ErrorCode {
   REQUIRED_FIELD_MISSING = 'REQUIRED_FIELD_MISSING',
   INVALID_FORMAT = 'INVALID_FORMAT',
   VALUE_OUT_OF_RANGE = 'VALUE_OUT_OF_RANGE',
+
+  // Instance/Feature errors (10xxx)
+  FEATURE_DISABLED = 'FEATURE_DISABLED',
+  QUOTA_EXCEEDED = 'QUOTA_EXCEEDED',
 }
 
 /**
@@ -102,6 +106,8 @@ export const ErrorHttpStatus: Record<ErrorCode, number> = {
   [ErrorCode.REQUIRED_FIELD_MISSING]: 400,
   [ErrorCode.INVALID_FORMAT]: 400,
   [ErrorCode.VALUE_OUT_OF_RANGE]: 400,
+  [ErrorCode.FEATURE_DISABLED]: 403,
+  [ErrorCode.QUOTA_EXCEEDED]: 429,
 };
 
 /**

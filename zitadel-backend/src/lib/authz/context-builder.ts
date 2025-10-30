@@ -2,7 +2,14 @@
  * Authorization context builder
  */
 
-import { AuthContext, Subject } from './types';
+import { 
+  AuthContext, 
+  Subject, 
+  TokenType, 
+  InstanceMetadata, 
+  OrgMetadata, 
+  ProjectMetadata 
+} from './types';
 
 /**
  * Build authorization context from request data
@@ -14,6 +21,16 @@ export class AuthContextBuilder {
   private instanceId: string = 'default';
   private roles: string[] = [];
   private metadata: Record<string, any> = {};
+  
+  // Enhanced metadata
+  private instanceMetadata?: InstanceMetadata;
+  private orgMetadata?: OrgMetadata;
+  private projectMetadata?: ProjectMetadata;
+  
+  // Token information
+  private tokenType: TokenType = TokenType.USER;
+  private isSystemToken: boolean = false;
+  private serviceAccount: boolean = false;
 
   /**
    * Set user ID
@@ -80,17 +97,70 @@ export class AuthContextBuilder {
   }
 
   /**
+   * Set instance metadata
+   */
+  withInstanceMetadata(metadata: InstanceMetadata): this {
+    this.instanceMetadata = metadata;
+    return this;
+  }
+
+  /**
+   * Set organization metadata
+   */
+  withOrgMetadata(metadata: OrgMetadata): this {
+    this.orgMetadata = metadata;
+    return this;
+  }
+
+  /**
+   * Set project metadata
+   */
+  withProjectMetadata(metadata: ProjectMetadata): this {
+    this.projectMetadata = metadata;
+    return this;
+  }
+
+  /**
+   * Set token type
+   */
+  withTokenType(tokenType: TokenType): this {
+    this.tokenType = tokenType;
+    this.isSystemToken = (tokenType === TokenType.SYSTEM);
+    return this;
+  }
+
+  /**
+   * Mark as system token
+   */
+  asSystemToken(): this {
+    this.tokenType = TokenType.SYSTEM;
+    this.isSystemToken = true;
+    return this;
+  }
+
+  /**
+   * Mark as service account
+   */
+  asServiceAccount(): this {
+    this.tokenType = TokenType.SERVICE_ACCOUNT;
+    this.serviceAccount = true;
+    return this;
+  }
+
+  /**
    * Build the auth context
    */
   build(): AuthContext {
-    if (!this.userId) {
-      throw new Error('User ID is required for auth context');
+    if (!this.userId && !this.isSystemToken) {
+      throw new Error('User ID is required for auth context (except for system tokens)');
     }
 
     const subject: Subject = {
-      userId: this.userId,
+      userId: this.userId || 'system',
       orgId: this.orgId,
       roles: this.roles,
+      tokenType: this.tokenType,
+      serviceAccount: this.serviceAccount,
     };
 
     return {
@@ -98,6 +168,17 @@ export class AuthContextBuilder {
       instanceId: this.instanceId,
       orgId: this.orgId,
       projectId: this.projectId,
+      
+      // Enhanced metadata
+      instanceMetadata: this.instanceMetadata,
+      orgMetadata: this.orgMetadata,
+      projectMetadata: this.projectMetadata,
+      
+      // Token information
+      tokenType: this.tokenType,
+      isSystemToken: this.isSystemToken,
+      
+      // Legacy metadata
       metadata: this.metadata,
     };
   }
@@ -119,6 +200,8 @@ export interface TokenPayload {
   project_id?: string;
   instance_id?: string;
   roles?: string[];
+  token_type?: 'user' | 'service' | 'system';
+  service_account?: boolean;
   [key: string]: any;
 }
 
@@ -126,23 +209,51 @@ export interface TokenPayload {
  * Build context from JWT token
  */
 export function buildContextFromToken(payload: TokenPayload): AuthContext {
-  return AuthContextBuilder.create()
+  const builder = AuthContextBuilder.create()
     .withUserId(payload.sub)
     .withOrgId(payload.org_id || '')
     .withProjectId(payload.project_id || '')
     .withInstanceId(payload.instance_id || 'default')
     .withRoles(payload.roles || [])
-    .withMetadata(payload)
+    .withMetadata(payload);
+
+  // Detect token type
+  if (payload.token_type === 'system') {
+    builder.asSystemToken();
+  } else if (payload.token_type === 'service' || payload.service_account) {
+    builder.asServiceAccount();
+  } else {
+    builder.withTokenType(TokenType.USER);
+  }
+
+  return builder.build();
+}
+
+/**
+ * Build context for system operations (no user required)
+ */
+export function buildSystemContext(instanceId: string = 'default'): AuthContext {
+  return AuthContextBuilder.create()
+    .withInstanceId(instanceId)
+    .withRoles(['system_admin', 'iam_owner'])
+    .asSystemToken()
     .build();
 }
 
 /**
- * Build context for system operations
+ * Build context for service account
  */
-export function buildSystemContext(instanceId: string = 'default'): AuthContext {
+export function buildServiceAccountContext(
+  userId: string,
+  instanceId: string = 'default',
+  orgId?: string,
+  roles: string[] = []
+): AuthContext {
   return AuthContextBuilder.create()
-    .withUserId('system')
+    .withUserId(userId)
     .withInstanceId(instanceId)
-    .withRoles(['system_admin'])
+    .withOrgId(orgId || '')
+    .withRoles(roles)
+    .asServiceAccount()
     .build();
 }

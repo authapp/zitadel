@@ -25,6 +25,7 @@ import {
   ActionType,
   RoleScope,
   PermissionDeniedError,
+  TokenType,
 } from './types';
 import { requirePermission, requireRole } from './middleware';
 
@@ -275,6 +276,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.SYSTEM_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permission = PermissionBuilder.user(ActionType.DELETE, 'user123');
@@ -293,6 +296,8 @@ describe('DefaultPermissionChecker', () => {
         },
         instanceId: 'test',
         orgId: 'org123',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permission = PermissionBuilder.user(ActionType.CREATE);
@@ -308,6 +313,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permission = PermissionBuilder.org(ActionType.DELETE);
@@ -326,6 +333,8 @@ describe('DefaultPermissionChecker', () => {
           ],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER, // Add tokenType property
+        isSystemToken: false, // Add isSystemToken property
       };
 
       const permission = PermissionBuilder.user(ActionType.READ, 'user123');
@@ -344,6 +353,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.SYSTEM_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permissions = [
@@ -363,6 +374,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permissions = [
@@ -384,6 +397,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.SYSTEM_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permissions = [
@@ -403,6 +418,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const permissions = [
@@ -424,6 +441,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.USER, SystemRole.ORG_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       expect(permissionChecker.hasRole(context, SystemRole.USER)).toBe(true);
@@ -437,6 +456,8 @@ describe('DefaultPermissionChecker', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       expect(permissionChecker.hasRole(context, SystemRole.SYSTEM_ADMIN)).toBe(false);
@@ -569,6 +590,8 @@ describe('middleware', () => {
           roles: [SystemRole.SYSTEM_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const middleware = requirePermission(
@@ -590,6 +613,8 @@ describe('middleware', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const middleware = requirePermission(
@@ -612,6 +637,8 @@ describe('middleware', () => {
           roles: [SystemRole.SYSTEM_ADMIN],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const middleware = requireRole(permissionChecker, SystemRole.SYSTEM_ADMIN);
@@ -629,6 +656,8 @@ describe('middleware', () => {
           roles: [SystemRole.USER],
         },
         instanceId: 'test',
+        tokenType: TokenType.USER,
+        isSystemToken: false,
       };
 
       const middleware = requireRole(permissionChecker, SystemRole.SYSTEM_ADMIN);

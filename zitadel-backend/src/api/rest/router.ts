@@ -2,7 +2,7 @@
  * API router implementation
  */
 
-import { generateId } from '../id/snowflake';
+import { generateId } from '../../lib/id/snowflake';
 import {
   ApiRouter,
   Route,
