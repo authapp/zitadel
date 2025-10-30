@@ -12,7 +12,7 @@ import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../wr
 import { validateRequired } from '../validation';
 import { throwInvalidArgument, throwPreconditionFailed } from '@/zerrors/errors';
 import { Command } from '../../eventstore/types';
-import { FlowWriteModel } from '../org/flow-write-model';
+import { InstanceFlowWriteModel } from './instance-flow-write-model';
 import { FlowType, TriggerType, isFlowTypeValid, isTriggerTypeValid, flowTypeHasTrigger } from '../../domain/flow';
 
 /**
@@ -31,7 +31,7 @@ export async function clearInstanceFlow(
   await this.checkPermission(ctx, 'instance.flow', 'write', ctx.instanceID);
 
   // Load existing flow
-  const wm = new FlowWriteModel(flowType, ctx.instanceID);
+  const wm = new InstanceFlowWriteModel(flowType, ctx.instanceID);
   await wm.load(this.getEventstore(), ctx.instanceID, ctx.instanceID);
 
   if (wm.triggers.size === 0) {
@@ -84,7 +84,7 @@ export async function setInstanceTriggerActions(
   await this.checkPermission(ctx, 'instance.flow', 'write', ctx.instanceID);
 
   // Load existing flow
-  const wm = new FlowWriteModel(flowType, ctx.instanceID);
+  const wm = new InstanceFlowWriteModel(flowType, ctx.instanceID);
   await wm.load(this.getEventstore(), ctx.instanceID, ctx.instanceID);
 
   // Check if there are any changes
@@ -150,7 +150,7 @@ export async function removeInstanceActionFromTrigger(
   await this.checkPermission(ctx, 'instance.flow', 'write', ctx.instanceID);
 
   // Load existing flow
-  const wm = new FlowWriteModel(flowType, ctx.instanceID);
+  const wm = new InstanceFlowWriteModel(flowType, ctx.instanceID);
   await wm.load(this.getEventstore(), ctx.instanceID, ctx.instanceID);
 
   const existingActions = wm.triggers.get(triggerType) || [];

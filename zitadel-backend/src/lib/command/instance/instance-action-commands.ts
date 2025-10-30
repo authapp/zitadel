@@ -12,7 +12,7 @@ import { appendAndReduce, ObjectDetails, writeModelToObjectDetails } from '../wr
 import { validateRequired } from '../validation';
 import { throwInvalidArgument, throwNotFound, throwPreconditionFailed } from '@/zerrors/errors';
 import { Command } from '../../eventstore/types';
-import { ActionWriteModel } from '../org/action-write-model';
+import { InstanceActionWriteModel } from './instance-action-write-model';
 import { Action, ActionState, actionStateExists, isActionValid } from '../../domain/action';
 
 /**
@@ -52,7 +52,7 @@ export async function addInstanceActionWithID(
   await this.checkPermission(ctx, 'instance.action', 'write', ctx.instanceID);
 
   // Check if action already exists
-  const wm = new ActionWriteModel(actionID, ctx.instanceID);
+  const wm = new InstanceActionWriteModel(actionID, ctx.instanceID);
   await wm.load(this.getEventstore(), actionID, ctx.instanceID);
 
   if (wm.state !== ActionState.UNSPECIFIED) {
@@ -103,7 +103,7 @@ export async function changeInstanceAction(
   await this.checkPermission(ctx, 'instance.action', 'write', ctx.instanceID);
 
   // Load existing action
-  const wm = new ActionWriteModel(actionID, ctx.instanceID);
+  const wm = new InstanceActionWriteModel(actionID, ctx.instanceID);
   await wm.load(this.getEventstore(), actionID, ctx.instanceID);
 
   if (!actionStateExists(wm.state)) {
@@ -167,7 +167,7 @@ export async function deactivateInstanceAction(
   await this.checkPermission(ctx, 'instance.action', 'write', ctx.instanceID);
 
   // Load existing action
-  const wm = new ActionWriteModel(actionID, ctx.instanceID);
+  const wm = new InstanceActionWriteModel(actionID, ctx.instanceID);
   await wm.load(this.getEventstore(), actionID, ctx.instanceID);
 
   if (!actionStateExists(wm.state)) {
@@ -209,7 +209,7 @@ export async function reactivateInstanceAction(
   await this.checkPermission(ctx, 'instance.action', 'write', ctx.instanceID);
 
   // Load existing action
-  const wm = new ActionWriteModel(actionID, ctx.instanceID);
+  const wm = new InstanceActionWriteModel(actionID, ctx.instanceID);
   await wm.load(this.getEventstore(), actionID, ctx.instanceID);
 
   if (!actionStateExists(wm.state)) {
@@ -253,7 +253,7 @@ export async function deleteInstanceAction(
   await this.checkPermission(ctx, 'instance.action', 'delete', ctx.instanceID);
 
   // Load existing action
-  const wm = new ActionWriteModel(actionID, ctx.instanceID);
+  const wm = new InstanceActionWriteModel(actionID, ctx.instanceID);
   await wm.load(this.getEventstore(), actionID, ctx.instanceID);
 
   if (!actionStateExists(wm.state)) {

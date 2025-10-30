@@ -136,6 +136,40 @@ export class ActionQueries {
     return result.rows.map(row => row.flow_type);
   }
 
+  /**
+   * Get trigger actions from action_flows table
+   * Used for instance-level and org-level flow configurations
+   * @param instanceID - Instance ID
+   * @param flowType - Flow type (numeric)
+   * @param triggerType - Trigger type (numeric)
+   * @param resourceOwner - Optional resource owner filter
+   * @returns Array of action IDs in sequence order
+   */
+  async getTriggerActions(
+    instanceID: string,
+    flowType: number,
+    triggerType: number,
+    resourceOwner?: string
+  ): Promise<string[]> {
+    let query = `
+      SELECT action_id
+      FROM projections.action_flows
+      WHERE instance_id = $1 AND flow_type = $2 AND trigger_type = $3
+    `;
+
+    const params: any[] = [instanceID, flowType, triggerType];
+
+    if (resourceOwner) {
+      query += ` AND resource_owner = $4`;
+      params.push(resourceOwner);
+    }
+
+    query += ` ORDER BY trigger_sequence`;
+
+    const result = await this.database.query(query, params);
+    return result.rows.map(row => row.action_id);
+  }
+
   // ===== Execution Methods =====
 
   /**

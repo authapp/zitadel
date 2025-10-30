@@ -3,25 +3,53 @@
  * Tests instance-level flow management (applies across all organizations)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
 import { Action } from '../../../src/lib/domain/action';
 import { FlowType, TriggerType } from '../../../src/lib/domain/flow';
+import { InstanceActionProjection } from '../../../src/lib/query/projections/instance-action-projection';
+import { InstanceFlowProjection } from '../../../src/lib/query/projections/instance-flow-projection';
+import { ActionQueries } from '../../../src/lib/query/action/action-queries';
 
-describe('Instance Flow Commands Integration Tests (Isolated)', () => {
+describe('Instance Flow Commands Integration Tests (E2E)', () => {
   let pool: DatabasePool;
   let ctx: CommandTestContext;
+  let actionProjection: InstanceActionProjection;
+  let flowProjection: InstanceFlowProjection;
+  let queries: ActionQueries;
 
   beforeAll(async () => {
     pool = await createTestDatabase();
     ctx = await setupCommandTest(pool);
+    
+    // Initialize projections and queries
+    actionProjection = new InstanceActionProjection(ctx.eventstore, pool);
+    await actionProjection.init();
+    flowProjection = new InstanceFlowProjection(ctx.eventstore, pool);
+    await flowProjection.init();
+    queries = new ActionQueries(pool);
+  });
+
+  beforeEach(async () => {
+    await ctx.clearEvents();
   });
 
   afterAll(async () => {
     await pool.close();
   });
+
+  /**
+   * Helper: Process projections
+   */
+  async function processProjections(): Promise<void> {
+    const events = await ctx.getEvents('*', '*');
+    for (const event of events) {
+      await actionProjection.reduce(event);
+      await flowProjection.reduce(event);
+    }
+  }
 
   /**
    * Helper: Create test action
@@ -44,10 +72,11 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
 
   describe('setInstanceTriggerActions', () => {
     describe('Success Cases', () => {
-      it('should set actions for instance flow trigger', async () => {
+      it('should set actions for instance flow trigger (E2E)', async () => {
         const actionID1 = await createTestAction('Instance Security Check');
         const actionID2 = await createTestAction('Instance Audit Log');
 
+        // 1. Execute command
         const result = await ctx.commands.setInstanceTriggerActions(
           ctx.createContext(),
           FlowType.EXTERNAL_AUTHENTICATION,
@@ -57,7 +86,7 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
 
         expect(result).toBeDefined();
 
-        // Verify event
+        // 2. Verify event
         const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
         const setEvent = events.find(e => e.eventType === 'instance.trigger.actions.set');
         expect(setEvent).toBeDefined();
@@ -66,6 +95,21 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
           triggerType: TriggerType.PRE_CREATION,
           actionIDs: [actionID1, actionID2],
         });
+
+        // 3. Process projections
+        await processProjections();
+
+        // 4. Verify via query layer
+        const triggerActions = await queries.getTriggerActions(
+          ctx.createContext().instanceID,
+          FlowType.EXTERNAL_AUTHENTICATION,
+          TriggerType.PRE_CREATION,
+          ctx.createContext().instanceID // Instance-level (resourceOwner = instanceID)
+        );
+
+        expect(triggerActions).toEqual([actionID1, actionID2]);
+
+        console.log('✓ E2E verified: Command → Event → Projection → Query');
       });
 
       it('should update existing trigger actions', async () => {
@@ -186,7 +230,7 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
 
   describe('clearInstanceFlow', () => {
     describe('Success Cases', () => {
-      it('should clear all triggers from instance flow', async () => {
+      it('should clear all triggers from instance flow (E2E)', async () => {
         const actionID1 = await createTestAction('Clear Action 1');
         const actionID2 = await createTestAction('Clear Action 2');
 
@@ -215,6 +259,29 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
         const clearEvent = events.find(e => e.eventType === 'instance.flow.cleared');
         expect(clearEvent).toBeDefined();
         expect(clearEvent!.payload!.flowType).toBe(FlowType.EXTERNAL_AUTHENTICATION);
+
+        // Process projections
+        await processProjections();
+
+        // Verify via query layer - should be empty
+        const trigger1Actions = await queries.getTriggerActions(
+          ctx.createContext().instanceID,
+          FlowType.EXTERNAL_AUTHENTICATION,
+          TriggerType.PRE_CREATION,
+          ctx.createContext().instanceID
+        );
+
+        const trigger2Actions = await queries.getTriggerActions(
+          ctx.createContext().instanceID,
+          FlowType.EXTERNAL_AUTHENTICATION,
+          TriggerType.POST_CREATION,
+          ctx.createContext().instanceID
+        );
+
+        expect(trigger1Actions).toEqual([]);
+        expect(trigger2Actions).toEqual([]);
+
+        console.log('✓ E2E verified: Flow cleared in query layer');
       });
     });
 
@@ -241,7 +308,7 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
 
   describe('removeInstanceActionFromTrigger', () => {
     describe('Success Cases', () => {
-      it('should remove specific action from trigger', async () => {
+      it('should remove specific action from trigger (E2E)', async () => {
         const actionID1 = await createTestAction('Keep Action');
         const actionID2 = await createTestAction('Remove Action');
         const actionID3 = await createTestAction('Also Keep');
@@ -262,10 +329,25 @@ describe('Instance Flow Commands Integration Tests (Isolated)', () => {
           actionID2
         );
 
-        // Verify remaining actions
+        // Verify remaining actions via event
         const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
         const lastSetEvent = events.filter(e => e.eventType === 'instance.trigger.actions.set').pop();
         expect(lastSetEvent!.payload!.actionIDs).toEqual([actionID1, actionID3]);
+
+        // Process projections
+        await processProjections();
+
+        // Verify via query layer
+        const triggerActions = await queries.getTriggerActions(
+          ctx.createContext().instanceID,
+          FlowType.INTERNAL_AUTHENTICATION,
+          TriggerType.POST_AUTHENTICATION,
+          ctx.createContext().instanceID
+        );
+
+        expect(triggerActions).toEqual([actionID1, actionID3]);
+
+        console.log('✓ E2E verified: Action removal reflected in query layer');
       });
     });
 
