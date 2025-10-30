@@ -1215,6 +1215,124 @@ export class Commands {
     require('./session/logout-commands').handleBackchannelLogout;
 
   // ============================================================================
+  // Web Key Commands (Phase 3 - Sprint 3)
+  // ============================================================================
+  
+  /**
+   * Generate web key
+   */
+  generateWebKey: typeof import('./crypto/web-key-commands').generateWebKey = 
+    require('./crypto/web-key-commands').generateWebKey;
+  
+  /**
+   * Activate web key
+   */
+  activateWebKey: typeof import('./crypto/web-key-commands').activateWebKey = 
+    require('./crypto/web-key-commands').activateWebKey;
+  
+  /**
+   * Deactivate web key
+   */
+  deactivateWebKey: typeof import('./crypto/web-key-commands').deactivateWebKey = 
+    require('./crypto/web-key-commands').deactivateWebKey;
+  
+  /**
+   * Remove web key
+   */
+  removeWebKey: typeof import('./crypto/web-key-commands').removeWebKey = 
+    require('./crypto/web-key-commands').removeWebKey;
+
+  // ============================================================================
+  // Device Authorization Commands (Phase 3 - Sprint 3)
+  // ============================================================================
+  
+  /**
+   * Add device authorization
+   */
+  addDeviceAuth: typeof import('./oauth/device-auth-commands').addDeviceAuth = 
+    require('./oauth/device-auth-commands').addDeviceAuth;
+  
+  /**
+   * Approve device authorization
+   */
+  approveDeviceAuth: typeof import('./oauth/device-auth-commands').approveDeviceAuth = 
+    require('./oauth/device-auth-commands').approveDeviceAuth;
+  
+  /**
+   * Deny device authorization
+   */
+  denyDeviceAuth: typeof import('./oauth/device-auth-commands').denyDeviceAuth = 
+    require('./oauth/device-auth-commands').denyDeviceAuth;
+  
+  /**
+   * Cancel device authorization
+   */
+  cancelDeviceAuth: typeof import('./oauth/device-auth-commands').cancelDeviceAuth = 
+    require('./oauth/device-auth-commands').cancelDeviceAuth;
+
+  // ============================================================================
+  // Instance Action Commands (Phase 4 - Advanced Features)
+  // ============================================================================
+  
+  /**
+   * Add instance action
+   */
+  addInstanceAction: typeof import('./instance/instance-action-commands').addInstanceAction = 
+    require('./instance/instance-action-commands').addInstanceAction;
+  
+  /**
+   * Add instance action with ID
+   */
+  addInstanceActionWithID: typeof import('./instance/instance-action-commands').addInstanceActionWithID = 
+    require('./instance/instance-action-commands').addInstanceActionWithID;
+  
+  /**
+   * Change instance action
+   */
+  changeInstanceAction: typeof import('./instance/instance-action-commands').changeInstanceAction = 
+    require('./instance/instance-action-commands').changeInstanceAction;
+  
+  /**
+   * Deactivate instance action
+   */
+  deactivateInstanceAction: typeof import('./instance/instance-action-commands').deactivateInstanceAction = 
+    require('./instance/instance-action-commands').deactivateInstanceAction;
+  
+  /**
+   * Reactivate instance action
+   */
+  reactivateInstanceAction: typeof import('./instance/instance-action-commands').reactivateInstanceAction = 
+    require('./instance/instance-action-commands').reactivateInstanceAction;
+  
+  /**
+   * Delete instance action
+   */
+  deleteInstanceAction: typeof import('./instance/instance-action-commands').deleteInstanceAction = 
+    require('./instance/instance-action-commands').deleteInstanceAction;
+
+  // ============================================================================
+  // Instance Flow Commands (Phase 4 - Advanced Features)
+  // ============================================================================
+  
+  /**
+   * Clear instance flow
+   */
+  clearInstanceFlow: typeof import('./instance/instance-flow-commands').clearInstanceFlow = 
+    require('./instance/instance-flow-commands').clearInstanceFlow;
+  
+  /**
+   * Set instance trigger actions
+   */
+  setInstanceTriggerActions: typeof import('./instance/instance-flow-commands').setInstanceTriggerActions = 
+    require('./instance/instance-flow-commands').setInstanceTriggerActions;
+  
+  /**
+   * Remove action from instance trigger
+   */
+  removeInstanceActionFromTrigger: typeof import('./instance/instance-flow-commands').removeInstanceActionFromTrigger = 
+    require('./instance/instance-flow-commands').removeInstanceActionFromTrigger;
+
+  // ============================================================================
   // Instance Commands (Phase 3)
   // ============================================================================
   
