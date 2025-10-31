@@ -192,6 +192,24 @@ export class Commands {
   unlockUser: typeof import('./user/user-commands').unlockUser = 
     require('./user/user-commands').unlockUser;
   
+  /**
+   * Change phone
+   */
+  changePhone: typeof import('./user/user-commands').changePhone = 
+    require('./user/user-commands').changePhone;
+  
+  /**
+   * Verify phone
+   */
+  verifyPhone: typeof import('./user/user-commands').verifyPhone = 
+    require('./user/user-commands').verifyPhone;
+  
+  /**
+   * Remove phone
+   */
+  removePhone: typeof import('./user/user-commands').removePhone = 
+    require('./user/user-commands').removePhone;
+  
   // --------------------------------------------------------------------------
   // User OTP/MFA Commands (Phase 1)
   // --------------------------------------------------------------------------

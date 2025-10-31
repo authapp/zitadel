@@ -18,6 +18,8 @@ import {
   newHumanAddedEvent,
   newMachineAddedEvent,
   newEmailVerifiedEvent,
+  newPhoneVerifiedEvent,
+  newPhoneRemovedEvent,
   newUserDeactivatedEvent,
   newUserReactivatedEvent,
   newUserLockedEvent,
@@ -663,6 +665,156 @@ export async function unlockUser(
   
   // 3. Create command using event factory
   const command = newUserUnlockedEvent(
+    userID,
+    orgID,
+    ctx.instanceID,
+    ctx.userID || 'system'
+  );
+  
+  // 4. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Change phone command
+ */
+export async function changePhone(
+  this: Commands,
+  ctx: Context,
+  userID: string,
+  orgID: string,
+  newPhone: string
+): Promise<ObjectDetails> {
+  // 1. Validate
+  newPhone = newPhone.trim();
+  if (!newPhone) {
+    throwInvalidArgument('phone is required', 'COMMAND-User70');
+  }
+  
+  // 2. Load write model
+  const wm = new UserWriteModel();
+  await wm.load(this.getEventstore(), userID, orgID);
+  
+  if (wm.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-User71');
+  }
+  if (wm.state === UserState.DELETED) {
+    throwNotFound('user deleted', 'COMMAND-User72');
+  }
+  if (wm.userType !== UserType.HUMAN) {
+    throwPreconditionFailed('only human users have phone', 'COMMAND-User73');
+  }
+  
+  // 3. Check if phone changed
+  if (wm.phone === newPhone) {
+    throwPreconditionFailed('phone not changed', 'COMMAND-User74');
+  }
+  
+  // 4. Check permissions
+  await this.checkPermission(ctx, 'user', 'update', orgID);
+  
+  // 5. Create command
+  const command: Command = {
+    eventType: 'user.phone.changed',
+    aggregateType: 'user',
+    aggregateID: userID,
+    owner: orgID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      oldPhone: wm.phone,
+      phone: newPhone,
+    },
+  };
+  
+  // 6. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Verify phone command
+ */
+export async function verifyPhone(
+  this: Commands,
+  ctx: Context,
+  userID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load write model
+  const wm = new UserWriteModel();
+  await wm.load(this.getEventstore(), userID, orgID);
+  
+  if (wm.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-User75');
+  }
+  if (wm.state === UserState.DELETED) {
+    throwNotFound('user deleted', 'COMMAND-User76');
+  }
+  if (wm.userType !== UserType.HUMAN) {
+    throwPreconditionFailed('only human users have phone', 'COMMAND-User77');
+  }
+  if (!wm.phone) {
+    throwPreconditionFailed('user has no phone', 'COMMAND-User78');
+  }
+  if (wm.phoneVerified) {
+    throwPreconditionFailed('phone already verified', 'COMMAND-User79');
+  }
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'user', 'update', orgID);
+  
+  // 3. Create command using event factory
+  const command = newPhoneVerifiedEvent(
+    userID,
+    orgID,
+    ctx.instanceID,
+    ctx.userID || 'system'
+  );
+  
+  // 4. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Remove phone command
+ */
+export async function removePhone(
+  this: Commands,
+  ctx: Context,
+  userID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load write model
+  const wm = new UserWriteModel();
+  await wm.load(this.getEventstore(), userID, orgID);
+  
+  if (wm.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-User80');
+  }
+  if (wm.state === UserState.DELETED) {
+    throwNotFound('user deleted', 'COMMAND-User81');
+  }
+  if (wm.userType !== UserType.HUMAN) {
+    throwPreconditionFailed('only human users have phone', 'COMMAND-User82');
+  }
+  if (!wm.phone) {
+    throwPreconditionFailed('user has no phone', 'COMMAND-User83');
+  }
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'user', 'update', orgID);
+  
+  // 3. Create command using event factory
+  const command = newPhoneRemovedEvent(
     userID,
     orgID,
     ctx.instanceID,

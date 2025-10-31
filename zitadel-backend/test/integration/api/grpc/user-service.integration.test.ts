@@ -444,6 +444,117 @@ describe('User Service Integration Tests - Complete Stack', () => {
     });
   });
 
+  describe('Profile Management - Complete Stack', () => {
+    it('should update user profile through complete stack', async () => {
+      // Arrange
+      const userId = await createTestUser('profile-update-test');
+      const context = ctx.createContext();
+
+      console.log('\n--- Updating user profile ---');
+      
+      // Act
+      const response = await userService.setUserProfile(context, {
+        userId,
+        givenName: 'Updated',
+        familyName: 'Name',
+        displayName: 'Updated User',
+        preferredLanguage: 'es',
+        // Note: nickname and gender not currently supported by changeProfile command
+      });
+
+      // Assert
+      expect(response.details).toBeDefined();
+
+      // Process projections
+      await processProjections();
+
+      // Verify via query layer
+      const user = await assertUserInQuery(userId, context.instanceID);
+      expect(user.firstName).toBe('Updated');
+      expect(user.lastName).toBe('Name');
+      expect(user.displayName).toBe('Updated User');
+      expect(user.preferredLanguage).toBe('es');
+      
+      console.log('✓ SetUserProfile: Complete stack verified (API → Command → Event → Projection → Query)');
+    });
+
+    it('should update user email through complete stack', async () => {
+      // Arrange
+      const userId = await createTestUser('email-update-test');
+      const context = ctx.createContext();
+      const newEmail = 'newemail@example.com';
+
+      console.log('\n--- Updating user email ---');
+      
+      // Act
+      const response = await userService.setUserEmail(context, {
+        userId,
+        email: newEmail,
+      });
+
+      // Assert
+      expect(response.details).toBeDefined();
+
+      // Process projections
+      await processProjections();
+
+      // Verify via query layer
+      const user = await assertUserInQuery(userId, context.instanceID);
+      expect(user.email).toBe(newEmail);
+      expect(user.emailVerified).toBe(false); // New email is unverified
+      
+      console.log('✓ SetUserEmail: Complete stack verified');
+    });
+
+    it('should verify email through complete stack', async () => {
+      // Arrange
+      const userId = await createTestUser('email-verify-test');
+      const context = ctx.createContext();
+
+      console.log('\n--- Verifying user email ---');
+      
+      // Act
+      const response = await userService.verifyEmail(context, {
+        userId,
+        verificationCode: 'dummy-code', // In real scenario, this would be validated
+      });
+
+      // Assert
+      expect(response.details).toBeDefined();
+
+      // Process projections
+      await processProjections();
+
+      // Verify via query layer
+      const user = await assertUserInQuery(userId, context.instanceID);
+      expect(user.emailVerified).toBe(true);
+      expect(user.emailVerifiedAt).toBeTruthy();
+      
+      console.log('✓ VerifyEmail: Complete stack verified');
+    });
+
+    it('should require userId for profile update', async () => {
+      const context = ctx.createContext();
+
+      await expect(
+        userService.setUserProfile(context, { userId: '', givenName: 'Test' })
+      ).rejects.toThrow(/userId is required/);
+      
+      console.log('✓ Profile validation working correctly');
+    });
+
+    it('should require email for email update', async () => {
+      const context = ctx.createContext();
+      const userId = generateSnowflakeId();
+
+      await expect(
+        userService.setUserEmail(context, { userId, email: '' })
+      ).rejects.toThrow(/email is required/);
+      
+      console.log('✓ Email validation working correctly');
+    });
+  });
+
   describe('Error Handling - API Layer', () => {
     it('should validate userId is required', async () => {
       const context = ctx.createContext();
