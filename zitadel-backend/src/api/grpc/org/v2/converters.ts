@@ -13,7 +13,7 @@ import {
 import { Details } from '../../proto/object/v2/object';
 import { OrgSetupData, OrgSetupAdmin } from '@/lib/command/org/org-setup-commands';
 import { ObjectDetails } from '@/lib/command/write-model';
-import { throwUnimplemented } from '@/zerrors/errors';
+import { throwInvalidArgument } from '@/zerrors/errors';
 
 /**
  * Convert AddOrganizationRequest to OrgSetupData command
@@ -61,7 +61,7 @@ function addOrganizationRequestAdminToCommand(
   }
 
   // No valid user type provided
-  throwUnimplemented('userType must be either userId or human', 'ORGv2-Conv01');
+  return throwInvalidArgument('userType must be either userId or human', 'ORGv2-Conv01');
 }
 
 /**

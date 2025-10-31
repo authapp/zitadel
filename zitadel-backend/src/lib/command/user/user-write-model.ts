@@ -46,6 +46,9 @@ export class UserWriteModel extends WriteModel {
         this.state = UserState.ACTIVE;
         this.username = event.payload?.username;
         this.email = event.payload?.email;
+        this.emailVerified = event.payload?.emailVerified || false;
+        this.phone = event.payload?.phone;
+        this.phoneVerified = event.payload?.phoneVerified || false;
         this.firstName = event.payload?.firstName;
         this.lastName = event.payload?.lastName;
         this.displayName = event.payload?.displayName;

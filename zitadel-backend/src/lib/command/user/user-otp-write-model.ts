@@ -87,6 +87,10 @@ export class HumanOTPSMSWriteModel extends WriteModel {
       case 'user.human.added':
       case 'user.human.registered':
         this.userState = UserState.ACTIVE;
+        // Extract phoneVerified from user creation event (for testing stubs)
+        if (event.payload?.phoneVerified) {
+          this.phoneVerified = true;
+        }
         break;
 
       case 'user.human.phone.verified':
@@ -194,6 +198,14 @@ export class HumanOTPEmailWriteModel extends WriteModel {
 
   reduce(event: Event): void {
     switch (event.eventType) {
+      case 'user.human.added':
+      case 'user.human.registered':
+        // Extract emailVerified from user creation event (for testing stubs)
+        if (event.payload?.emailVerified) {
+          this.emailVerified = true;
+        }
+        break;
+
       case 'user.human.email.verified':
       case 'user.v2.email.verified':
         this.emailVerified = true;

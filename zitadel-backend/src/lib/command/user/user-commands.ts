@@ -49,6 +49,7 @@ export interface AddHumanUserData {
   phone?: string;
   preferredLanguage?: string;
   emailVerified?: boolean;
+  phoneVerified?: boolean;
 }
 
 /**
@@ -117,6 +118,7 @@ export async function addHumanUser(
     password: data.password,
     phone: data.phone,
     emailVerified: data.emailVerified || false,
+    phoneVerified: data.phoneVerified || false,
   };
   
   const command = newHumanAddedEvent(
