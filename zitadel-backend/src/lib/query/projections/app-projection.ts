@@ -31,54 +31,52 @@ export class AppProjection extends Projection {
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
       // OIDC Application Events
-      case 'project.application.oidc.added':
+      case 'application.oidc.added':
         await this.handleOIDCAppAdded(event);
         break;
       
-      case 'project.application.oidc.changed':
+      case 'application.oidc.changed':
+      case 'application.oidc.config.changed':
         await this.handleOIDCAppChanged(event);
         break;
       
-      case 'project.application.oidc.secret.changed':
+      case 'application.secret.changed':
         await this.handleOIDCSecretChanged(event);
         break;
       
       // SAML Application Events
-      case 'project.application.saml.added':
+      case 'application.added': // SAML uses generic added event
         await this.handleSAMLAppAdded(event);
         break;
       
-      case 'project.application.saml.changed':
+      case 'application.saml.config.changed':
         await this.handleSAMLAppChanged(event);
         break;
       
       // API Application Events
-      case 'project.application.api.added':
+      case 'application.api.added':
         await this.handleAPIAppAdded(event);
         break;
       
-      case 'project.application.api.changed':
+      case 'application.api.changed':
+      case 'application.api.config.changed':
         await this.handleAPIAppChanged(event);
         break;
       
-      case 'project.application.api.secret.changed':
-        await this.handleAPISecretChanged(event);
-        break;
-      
       // Generic Application Events
-      case 'project.application.changed':
+      case 'application.changed':
         await this.handleAppChanged(event);
         break;
       
-      case 'project.application.deactivated':
+      case 'application.deactivated':
         await this.handleAppDeactivated(event);
         break;
       
-      case 'project.application.reactivated':
+      case 'application.reactivated':
         await this.handleAppReactivated(event);
         break;
       
-      case 'project.application.removed':
+      case 'application.removed':
         await this.handleAppRemoved(event);
         break;
     }
@@ -466,20 +464,21 @@ export function createAppProjectionConfig(): ProjectionConfig {
     name: 'app_projection',
     tables: ['projections.applications'],
     eventTypes: [
-      'project.application.oidc.added',
-      'project.application.oidc.changed',
-      'project.application.oidc.secret.changed',
-      'project.application.saml.added',
-      'project.application.saml.changed',
-      'project.application.api.added',
-      'project.application.api.changed',
-      'project.application.api.secret.changed',
-      'project.application.changed',
-      'project.application.deactivated',
-      'project.application.reactivated',
-      'project.application.removed',
+      'application.oidc.added',
+      'application.oidc.changed',
+      'application.oidc.config.changed',
+      'application.added',  // SAML uses generic added event
+      'application.saml.config.changed',
+      'application.api.added',
+      'application.api.changed',
+      'application.api.config.changed',
+      'application.secret.changed',
+      'application.changed',
+      'application.deactivated',
+      'application.reactivated',
+      'application.removed',
     ],
-    aggregateTypes: ['project'],
+    aggregateTypes: ['application'],
     batchSize: 100,
     interval: 1000,
     enableLocking: false,

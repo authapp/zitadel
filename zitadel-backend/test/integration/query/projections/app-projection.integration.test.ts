@@ -118,9 +118,9 @@ describe('Application Projection Integration Tests', () => {
     const events = [
       // OIDC App 1
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.oidcApp1.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.oidcApp1.appID,
         payload: {
           appId: testData.oidcApp1.appID,
           projectId: testData.oidcApp1.projectID,
@@ -139,9 +139,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // OIDC App 2
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.oidcApp2.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.oidcApp2.appID,
         payload: {
           appId: testData.oidcApp2.appID,
           projectId: testData.oidcApp2.projectID,
@@ -157,9 +157,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // SAML App 1
       {
-        eventType: 'project.application.saml.added',
-        aggregateType: 'project',
-        aggregateID: testData.samlApp1.projectID,
+        eventType: 'application.added',
+        aggregateType: 'application',
+        aggregateID: testData.samlApp1.appID,
         payload: {
           appId: testData.samlApp1.appID,
           projectId: testData.samlApp1.projectID,
@@ -173,9 +173,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // SAML App 2
       {
-        eventType: 'project.application.saml.added',
-        aggregateType: 'project',
-        aggregateID: testData.samlApp2.projectID,
+        eventType: 'application.added',
+        aggregateType: 'application',
+        aggregateID: testData.samlApp2.appID,
         payload: {
           appId: testData.samlApp2.appID,
           projectId: testData.samlApp2.projectID,
@@ -189,9 +189,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // API App 1
       {
-        eventType: 'project.application.api.added',
-        aggregateType: 'project',
-        aggregateID: testData.apiApp1.projectID,
+        eventType: 'application.api.added',
+        aggregateType: 'application',
+        aggregateID: testData.apiApp1.appID,
         payload: {
           appId: testData.apiApp1.appID,
           projectId: testData.apiApp1.projectID,
@@ -206,9 +206,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // API App 2
       {
-        eventType: 'project.application.api.added',
-        aggregateType: 'project',
-        aggregateID: testData.apiApp2.projectID,
+        eventType: 'application.api.added',
+        aggregateType: 'application',
+        aggregateID: testData.apiApp2.appID,
         payload: {
           appId: testData.apiApp2.appID,
           projectId: testData.apiApp2.projectID,
@@ -222,9 +222,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // Deactivated App
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.deactivatedApp.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.deactivatedApp.appID,
         payload: {
           appId: testData.deactivatedApp.appID,
           projectId: testData.deactivatedApp.projectID,
@@ -239,9 +239,9 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       },
       {
-        eventType: 'project.application.deactivated',
-        aggregateType: 'project',
-        aggregateID: testData.deactivatedApp.projectID,
+        eventType: 'application.deactivated',
+        aggregateType: 'application',
+        aggregateID: testData.deactivatedApp.appID,
         payload: { appId: testData.deactivatedApp.appID },
         creator: 'system',
         owner: 'test-instance',
@@ -249,9 +249,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // Removed App
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.removedApp.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.removedApp.appID,
         payload: {
           appId: testData.removedApp.appID,
           projectId: testData.removedApp.projectID,
@@ -266,9 +266,9 @@ describe('Application Projection Integration Tests', () => {
         instanceID: 'test-instance',
       },
       {
-        eventType: 'project.application.removed',
-        aggregateType: 'project',
-        aggregateID: testData.removedApp.projectID,
+        eventType: 'application.removed',
+        aggregateType: 'application',
+        aggregateID: testData.removedApp.appID,
         payload: { appId: testData.removedApp.appID },
         creator: 'system',
         owner: 'test-instance',
@@ -276,9 +276,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // Lookup App
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.lookupApp.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.lookupApp.appID,
         payload: {
           appId: testData.lookupApp.appID,
           projectId: testData.lookupApp.projectID,
@@ -294,9 +294,9 @@ describe('Application Projection Integration Tests', () => {
       },
       // Exists App
       {
-        eventType: 'project.application.oidc.added',
-        aggregateType: 'project',
-        aggregateID: testData.existsApp.projectID,
+        eventType: 'application.oidc.added',
+        aggregateType: 'application',
+        aggregateID: testData.existsApp.appID,
         payload: {
           appId: testData.existsApp.appID,
           projectId: testData.existsApp.projectID,

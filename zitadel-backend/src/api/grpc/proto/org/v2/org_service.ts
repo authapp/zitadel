@@ -175,3 +175,178 @@ export interface RemoveOrganizationResponse {
   /** Object details with metadata */
   details?: Details;
 }
+
+// ====================================================================
+// DOMAIN MANAGEMENT
+// ====================================================================
+
+/**
+ * AddOrganizationDomain Request
+ */
+export interface AddOrganizationDomainRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** Domain name (e.g., 'example.com') */
+  domain: string;
+}
+
+/**
+ * AddOrganizationDomain Response
+ */
+export interface AddOrganizationDomainResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * VerifyOrganizationDomain Request
+ */
+export interface VerifyOrganizationDomainRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** Domain name */
+  domain: string;
+  
+  /** Verification code */
+  validationCode: string;
+}
+
+/**
+ * VerifyOrganizationDomain Response
+ */
+export interface VerifyOrganizationDomainResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * SetPrimaryOrganizationDomain Request
+ */
+export interface SetPrimaryOrganizationDomainRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** Domain name to set as primary */
+  domain: string;
+}
+
+/**
+ * SetPrimaryOrganizationDomain Response
+ */
+export interface SetPrimaryOrganizationDomainResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * RemoveOrganizationDomain Request
+ */
+export interface RemoveOrganizationDomainRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** Domain name to remove */
+  domain: string;
+}
+
+/**
+ * RemoveOrganizationDomain Response
+ */
+export interface RemoveOrganizationDomainResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * GenerateDomainValidation Request
+ */
+export interface GenerateDomainValidationRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** Domain name */
+  domain: string;
+  
+  /** Validation type (e.g., DNS_TXT, HTTP) */
+  type: string;
+}
+
+/**
+ * GenerateDomainValidation Response
+ */
+export interface GenerateDomainValidationResponse {
+  /** Validation token/code */
+  validationToken: string;
+  
+  /** URL or DNS record for validation */
+  validationUrl: string;
+}
+
+// ====================================================================
+// MEMBER MANAGEMENT  
+// ====================================================================
+
+/**
+ * AddOrganizationMember Request
+ */
+export interface AddOrganizationMemberRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** User ID to add as member */
+  userId: string;
+  
+  /** Member roles (e.g., 'ORG_OWNER', 'ORG_USER_MANAGER') */
+  roles: string[];
+}
+
+/**
+ * AddOrganizationMember Response
+ */
+export interface AddOrganizationMemberResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * UpdateOrganizationMember Request
+ */
+export interface UpdateOrganizationMemberRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** User ID */
+  userId: string;
+  
+  /** New member roles */
+  roles: string[];
+}
+
+/**
+ * UpdateOrganizationMember Response
+ */
+export interface UpdateOrganizationMemberResponse {
+  /** Object details with metadata */
+  details?: Details;
+}
+
+/**
+ * RemoveOrganizationMember Request
+ */
+export interface RemoveOrganizationMemberRequest {
+  /** Organization ID */
+  organizationId: string;
+  
+  /** User ID to remove */
+  userId: string;
+}
+
+/**
+ * RemoveOrganizationMember Response
+ */
+export interface RemoveOrganizationMemberResponse {
+  /** Object details with metadata */
+  details?: Details;
+}

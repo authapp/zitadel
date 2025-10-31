@@ -677,6 +677,18 @@ export class Commands {
     require('./org/org-commands').removeDomain;
   
   /**
+   * Generate domain validation token
+   */
+  generateDomainValidation: typeof import('./org/org-commands').generateDomainValidation = 
+    require('./org/org-commands').generateDomainValidation;
+  
+  /**
+   * Validate organization domain
+   */
+  validateOrgDomain: typeof import('./org/org-commands').validateOrgDomain = 
+    require('./org/org-commands').validateOrgDomain;
+  
+  /**
    * Setup organization with admins and domains
    */
   setupOrg: typeof import('./org/org-setup-commands').setupOrg = 
