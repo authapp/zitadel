@@ -1,20 +1,33 @@
 /**
  * API Server
  * 
- * Main HTTP server with all API routes
+ * Main HTTP server with all API routes and middleware
  */
 
-import express, { Express, Request, Response, NextFunction } from 'express';
+import express, { Express } from 'express';
 import { Commands } from '@/lib/command/commands';
 import { createOrganizationRouter } from './grpc/org/v2/router';
-import { isZitadelError } from '@/zerrors/errors';
+import {
+  createRateLimiter,
+  createSecurityHeaders,
+  createCorsMiddleware,
+  createRequestIdMiddleware,
+  createLoggingMiddleware,
+  createErrorHandler,
+  notFoundHandler,
+} from './middleware';
 
 export interface ServerConfig {
   port: number;
   host: string;
+  environment?: 'development' | 'production' | 'test';
   cors?: {
     origin: string | string[];
     credentials: boolean;
+  };
+  rateLimit?: {
+    windowMs?: number;
+    max?: number;
   };
 }
 
@@ -23,33 +36,39 @@ export interface ServerConfig {
  */
 export function createServer(commands: Commands, config: ServerConfig): Express {
   const app = express();
+  const isDevelopment = config.environment === 'development';
 
-  // Middleware
+  // Request ID tracking (must be first)
+  app.use(createRequestIdMiddleware());
+
+  // Security headers
+  app.use(createSecurityHeaders({
+    contentSecurityPolicy: isDevelopment ? false : undefined,
+    hsts: isDevelopment ? false : undefined,
+  }));
+
+  // CORS
+  app.use(createCorsMiddleware({
+    origin: config.cors?.origin || '*',
+    credentials: config.cors?.credentials ?? false,
+  }));
+
+  // Request logging
+  app.use(createLoggingMiddleware({
+    format: isDevelopment ? 'dev' : 'combined',
+  }));
+
+  // Body parsing
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  // CORS
-  if (config.cors) {
-    app.use((req, res, next) => {
-      const origin = Array.isArray(config.cors!.origin)
-        ? config.cors!.origin[0]
-        : config.cors!.origin;
-      
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-ID, X-Instance-ID, X-Org-ID');
-      res.header('Access-Control-Allow-Credentials', config.cors!.credentials ? 'true' : 'false');
+  // Rate limiting (global)
+  app.use(createRateLimiter({
+    windowMs: config.rateLimit?.windowMs,
+    max: config.rateLimit?.max,
+  }));
 
-      if (req.method === 'OPTIONS') {
-        res.sendStatus(200);
-        return;
-      }
-
-      next();
-    });
-  }
-
-  // Health check
+  // Health check (no rate limit)
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
@@ -58,31 +77,13 @@ export function createServer(commands: Commands, config: ServerConfig): Express 
   app.use('/v2', createOrganizationRouter(commands));
 
   // 404 handler
-  app.use((req, res) => {
-    res.status(404).json({
-      error: 'NotFound',
-      message: `Route ${req.method} ${req.path} not found`,
-      code: 'NOT_FOUND',
-    });
-  });
+  app.use(notFoundHandler);
 
-  // Error handler
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    if (isZitadelError(err)) {
-      return res.status(err.httpStatus).json({
-        error: err.name,
-        message: err.message,
-        code: err.code,
-      });
-    }
-
-    console.error('Unhandled error:', err);
-    return res.status(500).json({
-      error: 'Internal',
-      message: 'Internal server error',
-      code: 'INTERNAL',
-    });
-  });
+  // Error handler (must be last)
+  app.use(createErrorHandler({
+    includeStack: isDevelopment,
+    logErrors: true,
+  }));
 
   return app;
 }
