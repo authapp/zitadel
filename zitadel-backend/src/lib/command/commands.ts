@@ -1812,6 +1812,46 @@ export class Commands {
   removeInstanceIDP: typeof import('./instance/instance-idp-commands').removeInstanceIDP = 
     require('./instance/instance-idp-commands').removeInstanceIDP;
   
+  // --------------------------------------------------------------------------
+  // IDP Callback Commands (Sprint 10-11)
+  // --------------------------------------------------------------------------
+  
+  /**
+   * Start IDP intent for OAuth/OIDC/SAML flow
+   */
+  startIDPIntent: typeof import('./idp/idp-callback-commands').startIDPIntent = 
+    require('./idp/idp-callback-commands').startIDPIntent;
+  
+  /**
+   * Get IDP intent by state
+   */
+  getIDPIntentByState: typeof import('./idp/idp-callback-commands').getIDPIntentByState = 
+    require('./idp/idp-callback-commands').getIDPIntentByState;
+  
+  /**
+   * Handle OAuth callback from external provider
+   */
+  handleOAuthCallback: typeof import('./idp/idp-callback-commands').handleOAuthCallback = 
+    require('./idp/idp-callback-commands').handleOAuthCallback;
+  
+  /**
+   * Handle OIDC callback from external provider
+   */
+  handleOIDCCallback: typeof import('./idp/idp-callback-commands').handleOIDCCallback = 
+    require('./idp/idp-callback-commands').handleOIDCCallback;
+  
+  /**
+   * Handle SAML response from external provider
+   */
+  handleSAMLResponse: typeof import('./idp/idp-callback-commands').handleSAMLResponse = 
+    require('./idp/idp-callback-commands').handleSAMLResponse;
+  
+  /**
+   * Provision user from external IDP
+   */
+  provisionUserFromIDP: typeof import('./idp/idp-callback-commands').provisionUserFromIDP = 
+    require('./idp/idp-callback-commands').provisionUserFromIDP;
+  
   // =============================================================================
   // Custom Text Commands (Phase 3 - Week 17-18)
   // =============================================================================
