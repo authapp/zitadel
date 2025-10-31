@@ -43,7 +43,7 @@ export class UserQueries {
         password_hash, password_changed_at, password_change_required, mfa_enabled,
         state, user_type, created_at, updated_at, deleted_at
        FROM projections.users
-       WHERE id = $1 AND instance_id = $2 AND deleted_at IS NULL`,
+       WHERE id = $1 AND instance_id = $2`,
       [userId, instanceId]
     );
 

@@ -180,6 +180,18 @@ export class Commands {
   removeUser: typeof import('./user/user-commands').removeUser = 
     require('./user/user-commands').removeUser;
   
+  /**
+   * Lock user
+   */
+  lockUser: typeof import('./user/user-commands').lockUser = 
+    require('./user/user-commands').lockUser;
+  
+  /**
+   * Unlock user
+   */
+  unlockUser: typeof import('./user/user-commands').unlockUser = 
+    require('./user/user-commands').unlockUser;
+  
   // --------------------------------------------------------------------------
   // User OTP/MFA Commands (Phase 1)
   // --------------------------------------------------------------------------

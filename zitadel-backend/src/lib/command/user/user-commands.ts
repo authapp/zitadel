@@ -20,6 +20,8 @@ import {
   newEmailVerifiedEvent,
   newUserDeactivatedEvent,
   newUserReactivatedEvent,
+  newUserLockedEvent,
+  newUserUnlockedEvent,
   newUserRemovedEvent,
   HumanAddedPayload,
   MachineAddedPayload,
@@ -579,6 +581,88 @@ export async function removeUser(
   
   // 3. Create command using event factory
   const command = newUserRemovedEvent(
+    userID,
+    orgID,
+    ctx.instanceID,
+    ctx.userID || 'system'
+  );
+  
+  // 4. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Lock user command
+ */
+export async function lockUser(
+  this: Commands,
+  ctx: Context,
+  userID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load write model
+  const wm = new UserWriteModel();
+  await wm.load(this.getEventstore(), userID, orgID);
+  
+  if (wm.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-UserB0');
+  }
+  if (wm.state === UserState.DELETED) {
+    throwNotFound('user deleted', 'COMMAND-UserB1');
+  }
+  if (wm.state === UserState.LOCKED) {
+    throwPreconditionFailed('user already locked', 'COMMAND-UserB2');
+  }
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'user', 'update', orgID);
+  
+  // 3. Create command using event factory
+  const command = newUserLockedEvent(
+    userID,
+    orgID,
+    ctx.instanceID,
+    ctx.userID || 'system'
+  );
+  
+  // 4. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
+ * Unlock user command
+ */
+export async function unlockUser(
+  this: Commands,
+  ctx: Context,
+  userID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Load write model
+  const wm = new UserWriteModel();
+  await wm.load(this.getEventstore(), userID, orgID);
+  
+  if (wm.state === UserState.UNSPECIFIED) {
+    throwNotFound('user not found', 'COMMAND-UserC0');
+  }
+  if (wm.state === UserState.DELETED) {
+    throwNotFound('user deleted', 'COMMAND-UserC1');
+  }
+  if (wm.state !== UserState.LOCKED) {
+    throwPreconditionFailed('user not locked', 'COMMAND-UserC2');
+  }
+  
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'user', 'update', orgID);
+  
+  // 3. Create command using event factory
+  const command = newUserUnlockedEvent(
     userID,
     orgID,
     ctx.instanceID,

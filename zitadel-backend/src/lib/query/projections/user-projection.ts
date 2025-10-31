@@ -81,6 +81,7 @@ export class UserProjection extends Projection {
       case 'user.changed':
       case 'user.profile.changed':
       case 'user.updated':  // Old event type
+      case 'user.username.changed':  // Username change event
         await this.handleUserChanged(event);
         break;
       
@@ -143,7 +144,13 @@ export class UserProjection extends Projection {
         state, user_type, password_hash, password_changed_at, password_change_required, mfa_enabled,
         created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
-      ON CONFLICT (instance_id, id) DO NOTHING`,
+      ON CONFLICT (instance_id, id) DO UPDATE SET
+        username = EXCLUDED.username,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
+        email = EXCLUDED.email,
+        updated_at = EXCLUDED.updated_at,
+        sequence = EXCLUDED.sequence`,
       [
         event.aggregateID,
         event.instanceID || 'default',
@@ -337,12 +344,12 @@ export class UserProjection extends Projection {
    * Handle user.removed event
    */
   private async handleUserRemoved(event: Event): Promise<void> {
-    // Soft delete - mark as inactive and set deleted_at
+    // Soft delete - mark as deleted and set deleted_at
     await this.database.query(
       `UPDATE projections.users 
        SET state = $1, deleted_at = $2, updated_at = $3, change_date = $4, sequence = $5
        WHERE instance_id = $6 AND id = $7`,
-      ['inactive', event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
+      ['deleted', event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
     );
   }
 

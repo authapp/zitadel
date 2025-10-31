@@ -343,10 +343,13 @@ describe('User Projection Integration Tests', () => {
       
       await waitForProjection();
       
-      // Note: UserQueries.getUserByID() filters out deleted users (deleted_at IS NULL)
-      // This is correct behavior - removed users should not be returned by the query layer
+      // Note: getUserByID() returns deleted users so the API can show deletion status
+      // Only search/list operations filter out deleted users
       const result = await userQueries.getUserByID(userId, 'test-instance');
-      expect(result).toBeNull(); // Removed users are filtered out by query layer
+      expect(result).not.toBeNull();
+      expect(result!.state).toBe('deleted');
+      expect(result!.deletedAt).toBeTruthy();
+      console.log('✓ Removed user returned with deleted state');
     }, 15000);
   });
 
