@@ -12,7 +12,7 @@ import {
 } from '../../../../src/api/middleware/request-id';
 
 describe('Request ID Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: any; // Use any to avoid session property type conflicts
   let mockRes: Partial<Response>;
   let mockNext: jest.Mock;
 
@@ -38,7 +38,7 @@ describe('Request ID Middleware', () => {
     it('should generate request ID if not provided', () => {
       const middleware = createRequestIdMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBeDefined();
       expect(typeof mockReq.requestId).toBe('string');
@@ -50,7 +50,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'x-request-id': existingId };
       
       const middleware = createRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBe(existingId);
     });
@@ -58,7 +58,7 @@ describe('Request ID Middleware', () => {
     it('should set request ID in response header by default', () => {
       const middleware = createRequestIdMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'X-Request-ID',
@@ -71,7 +71,7 @@ describe('Request ID Middleware', () => {
         setResponseHeader: false,
       });
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).not.toHaveBeenCalled();
     });
@@ -82,7 +82,7 @@ describe('Request ID Middleware', () => {
         headerName: customHeader,
       });
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         customHeader,
@@ -96,7 +96,7 @@ describe('Request ID Middleware', () => {
         generator: () => customId,
       });
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBe(customId);
     });
@@ -104,7 +104,7 @@ describe('Request ID Middleware', () => {
     it('should call next() after setting ID', () => {
       const middleware = createRequestIdMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
@@ -114,7 +114,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'X-Request-ID': existingId };
       
       const middleware = createRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBe(existingId);
     });
@@ -122,7 +122,7 @@ describe('Request ID Middleware', () => {
     it('should generate UUID format by default', () => {
       const middleware = createRequestIdMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -134,13 +134,13 @@ describe('Request ID Middleware', () => {
     it('should return request ID from request object', () => {
       mockReq.requestId = 'test-request-id';
       
-      const id = getRequestId(mockReq as Request);
+      const id = getRequestId(mockReq);
       
       expect(id).toBe('test-request-id');
     });
 
     it('should return undefined if no request ID', () => {
-      const id = getRequestId(mockReq as Request);
+      const id = getRequestId(mockReq);
       
       expect(id).toBeUndefined();
     });
@@ -151,7 +151,7 @@ describe('Request ID Middleware', () => {
       const prefix = 'api';
       const middleware = createRequestIdWithPrefix(prefix);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBeDefined();
       expect(mockReq.requestId?.startsWith(`${prefix}-`)).toBe(true);
@@ -161,7 +161,7 @@ describe('Request ID Middleware', () => {
       const prefix = 'zitadel';
       const middleware = createRequestIdWithPrefix(prefix);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const parts = mockReq.requestId?.split('-');
       expect(parts?.[0]).toBe(prefix);
@@ -173,7 +173,7 @@ describe('Request ID Middleware', () => {
     it('should require request ID from client', () => {
       const middleware = createStrictRequestIdMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -189,7 +189,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'x-request-id': clientId };
       
       const middleware = createStrictRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBe(clientId);
       expect(mockNext).toHaveBeenCalledTimes(1);
@@ -200,7 +200,7 @@ describe('Request ID Middleware', () => {
       const customHeader = 'X-Trace-ID';
       const middleware = createStrictRequestIdMiddleware(customHeader);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -214,7 +214,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'x-request-id': clientId };
       
       const middleware = createStrictRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Request-ID', clientId);
     });
@@ -225,7 +225,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'x-request-id': ['array', 'value'] as any };
       
       const middleware = createRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       // Should generate new ID
       expect(mockReq.requestId).toBeDefined();
@@ -236,7 +236,7 @@ describe('Request ID Middleware', () => {
       mockReq.headers = { 'x-request-id': '' };
       
       const middleware = createRequestIdMiddleware();
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       // Should generate new ID
       expect(mockReq.requestId).toBeDefined();
@@ -247,11 +247,11 @@ describe('Request ID Middleware', () => {
       const middleware = createRequestIdMiddleware();
       
       // First call
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       const firstId = mockReq.requestId;
       
       // Second call should not change ID
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockReq.requestId).toBe(firstId);
     });

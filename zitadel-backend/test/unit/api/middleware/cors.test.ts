@@ -46,7 +46,7 @@ jest.mock('cors', () => {
 });
 
 describe('CORS Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: any; // Use any to avoid session property type conflicts
   let mockRes: Partial<Response>;
   let mockNext: jest.Mock;
 
@@ -70,7 +70,7 @@ describe('CORS Middleware', () => {
     it('should create CORS middleware with default config', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options).toBeDefined();
@@ -81,7 +81,7 @@ describe('CORS Middleware', () => {
     it('should allow all origins by default', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
@@ -95,7 +95,7 @@ describe('CORS Middleware', () => {
         origin: allowedOrigin,
       });
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
@@ -108,7 +108,7 @@ describe('CORS Middleware', () => {
         credentials: true,
       });
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Credentials',
@@ -119,7 +119,7 @@ describe('CORS Middleware', () => {
     it('should configure default allowed headers', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.allowedHeaders).toContain('Content-Type');
@@ -130,7 +130,7 @@ describe('CORS Middleware', () => {
     it('should configure default methods', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.methods).toContain('GET');
@@ -142,7 +142,7 @@ describe('CORS Middleware', () => {
     it('should expose rate limit headers', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.exposedHeaders).toContain('X-Request-ID');
@@ -155,7 +155,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'http://localhost:3000' };
       const middleware = createDevelopmentCors();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.origin).toBe(true);
@@ -164,7 +164,7 @@ describe('CORS Middleware', () => {
     it('should enable credentials in development', () => {
       const middleware = createDevelopmentCors();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.credentials).toBe(true);
@@ -173,7 +173,7 @@ describe('CORS Middleware', () => {
     it('should allow all headers in development', () => {
       const middleware = createDevelopmentCors();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.allowedHeaders).toBe('*');
@@ -191,7 +191,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'https://app.example.com' };
       const middleware = createProductionCors(allowedOrigins);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
@@ -203,7 +203,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'https://evil.com' };
       const middleware = createProductionCors(allowedOrigins);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect((mockReq as any).__corsError).toBeDefined();
       expect((mockReq as any).__corsError.message).toContain('not allowed by CORS');
@@ -212,7 +212,7 @@ describe('CORS Middleware', () => {
     it('should allow requests with no origin', () => {
       const middleware = createProductionCors(allowedOrigins);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       // Should not have CORS error for no-origin requests
       expect((mockReq as any).__corsError).toBeUndefined();
@@ -221,7 +221,7 @@ describe('CORS Middleware', () => {
     it('should enable credentials in production', () => {
       const middleware = createProductionCors(allowedOrigins);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.credentials).toBe(true);
@@ -230,7 +230,7 @@ describe('CORS Middleware', () => {
     it('should have shorter maxAge in production', () => {
       const middleware = createProductionCors(allowedOrigins);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const options = (mockReq as any).__corsOptions;
       expect(options.maxAge).toBe(600); // 10 minutes
@@ -246,7 +246,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'https://app.example.com' };
       const middleware = createDynamicCors(validator);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(validator).toHaveBeenCalledWith('https://app.example.com');
     });
@@ -256,7 +256,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'https://test.com' };
       
       const middleware = createDynamicCors(validator);
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalledWith(
         'Access-Control-Allow-Origin',
@@ -269,7 +269,7 @@ describe('CORS Middleware', () => {
       mockReq.headers = { origin: 'https://evil.com' };
       
       const middleware = createDynamicCors(validator);
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect((mockReq as any).__corsError).toBeDefined();
     });
@@ -279,7 +279,7 @@ describe('CORS Middleware', () => {
     it('should handle missing origin header', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalled();
     });
@@ -287,7 +287,7 @@ describe('CORS Middleware', () => {
     it('should call next() after setting headers', () => {
       const middleware = createCorsMiddleware();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalledTimes(1);
     });

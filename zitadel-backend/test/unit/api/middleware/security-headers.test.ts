@@ -34,7 +34,7 @@ jest.mock('helmet', () => {
 });
 
 describe('Security Headers Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: any; // Use any to avoid session property type conflicts
   let mockRes: Partial<Response>;
   let mockNext: jest.Mock;
 
@@ -42,6 +42,7 @@ describe('Security Headers Middleware', () => {
     mockReq = {
       url: '/test',
       method: 'GET',
+      session: {},
     };
     
     mockRes = {
@@ -65,7 +66,7 @@ describe('Security Headers Middleware', () => {
     it('should set security headers', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalled();
       expect(mockRes.setHeader).toHaveBeenCalled();
@@ -74,7 +75,7 @@ describe('Security Headers Middleware', () => {
     it('should configure CSP by default', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.contentSecurityPolicy).toBeDefined();
@@ -84,7 +85,7 @@ describe('Security Headers Middleware', () => {
     it('should configure HSTS by default', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.hsts).toBeDefined();
@@ -94,7 +95,7 @@ describe('Security Headers Middleware', () => {
     it('should hide X-Powered-By header', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.hidePoweredBy).toBe(true);
@@ -103,7 +104,7 @@ describe('Security Headers Middleware', () => {
     it('should set frameguard to deny', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.frameguard).toBeDefined();
@@ -118,7 +119,7 @@ describe('Security Headers Middleware', () => {
       
       const middleware = createSecurityHeaders(customConfig);
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.hsts.maxAge).toBe(86400);
@@ -127,7 +128,7 @@ describe('Security Headers Middleware', () => {
     it('should enable XSS filter', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.xssFilter).toBe(true);
@@ -136,7 +137,7 @@ describe('Security Headers Middleware', () => {
     it('should set referrer policy', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.referrerPolicy).toBeDefined();
@@ -147,7 +148,7 @@ describe('Security Headers Middleware', () => {
     it('should create lenient headers for development', () => {
       const middleware = createDevelopmentSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.contentSecurityPolicy).toBe(false);
@@ -157,7 +158,7 @@ describe('Security Headers Middleware', () => {
     it('should allow cross-origin resources', () => {
       const middleware = createDevelopmentSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.crossOriginResourcePolicy).toBeDefined();
@@ -167,7 +168,7 @@ describe('Security Headers Middleware', () => {
     it('should not require HTTPS in development', () => {
       const middleware = createDevelopmentSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.hsts).toBe(false);
@@ -178,7 +179,7 @@ describe('Security Headers Middleware', () => {
     it('should create strict headers for production', () => {
       const middleware = createProductionSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.contentSecurityPolicy).toBeDefined();
@@ -188,7 +189,7 @@ describe('Security Headers Middleware', () => {
     it('should enforce strict CSP', () => {
       const middleware = createProductionSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       const csp = config.contentSecurityPolicy.directives;
@@ -201,7 +202,7 @@ describe('Security Headers Middleware', () => {
     it('should upgrade insecure requests', () => {
       const middleware = createProductionSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       const csp = config.contentSecurityPolicy.directives;
@@ -212,7 +213,7 @@ describe('Security Headers Middleware', () => {
     it('should set strict HSTS', () => {
       const middleware = createProductionSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.hsts.maxAge).toBe(31536000);
@@ -223,7 +224,7 @@ describe('Security Headers Middleware', () => {
     it('should deny frame embedding', () => {
       const middleware = createProductionSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__helmetConfig;
       expect(config.frameguard.action).toBe('deny');
@@ -234,7 +235,7 @@ describe('Security Headers Middleware', () => {
     it('should call next() after setting headers', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalledTimes(1);
     });
@@ -242,7 +243,7 @@ describe('Security Headers Middleware', () => {
     it('should set multiple security headers', () => {
       const middleware = createSecurityHeaders();
       
-      middleware(mockReq as Request, mockRes as Response, mockNext);
+      middleware(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.setHeader).toHaveBeenCalled();
     });

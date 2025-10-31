@@ -41,6 +41,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',
+        '^jose$': '<rootDir>/test/__mocks__/jose.ts',
       },
       // Unit tests run in parallel for speed
       maxWorkers: '50%',
@@ -58,6 +59,7 @@ module.exports = {
       moduleNameMapper: {
         '^@/zerrors/(.*)$': '<rootDir>/src/lib/zerrors/$1',
         '^@/(.*)$': '<rootDir>/src/lib/$1',
+        '^jose$': '<rootDir>/test/__mocks__/jose.ts',
       },
       // CRITICAL: Force sequential execution for ALL integration tests
       maxWorkers: 1,

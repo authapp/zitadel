@@ -30,7 +30,7 @@ jest.mock('express-rate-limit', () => {
 });
 
 describe('Rate Limiting Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: any; // Use any to avoid session property type conflicts
   let mockRes: Partial<Response>;
   let mockNext: jest.Mock;
 
@@ -67,7 +67,7 @@ describe('Rate Limiting Middleware', () => {
         message: 'Custom message',
       });
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.windowMs).toBe(60000);
@@ -78,7 +78,7 @@ describe('Rate Limiting Middleware', () => {
     it('should allow requests under the limit', () => {
       const limiter = createRateLimiter();
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       expect(mockNext).toHaveBeenCalled();
       expect(mockRes.status).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe('Rate Limiting Middleware', () => {
       });
       
       (mockReq as any).__simulateRateLimit = true;
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.status).toHaveBeenCalledWith(429);
       expect(mockRes.json).toHaveBeenCalledWith({
@@ -105,7 +105,7 @@ describe('Rate Limiting Middleware', () => {
     it('should use standard headers by default', () => {
       const limiter = createRateLimiter();
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.standardHeaders).toBe(true);
@@ -117,7 +117,7 @@ describe('Rate Limiting Middleware', () => {
         skipSuccessfulRequests: true,
       });
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.skipSuccessfulRequests).toBe(true);
@@ -128,7 +128,7 @@ describe('Rate Limiting Middleware', () => {
         skipFailedRequests: true,
       });
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.skipFailedRequests).toBe(true);
@@ -139,7 +139,7 @@ describe('Rate Limiting Middleware', () => {
     it('should create strict rate limiter for auth', () => {
       const limiter = createAuthRateLimiter();
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.max).toBe(5);
@@ -152,7 +152,7 @@ describe('Rate Limiting Middleware', () => {
       const limiter = createAuthRateLimiter();
       
       (mockReq as any).__simulateRateLimit = true;
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.status).toHaveBeenCalledWith(429);
       expect(mockRes.json).toHaveBeenCalledWith(
@@ -168,7 +168,7 @@ describe('Rate Limiting Middleware', () => {
     it('should create lenient rate limiter for public endpoints', () => {
       const limiter = createPublicRateLimiter();
       
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       const config = (mockReq as any).__rateLimitConfig;
       expect(config.max).toBe(30);
@@ -179,12 +179,12 @@ describe('Rate Limiting Middleware', () => {
     it('should allow more requests than auth limiter', () => {
       const publicLimiter = createPublicRateLimiter();
       
-      publicLimiter(mockReq as Request, mockRes as Response, mockNext);
+      publicLimiter(mockReq, mockRes as Response, mockNext);
       
       const publicConfig = (mockReq as any).__rateLimitConfig;
       
       const authLimiter = createAuthRateLimiter();
-      authLimiter(mockReq as Request, mockRes as Response, mockNext);
+      authLimiter(mockReq, mockRes as Response, mockNext);
       
       const authConfig = (mockReq as any).__rateLimitConfig;
       
@@ -199,7 +199,7 @@ describe('Rate Limiting Middleware', () => {
       });
       
       (mockReq as any).__simulateRateLimit = true;
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.json).toHaveBeenCalledWith({
         error: 'TooManyRequests',
@@ -212,7 +212,7 @@ describe('Rate Limiting Middleware', () => {
       const limiter = createRateLimiter();
       
       (mockReq as any).__simulateRateLimit = true;
-      limiter(mockReq as Request, mockRes as Response, mockNext);
+      limiter(mockReq, mockRes as Response, mockNext);
       
       expect(mockRes.status).toHaveBeenCalledWith(429);
     });
