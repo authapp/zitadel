@@ -70,6 +70,7 @@ module.exports = {
       testTimeout: 30000,
       // Enable detailed timing output
       verbose: true,
+      // Note: forceExit must be passed as CLI flag (--forceExit) not in config
     },
   ],
 };

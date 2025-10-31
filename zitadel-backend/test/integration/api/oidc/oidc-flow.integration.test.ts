@@ -45,6 +45,10 @@ describe('OIDC Flow Integration Tests', () => {
   });
 
   afterAll(async () => {
+    // Reset global singletons to prevent interference with other tests
+    resetKeyManager();
+    resetTokenStore();
+    
     await pool.close();
   });
 
