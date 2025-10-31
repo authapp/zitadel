@@ -342,6 +342,34 @@ CREATE TABLE IF NOT EXISTS projections.idps (
     config_data JSONB
 );
 
+-- Table: projections.idp_intents
+-- Stores temporary OAuth/OIDC/SAML intent state during external IDP flows
+CREATE TABLE IF NOT EXISTS projections.idp_intents (
+    id TEXT NOT NULL,
+    instance_id TEXT NOT NULL,
+    idp_id TEXT NOT NULL,
+    idp_type TEXT NOT NULL, -- 'oauth', 'oidc', 'saml'
+    state TEXT NOT NULL, -- CSRF protection state parameter
+    code_verifier TEXT, -- PKCE code verifier (OAuth/OIDC)
+    nonce TEXT, -- OIDC nonce for replay protection
+    redirect_uri TEXT NOT NULL,
+    auth_request_id TEXT, -- Optional: link to auth request if in login flow
+    user_id TEXT, -- Optional: user initiating the flow
+    resource_owner TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    expires_at TIMESTAMPTZ NOT NULL, -- Intent TTL (typically 10 minutes)
+    succeeded BOOLEAN DEFAULT false,
+    succeeded_at TIMESTAMPTZ,
+    succeeded_user_id TEXT,
+    PRIMARY KEY (instance_id, id)
+);
+
+-- Index for fast state lookup during callback
+CREATE INDEX IF NOT EXISTS idx_idp_intents_state ON projections.idp_intents(instance_id, state) WHERE succeeded = false;
+
+-- Index for cleanup of expired intents
+CREATE INDEX IF NOT EXISTS idx_idp_intents_expires_at ON projections.idp_intents(expires_at) WHERE succeeded = false;
+
 -- Table: projections.instance_domains
 CREATE TABLE IF NOT EXISTS projections.instance_domains (
     instance_id TEXT NOT NULL,
