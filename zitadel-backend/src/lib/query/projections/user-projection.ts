@@ -86,10 +86,12 @@ export class UserProjection extends Projection {
         break;
       
       case 'user.email.changed':
+      case 'user.v2.email.changed':
         await this.handleEmailChanged(event);
         break;
       
       case 'user.email.verified':
+      case 'user.v2.email.verified':
         await this.handleEmailVerified(event);
         break;
       
@@ -99,6 +101,10 @@ export class UserProjection extends Projection {
       
       case 'user.phone.verified':
         await this.handlePhoneVerified(event);
+        break;
+      
+      case 'user.phone.removed':
+        await this.handlePhoneRemoved(event);
         break;
       
       case 'user.password.changed':
@@ -290,9 +296,21 @@ export class UserProjection extends Projection {
   private async handlePhoneVerified(event: Event): Promise<void> {
     await this.database.query(
       `UPDATE projections.users 
-       SET phone_verified = true, phone_verified_at = $1, updated_at = $2, change_date = $3, sequence = $4
+       SET phone_verified = $1, phone_verified_at = $2, updated_at = $3, change_date = $4, sequence = $5
+       WHERE instance_id = $6 AND id = $7`,
+      [true, event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
+    );
+  }
+
+  /**
+   * Handle user.phone.removed event
+   */
+  private async handlePhoneRemoved(event: Event): Promise<void> {
+    await this.database.query(
+      `UPDATE projections.users 
+       SET phone = NULL, phone_verified = $1, updated_at = $2, change_date = $3, sequence = $4
        WHERE instance_id = $5 AND id = $6`,
-      [event.createdAt, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
+      [false, event.createdAt, event.createdAt, event.aggregateVersion || 0, event.instanceID || 'default', event.aggregateID]
     );
   }
 
@@ -368,9 +386,11 @@ export class UserProjection extends Projection {
         await this.handleUserChanged(event);
         break;
       case 'user.email.changed':
+      case 'user.v2.email.changed':
         await this.handleEmailChanged(event);
         break;
       case 'user.email.verified':
+      case 'user.v2.email.verified':
         await this.handleEmailVerified(event);
         break;
       case 'user.phone.changed':
@@ -378,6 +398,9 @@ export class UserProjection extends Projection {
         break;
       case 'user.phone.verified':
         await this.handlePhoneVerified(event);
+        break;
+      case 'user.phone.removed':
+        await this.handlePhoneRemoved(event);
         break;
       case 'user.password.changed':
         await this.handlePasswordChanged(event);
@@ -426,9 +449,12 @@ export function createUserProjectionConfig(): ProjectionConfig {
       'user.changed',
       'user.profile.changed',
       'user.email.changed',
+      'user.v2.email.changed',
       'user.email.verified',
+      'user.v2.email.verified',
       'user.phone.changed',
       'user.phone.verified',
+      'user.phone.removed',
       'user.password.changed',
       'user.deactivated',
       'user.reactivated',
