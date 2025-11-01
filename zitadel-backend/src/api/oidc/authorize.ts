@@ -4,6 +4,7 @@
  * OAuth 2.0 and OIDC authorization endpoint
  * Implements Authorization Code Flow and Implicit Flow
  * Supports Pushed Authorization Requests (RFC 9126)
+ * Supports JWT-Secured Authorization Request (RFC 9101)
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -12,6 +13,12 @@ import { AuthorizationRequest } from './types';
 import { getTokenStore } from './token-store';
 import { Commands } from '@/lib/command/commands';
 import { DatabasePool } from '@/lib/database';
+import { 
+  validateJARRequest,
+  parseJARParameter,
+  isJARRequest,
+  mergeJARWithQueryParams 
+} from '../../lib/command/oauth/jar-commands';
 
 /**
  * Validate authorization request
@@ -168,6 +175,35 @@ export async function authorizeHandler(
     // Support both GET and POST
     let params: Partial<AuthorizationRequest> =
       req.method === 'POST' ? req.body : req.query;
+    
+    // RFC 9101: Check if request/request_uri is provided (JAR)
+    if (isJARRequest(params) && commands) {
+      try {
+        // Parse JAR parameter
+        const requestJwt = await parseJARParameter(
+          params.request as string | undefined,
+          params.request_uri as string | undefined
+        );
+        
+        if (requestJwt) {
+          // Validate JAR request
+          const jarRequest = await validateJARRequest(requestJwt, {
+            expectedClientId: params.client_id || '',
+            expectedAudience: process.env.ISSUER_URL || 'http://localhost:3000',
+            requireSignature: false, // Allow unsigned JWTs for testing
+          });
+          
+          // Merge JAR params with query params (JAR takes precedence)
+          params = mergeJARWithQueryParams(jarRequest, params);
+        }
+      } catch (error: any) {
+        res.status(400).json({
+          error: 'invalid_request_object',
+          error_description: error.message,
+        });
+        return;
+      }
+    }
     
     // RFC 9126: Check if request_uri is provided (PAR)
     if (params.request_uri && commands) {

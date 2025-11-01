@@ -57,6 +57,8 @@ export interface AuthorizationRequest {
   code_challenge_method?: string;
   // RFC 9126: Pushed Authorization Requests
   request_uri?: string;
+  // RFC 9101: JWT-Secured Authorization Request
+  request?: string;
 }
 
 /**

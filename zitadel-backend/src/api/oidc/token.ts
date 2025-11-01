@@ -11,6 +11,12 @@ import { TokenResponse, AccessTokenClaims, IDTokenClaims } from './types';
 import { getTokenStore } from './token-store';
 import { getKeyManager } from './key-manager';
 import { verifyCodeChallenge } from './authorize';
+import { 
+  validateDPoPProof, 
+  extractDPoPProof, 
+  calculateJWKThumbprint,
+  DPoPProof 
+} from '../../lib/command/oauth/dpop-commands';
 // Device authorization support - will be completed with projection layer
 // import { DeviceAuthWriteModel, DeviceAuthState } from '@/lib/command/oauth/device-auth-commands';
 
@@ -44,12 +50,13 @@ async function generateAccessToken(params: {
   client_id: string;
   scope: string;
   audience?: string;
+  dpopProof?: DPoPProof; // RFC 9449: DPoP binding
 }): Promise<string> {
   const keyManager = await getKeyManager();
   const jti = randomUUID();
   const now = Math.floor(Date.now() / 1000);
 
-  const claims: AccessTokenClaims = {
+  const claims: AccessTokenClaims & { cnf?: { jkt: string } } = {
     iss: process.env.ISSUER_URL || 'http://localhost:3000',
     sub: params.user_id,
     aud: params.audience || params.client_id,
@@ -59,6 +66,13 @@ async function generateAccessToken(params: {
     client_id: params.client_id,
     jti,
   };
+
+  // RFC 9449: Bind token to DPoP key via cnf claim
+  if (params.dpopProof) {
+    claims.cnf = {
+      jkt: calculateJWKThumbprint(params.dpopProof.header.jwk),
+    };
+  }
 
   const tokenStore = getTokenStore();
   tokenStore.trackAccessToken(params.user_id, jti);
@@ -176,11 +190,30 @@ async function handleAuthorizationCodeGrant(
     }
   }
 
+  // RFC 9449: Validate DPoP proof if present
+  let dpopProof: DPoPProof | undefined;
+  const dpopHeader = extractDPoPProof(req.headers as Record<string, string | string[] | undefined>);
+  
+  if (dpopHeader) {
+    try {
+      dpopProof = await validateDPoPProof(dpopHeader, {
+        expectedMethod: 'POST',
+        expectedUrl: `${process.env.ISSUER_URL || 'http://localhost:3000'}/oauth/v2/token`,
+      });
+    } catch (error: any) {
+      return {
+        error: 'invalid_dpop_proof',
+        error_description: error.message,
+      };
+    }
+  }
+
   // Generate tokens
   const accessToken = await generateAccessToken({
     user_id: authCode.user_id,
     client_id: authCode.client_id,
     scope: authCode.scope,
+    dpopProof,
   });
 
   const refreshToken = tokenStore.generateRefreshToken({
@@ -191,7 +224,7 @@ async function handleAuthorizationCodeGrant(
 
   const response: TokenResponse = {
     access_token: accessToken,
-    token_type: 'Bearer',
+    token_type: dpopProof ? 'DPoP' : 'Bearer', // RFC 9449: token_type indicates binding
     expires_in: 3600,
     refresh_token: refreshToken,
     scope: authCode.scope,

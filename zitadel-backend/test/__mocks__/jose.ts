@@ -28,6 +28,25 @@ export async function exportJWK(key: any) {
   return jwk;
 }
 
+export async function importJWK(jwk: any, alg?: string) {
+  // Import JWK back to CryptoKey for verification
+  const algorithm = jwk.kty === 'RSA' 
+    ? { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
+    : jwk.kty === 'EC'
+    ? { name: 'ECDSA', namedCurve: jwk.crv || 'P-256' }
+    : { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }; // Default to RSA
+  
+  const key = await webcrypto.subtle.importKey(
+    'jwk',
+    jwk,
+    algorithm,
+    true,
+    ['verify']
+  );
+  
+  return key;
+}
+
 export class SignJWT {
   private payload: any;
   private protectedHeader: any;
