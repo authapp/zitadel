@@ -1475,6 +1475,12 @@ export class Commands {
    */
   removeInstanceMember: typeof import('./instance/instance-commands').removeInstanceMember = 
     require('./instance/instance-commands').removeInstanceMember;
+  
+  /**
+   * Remove instance (destructive operation)
+   */
+  removeInstance: typeof import('./instance/instance-commands').removeInstance = 
+    require('./instance/instance-commands').removeInstance;
 
   // ============================================================================
   // Policy Commands (Phase 3)
