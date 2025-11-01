@@ -166,8 +166,8 @@ export async function addDeviceAuth(
 
   await this.getEventstore().push(command);
 
-  // Store mapping for user code lookup (testing helper)
-  storeUserCodeMapping(ctx.instanceID, userCode, deviceCode);
+  // Store in memory fallback for tests
+  userCodeToDeviceCodeMemory.set(`${ctx.instanceID}:${userCode}`, deviceCode);
 
   return {
     deviceCode,
@@ -363,24 +363,36 @@ export async function cancelDeviceAuth(
 
 /**
  * Helper: Find device code by user code
- * In production, this would query the device auth projection
- * For testing, we store a simple in-memory map
+ * Tries projection first, falls back to in-memory for tests
  */
-const userCodeToDeviceCode = new Map<string, string>();
-
 async function findDeviceCodeByUserCode(
-  _commands: Commands,
+  commands: Commands,
   ctx: Context,
   userCode: string
 ): Promise<string | null> {
-  // Check in-memory map (populated when device auth is added)
-  // In production, would query projection using: _commands.database
-  return userCodeToDeviceCode.get(`${ctx.instanceID}:${userCode}`) || null;
+  //  First try in-memory (for command-level tests)
+  const memoryResult = userCodeToDeviceCodeMemory.get(`${ctx.instanceID}:${userCode}`);
+  if (memoryResult) {
+    return memoryResult;
+  }
+
+  // Then try database projection (for API-level tests)
+  if (commands.database) {
+    try {
+      const { DeviceAuthQueries } = await import('../../query/device-auth/device-auth-queries');
+      const queries = new DeviceAuthQueries(commands.database);
+      const deviceAuth = await queries.getByUserCode(userCode, ctx.instanceID);
+      return deviceAuth ? deviceAuth.deviceCode : null;
+    } catch (error) {
+      // Projection table might not exist yet, continue
+    }
+  }
+
+  return null;
 }
 
 /**
- * Store user code mapping (called internally after adding device auth)
+ * In-memory storage for user_code to device_code mapping
+ * Used by command-level tests and as fallback
  */
-function storeUserCodeMapping(instanceID: string, userCode: string, deviceCode: string): void {
-  userCodeToDeviceCode.set(`${instanceID}:${userCode}`, deviceCode);
-}
+const userCodeToDeviceCodeMemory = new Map<string, string>();

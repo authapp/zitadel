@@ -357,27 +357,6 @@ export class AppProjection extends Projection {
     );
   }
 
-  private async handleAPISecretChanged(event: Event): Promise<void> {
-    const payload = event.payload as any;
-    
-    await this.database.query(
-      `UPDATE projections.applications SET
-        client_secret = $3,
-        updated_at = $4,
-        change_date = $5,
-        sequence = $6
-      WHERE instance_id = $1 AND id = $2 AND app_type = 'api'`,
-      [
-        event.instanceID || 'default',
-        payload.appId || event.aggregateID,
-        payload.clientSecret,
-        event.createdAt,
-        event.createdAt,
-        Number(event.aggregateVersion || 1n),
-      ]
-    );
-  }
-
   private async handleAppChanged(event: Event): Promise<void> {
     const payload = event.payload as any;
     

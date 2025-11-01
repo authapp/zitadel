@@ -142,7 +142,7 @@ export class AuthService {
    */
   async VerifyMyUserEmail(
     ctx: Context,
-    request: VerifyMyUserEmailRequest
+    _request: VerifyMyUserEmailRequest
   ): Promise<VerifyMyUserEmailResponse> {
     const userId = ctx.userID;
     if (!userId) {
@@ -200,7 +200,7 @@ export class AuthService {
    */
   async VerifyMyUserPhone(
     ctx: Context,
-    request: VerifyMyUserPhoneRequest
+    _request: VerifyMyUserPhoneRequest
   ): Promise<VerifyMyUserPhoneResponse> {
     const userId = ctx.userID;
     if (!userId) {

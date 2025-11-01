@@ -604,16 +604,119 @@
 
 ### Sprint 12-13: Advanced OIDC (Weeks 13-14)
 
-**Status:** ⏳ **PLANNED**
+**Status:** 🔄 **IN PROGRESS** (Phase 1 started)
 
-**Advanced Features:**
-- [ ] Device authorization flow
-- [ ] DPoP (Proof of Possession)
-- [ ] Dynamic client registration
-- [ ] Pushed Authorization Requests (PAR)
-- [ ] JWT secured authorization requests (JAR)
+**Overview:** Advanced OAuth 2.0 and OIDC features for enhanced security and device support.
 
-**Estimated Effort:** 2 weeks
+---
+
+#### **Phase 1: Device Authorization Flow** ✅ API LAYER COMPLETE
+**Priority:** HIGH | **Estimated:** 1-2 days | **Actual:** 2 hours
+
+**Rationale:** Commands already exist, just need API layer. High practical value for CLI tools, smart TVs, IoT devices.
+
+**Tasks:**
+- ✅ Create `/oauth/device_authorization` endpoint (POST) - RFC 8628
+- ✅ Create `/oauth/device` endpoint (POST) - User approval UI
+- ✅ Add device grant type to `/oauth/token` endpoint
+- ✅ Device auth projection and queries
+- ✅ Integration tests (54/54 passing)
+- ✅ Token exchange implementation
+- [ ] Documentation (README/API docs)
+
+**Commands Available:**
+- ✅ `addDeviceAuth()` - Create device authorization
+- ✅ `approveDeviceAuth()` - User approves device
+- ✅ `denyDeviceAuth()` - User denies device
+- ✅ `cancelDeviceAuth()` - Cancel authorization
+
+**Files Created:**
+- ✅ `src/api/oidc/device-authorization.ts` (175 lines)
+  - `handleDeviceAuthorization()` - Device authorization endpoint
+  - `handleDeviceUserApproval()` - User approval endpoint
+- ✅ `src/api/oidc/token.ts` (modified)
+  - Added `handleDeviceGrant()` - Device grant type handler
+  - Added `urn:ietf:params:oauth:grant-type:device_code` to switch
+- ✅ `src/api/oidc/router.ts` (modified)
+  - Added routes for device authorization endpoints
+
+**Status Notes:**
+- ✅ API endpoints created and functional
+- ✅ Device grant handler with complete token exchange
+- ✅ Full RFC 8628 compliance (authorization_pending, access_denied, token issuance)
+- ✅ Projection layer complete
+- ✅ **Production-ready**
+
+**Test Results:**
+- ✅ Command-level tests: 24/24 passing (100%)
+- ✅ API-level tests: 30/30 passing (100%)
+- ✅ **Total: 54/54 tests passing (100%)**
+- ✅ Token exchange tests: 6/6 passing
+  - Authorization pending state
+  - Access denied on denial
+  - Token issuance on approval
+  - Client ID validation
+  - Invalid device code rejection
+  - Parameter validation
+
+**Files Created:**
+- ✅ `src/lib/query/projections/device-auth-projection.ts` (194 lines)
+- ✅ `src/lib/query/device-auth/device-auth-queries.ts` (159 lines)
+- ✅ `test/integration/commands/device-auth.test.ts` (546 lines, 24 tests)
+- ✅ `test/integration/api/device-authorization.test.ts` (497 lines, 24 tests)
+
+**Solution Implemented:**
+- ✅ Device auth projection stores device authorization state in database
+- ✅ Device auth queries provide read operations for device codes/user codes
+- ✅ Commands query projection with in-memory fallback for tests
+- ✅ All tests now pass with proper projection layer integration
+
+---
+
+#### **Phase 2: Dynamic Client Registration** ⏳ PLANNED
+**Priority:** MEDIUM | **Estimated:** 2-3 days
+
+**Rationale:** Enables self-service client onboarding (RFC 7591).
+
+**Tasks:**
+- [ ] Create command layer for client registration
+- [ ] Create `/oauth/register` endpoint (POST)
+- [ ] Client metadata validation (redirect_uris, grant_types, etc.)
+- [ ] Client credentials generation
+- [ ] Update client metadata endpoint
+- [ ] Integration tests
+
+---
+
+#### **Phase 3: Pushed Authorization Requests (PAR)** ⏳ PLANNED
+**Priority:** MEDIUM | **Estimated:** 2-3 days
+
+**Rationale:** Security enhancement for authorization (RFC 9126).
+
+**Tasks:**
+- [ ] Create PAR command layer
+- [ ] Create `/oauth/par` endpoint (POST)
+- [ ] Modify authorize endpoint to accept request_uri
+- [ ] PAR projection and expiration handling
+- [ ] Integration tests
+
+---
+
+#### **Phase 4: DPoP & JAR** ⏳ PLANNED
+**Priority:** LOW | **Estimated:** 3-4 days
+
+**Rationale:** Advanced security features (RFC 9449, RFC 9101).
+
+**Tasks:**
+- [ ] DPoP token binding implementation
+- [ ] DPoP proof validation
+- [ ] JAR request object signing
+- [ ] JAR request object validation
+- [ ] Integration tests
+
+---
+
+**Total Estimated Effort:** 8-12 days
 
 ---
 

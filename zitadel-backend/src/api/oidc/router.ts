@@ -12,12 +12,15 @@ import { tokenHandler } from './token';
 import { userinfoHandler } from './userinfo';
 import { introspectHandler } from './introspect';
 import { revokeHandler } from './revoke';
+import { handleDeviceAuthorization, handleDeviceUserApproval } from './device-authorization';
 import { asyncHandler } from '../middleware';
+import { Commands } from '@/lib/command/commands';
+import { DatabasePool } from '@/lib/database';
 
 /**
  * Create OIDC router
  */
-export function createOIDCRouter(): Router {
+export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Router {
   const router = Router();
 
   // OpenID Connect Discovery
@@ -42,6 +45,18 @@ export function createOIDCRouter(): Router {
 
   // Token revocation
   router.post('/oauth/v2/revoke', asyncHandler(revokeHandler));
+
+  // Device Authorization Flow (RFC 8628)
+  // Only register routes if commands and pool are provided
+  if (commands && pool) {
+    router.post('/oauth/device_authorization', async (req, res) => {
+      await handleDeviceAuthorization(req, res, commands, pool);
+    });
+
+    router.post('/oauth/device', async (req, res) => {
+      await handleDeviceUserApproval(req, res, commands, pool);
+    });
+  }
 
   return router;
 }

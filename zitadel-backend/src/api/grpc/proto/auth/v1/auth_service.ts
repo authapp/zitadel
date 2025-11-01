@@ -6,7 +6,7 @@
  */
 
 import { Timestamp } from '../../google/protobuf/timestamp';
-import { User } from '../user/v2/user';
+import { User } from '../../user/v2/user_service';
 
 /**
  * Request: Get authenticated user

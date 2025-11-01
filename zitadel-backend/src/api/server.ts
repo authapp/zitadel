@@ -78,7 +78,7 @@ export function createServer(commands: Commands, config: ServerConfig): Express 
   });
 
   // OIDC/OAuth2 routes (mounted at root for standard paths)
-  app.use(createOIDCRouter());
+  app.use(createOIDCRouter(commands, commands.database));
 
   // API routes
   app.use('/v2', createOrganizationRouter(commands));

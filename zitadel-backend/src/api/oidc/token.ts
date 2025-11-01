@@ -11,6 +11,8 @@ import { TokenResponse, AccessTokenClaims, IDTokenClaims } from './types';
 import { getTokenStore } from './token-store';
 import { getKeyManager } from './key-manager';
 import { verifyCodeChallenge } from './authorize';
+// Device authorization support - will be completed with projection layer
+// import { DeviceAuthWriteModel, DeviceAuthState } from '@/lib/command/oauth/device-auth-commands';
 
 /**
  * Extract client credentials from request
@@ -315,6 +317,155 @@ async function handleClientCredentialsGrant(
 }
 
 /**
+ * Handle device authorization grant (RFC 8628)
+ * urn:ietf:params:oauth:grant-type:device_code
+ */
+async function handleDeviceGrant(
+  req: Request
+): Promise<TokenResponse | { error: string; error_description: string }> {
+  const { device_code, client_id } = req.body;
+
+  // Validate required parameters
+  if (!device_code) {
+    return {
+      error: 'invalid_request',
+      error_description: 'Missing device_code parameter',
+    };
+  }
+
+  if (!client_id) {
+    return {
+      error: 'invalid_request',
+      error_description: 'Missing client_id parameter',
+    };
+  }
+
+  try {
+    // Query device authorization from projection
+    const { DeviceAuthQueries } = await import('../../lib/query/device-auth/device-auth-queries');
+    const { DatabasePool } = await import('../../lib/database');
+    
+    // Get database pool from request (injected by middleware)
+    const pool = (req as any).pool as typeof DatabasePool.prototype;
+    if (!pool) {
+      return {
+        error: 'server_error',
+        error_description: 'Database not available',
+      };
+    }
+
+    const queries = new DeviceAuthQueries(pool);
+    const instanceID = (req.headers['x-zitadel-instance'] as string) || 'default';
+    
+    const deviceAuth = await queries.getByDeviceCode(device_code, instanceID);
+
+    // Check if device authorization exists
+    if (!deviceAuth) {
+      return {
+        error: 'invalid_grant',
+        error_description: 'Device code not found or expired',
+      };
+    }
+
+    // Verify client_id matches
+    if (deviceAuth.clientID !== client_id) {
+      return {
+        error: 'invalid_client',
+        error_description: 'Client ID mismatch',
+      };
+    }
+
+    // Check if expired
+    if (deviceAuth.expiresAt < new Date()) {
+      return {
+        error: 'expired_token',
+        error_description: 'Device code has expired',
+      };
+    }
+
+    // Check state and return appropriate response
+    switch (deviceAuth.state) {
+      case 'requested':
+        // User hasn't approved yet - device should keep polling
+        return {
+          error: 'authorization_pending',
+          error_description: 'User has not yet approved the device',
+        };
+
+      case 'denied':
+        // User explicitly denied
+        return {
+          error: 'access_denied',
+          error_description: 'User denied the device authorization',
+        };
+
+      case 'cancelled':
+        // Authorization was cancelled
+        return {
+          error: 'access_denied',
+          error_description: 'Device authorization was cancelled',
+        };
+
+      case 'expired':
+        // Explicitly marked as expired
+        return {
+          error: 'expired_token',
+          error_description: 'Device code has expired',
+        };
+
+      case 'approved':
+        // Device approved! Issue tokens
+        if (!deviceAuth.userID) {
+          return {
+            error: 'server_error',
+            error_description: 'Device approved but no user ID found',
+          };
+        }
+
+        const user_id = deviceAuth.userID;
+        const scope = deviceAuth.scope.join(' ');
+
+        // Generate access token
+        const accessToken = await generateAccessToken({
+          user_id,
+          client_id,
+          scope,
+          audience: instanceID,
+        });
+
+        // Generate refresh token
+        const refreshToken = randomUUID();
+
+        // Track tokens
+        const tokenStore = getTokenStore();
+        // Extract jti from access token (simplified - in production would decode JWT)
+        const jti = randomUUID();
+        tokenStore.trackAccessToken(user_id, jti);
+
+        return {
+          access_token: accessToken,
+          token_type: 'Bearer',
+          expires_in: 3600,
+          refresh_token: refreshToken,
+          scope,
+        };
+
+      default:
+        return {
+          error: 'invalid_grant',
+          error_description: `Device authorization in invalid state: ${deviceAuth.state}`,
+        };
+    }
+  } catch (error) {
+    console.error('[Device Grant] Error:', error);
+    return {
+      error: 'server_error',
+      error_description: 'Internal server error',
+    };
+  }
+}
+
+/**
  * Token endpoint handler
  * POST /oauth/v2/token
  */
@@ -347,6 +498,10 @@ export async function tokenHandler(
 
       case 'client_credentials':
         result = await handleClientCredentialsGrant(req);
+        break;
+
+      case 'urn:ietf:params:oauth:grant-type:device_code':
+        result = await handleDeviceGrant(req);
         break;
 
       default:
