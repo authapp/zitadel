@@ -131,3 +131,247 @@ export interface GetDefaultOrgRequest {}
 export interface GetDefaultOrgResponse {
   org: Org;
 }
+
+// ============================================================================
+// Secret Generator Types
+// ============================================================================
+
+export enum SecretGeneratorType {
+  SECRET_GENERATOR_TYPE_UNSPECIFIED = 0,
+  SECRET_GENERATOR_TYPE_INIT_CODE = 1,           // User initialization code
+  SECRET_GENERATOR_TYPE_VERIFY_EMAIL_CODE = 2,   // Email verification code
+  SECRET_GENERATOR_TYPE_VERIFY_PHONE_CODE = 3,   // Phone/SMS verification code
+  SECRET_GENERATOR_TYPE_PASSWORD_RESET_CODE = 4, // Password reset code
+  SECRET_GENERATOR_TYPE_PASSWORDLESS_INIT_CODE = 5, // Passwordless registration
+  SECRET_GENERATOR_TYPE_APP_SECRET = 6,          // Application client secret
+  SECRET_GENERATOR_TYPE_OTP_SMS = 7,             // OTP via SMS
+  SECRET_GENERATOR_TYPE_OTP_EMAIL = 8,           // OTP via Email
+}
+
+export interface SecretGenerator {
+  generatorType: SecretGeneratorType;
+  details: ObjectDetails;
+  length: number;
+  expiry: string; // Duration (e.g., "10m", "1h")
+  includeUpperCase: boolean;
+  includeLowerCase: boolean;
+  includeDigits: boolean;
+  includeSymbols: boolean;
+}
+
+export interface ListSecretGeneratorsRequest {}
+
+export interface ListSecretGeneratorsResponse {
+  details: {
+    totalResult: number;
+    processedSequence: number;
+    timestamp: Date;
+  };
+  result: SecretGenerator[];
+}
+
+export interface GetSecretGeneratorRequest {
+  generatorType: SecretGeneratorType;
+}
+
+export interface GetSecretGeneratorResponse {
+  secretGenerator: SecretGenerator;
+}
+
+export interface UpdateSecretGeneratorRequest {
+  generatorType: SecretGeneratorType;
+  length?: number;
+  expiry?: string;
+  includeUpperCase?: boolean;
+  includeLowerCase?: boolean;
+  includeDigits?: boolean;
+  includeSymbols?: boolean;
+}
+
+export interface UpdateSecretGeneratorResponse {
+  details: ObjectDetails;
+}
+
+// ============================================================================
+// SMTP Configuration Types (Deprecated - use Email Providers)
+// ============================================================================
+
+export interface GetSMTPConfigRequest {}
+
+export interface GetSMTPConfigResponse {
+  smtpConfig: SMTPConfig;
+}
+
+export interface SMTPConfig {
+  details: ObjectDetails;
+  senderAddress: string;
+  senderName: string;
+  tls: boolean;
+  host: string;
+  user: string;
+  replyToAddress?: string;
+  description?: string;
+  state: SMTPConfigState;
+}
+
+export enum SMTPConfigState {
+  SMTP_CONFIG_STATE_UNSPECIFIED = 0,
+  SMTP_CONFIG_STATE_INACTIVE = 1,
+  SMTP_CONFIG_STATE_ACTIVE = 2,
+}
+
+export interface UpdateSMTPConfigRequest {
+  senderAddress?: string;
+  senderName?: string;
+  tls?: boolean;
+  host?: string;
+  user?: string;
+  password?: string;
+  replyToAddress?: string;
+  description?: string;
+}
+
+export interface UpdateSMTPConfigResponse {
+  details: ObjectDetails;
+}
+
+// ============================================================================
+// Email Provider Types
+// ============================================================================
+
+export enum EmailProviderState {
+  EMAIL_PROVIDER_STATE_UNSPECIFIED = 0,
+  EMAIL_PROVIDER_STATE_INACTIVE = 1,
+  EMAIL_PROVIDER_STATE_ACTIVE = 2,
+}
+
+export enum EmailProviderType {
+  EMAIL_PROVIDER_TYPE_UNSPECIFIED = 0,
+  EMAIL_PROVIDER_TYPE_SMTP = 1,
+  EMAIL_PROVIDER_TYPE_HTTP = 2,
+}
+
+export interface EmailProvider {
+  id: string;
+  details: ObjectDetails;
+  state: EmailProviderState;
+  description: string;
+  // SMTP config
+  smtpConfig?: SMTPEmailConfig;
+  // HTTP config
+  httpConfig?: HTTPEmailConfig;
+}
+
+export interface SMTPEmailConfig {
+  senderAddress: string;
+  senderName: string;
+  tls: boolean;
+  host: string;
+  user: string;
+  replyToAddress?: string;
+}
+
+export interface HTTPEmailConfig {
+  endpoint: string;
+}
+
+export interface ListEmailProvidersRequest {}
+
+export interface ListEmailProvidersResponse {
+  details: {
+    totalResult: number;
+    processedSequence: number;
+    timestamp: Date;
+  };
+  result: EmailProvider[];
+}
+
+export interface GetEmailProviderRequest {}
+
+export interface GetEmailProviderResponse {
+  config: EmailProvider;
+}
+
+export interface GetEmailProviderByIdRequest {
+  id: string;
+}
+
+export interface GetEmailProviderByIdResponse {
+  config: EmailProvider;
+}
+
+export interface AddEmailProviderSMTPRequest {
+  senderAddress: string;
+  senderName?: string;
+  tls?: boolean;
+  host: string;
+  user?: string;
+  password?: string;
+  replyToAddress?: string;
+  description?: string;
+}
+
+export interface AddEmailProviderSMTPResponse {
+  details: ObjectDetails;
+  id: string;
+}
+
+export interface UpdateEmailProviderSMTPRequest {
+  id: string;
+  senderAddress?: string;
+  senderName?: string;
+  tls?: boolean;
+  host?: string;
+  user?: string;
+  replyToAddress?: string;
+  description?: string;
+}
+
+export interface UpdateEmailProviderSMTPResponse {
+  details: ObjectDetails;
+}
+
+export interface AddEmailProviderHTTPRequest {
+  endpoint: string;
+  description?: string;
+}
+
+export interface AddEmailProviderHTTPResponse {
+  details: ObjectDetails;
+  id: string;
+}
+
+export interface UpdateEmailProviderHTTPRequest {
+  id: string;
+  endpoint?: string;
+  description?: string;
+}
+
+export interface UpdateEmailProviderHTTPResponse {
+  details: ObjectDetails;
+}
+
+export interface UpdateEmailProviderSMTPPasswordRequest {
+  id: string;
+  password: string;
+}
+
+export interface UpdateEmailProviderSMTPPasswordResponse {
+  details: ObjectDetails;
+}
+
+export interface ActivateEmailProviderRequest {
+  id: string;
+}
+
+export interface ActivateEmailProviderResponse {
+  details: ObjectDetails;
+}
+
+export interface RemoveEmailProviderRequest {
+  id: string;
+}
+
+export interface RemoveEmailProviderResponse {
+  details: ObjectDetails;
+}

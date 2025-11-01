@@ -894,40 +894,41 @@
 
 ### Sprint 15: Admin API (Week 16)
 
-**Status:** 🚧 **IN PROGRESS** | System & Health Complete (8/10)
+**Status:** 🚧 **IN PROGRESS** | System & Health (10/10) ✅ | Secret Gen (5/5) ✅ | Email Providers (9/9) ✅
 
 **Overview:** System-level administration APIs for managing ZITADEL instance configuration, settings, and global policies.
 
 **Endpoint Categories:**
 
-**System & Health (8/10 endpoints):**
+**System & Health (10/10 endpoints):** ✅ **COMPLETE**
 - [x] Healthz - System health check
 - [x] GetSupportedLanguages - Available languages
 - [x] GetAllowedLanguages - Restricted languages
-- [ ] SetDefaultLanguage - Configure default language (command needed)
+- [x] SetDefaultLanguage - Configure default language ✅ (Nov 1, 2025)
 - [x] GetDefaultLanguage - Retrieve default language
 - [x] ListOrgs - List all organizations
-- [ ] GetOrgByID - Get specific org (projection timing issue)
+- [x] GetOrgByID - Get specific org ✅ (Nov 1, 2025)
 - [x] IsOrgUnique - Check uniqueness
+- [x] Complete Stack Test - All 13 tests passing ✅
 
-**Secret Generators (5 endpoints):**
-- [ ] ListSecretGenerators - List all generators
-- [ ] GetSecretGenerator - Get generator by type
-- [ ] UpdateSecretGenerator - Update generator config
-- [ ] GetSMTPConfig - Get SMTP configuration (deprecated)
-- [ ] UpdateSMTPConfig - Update SMTP (deprecated)
+**Secret Generators (5 endpoints):** ✅ **COMPLETE**
+- [x] ListSecretGenerators - List all generators ✅ (Nov 1, 2025)
+- [x] GetSecretGenerator - Get generator by type ✅ (Nov 1, 2025)
+- [x] UpdateSecretGenerator - Update generator config ✅ (Nov 1, 2025)
+- [x] GetSMTPConfig - Get SMTP configuration (deprecated) ✅ (Nov 1, 2025)
+- [x] UpdateSMTPConfig - Update SMTP (deprecated) ✅ (Nov 1, 2025)
 
-**Email Providers (9 endpoints):**
-- [ ] ListEmailProviders - List all email providers
-- [ ] GetEmailProvider - Get active provider
-- [ ] GetEmailProviderById - Get specific provider
-- [ ] AddEmailProviderSMTP - Add SMTP provider
-- [ ] UpdateEmailProviderSMTP - Update SMTP provider
-- [ ] AddEmailProviderHTTP - Add HTTP provider
-- [ ] UpdateEmailProviderHTTP - Update HTTP provider
-- [ ] UpdateEmailProviderSMTPPassword - Update SMTP password
-- [ ] ActivateEmailProvider - Activate provider
-- [ ] RemoveEmailProvider - Remove provider
+**Email Providers (9 endpoints):** ✅ **COMPLETE**
+- [x] ListEmailProviders - List all email providers ✅ (Nov 1, 2025)
+- [x] GetEmailProvider - Get active provider ✅ (Nov 1, 2025)
+- [x] GetEmailProviderById - Get specific provider ✅ (Nov 1, 2025)
+- [x] AddEmailProviderSMTP - Add SMTP provider ✅ (Nov 1, 2025)
+- [x] UpdateEmailProviderSMTP - Update SMTP provider ✅ (Nov 1, 2025)
+- [x] AddEmailProviderHTTP - Add HTTP provider ✅ (Nov 1, 2025)
+- [x] UpdateEmailProviderHTTP - Update HTTP provider ✅ (Nov 1, 2025)
+- [x] UpdateEmailProviderSMTPPassword - Update SMTP password ✅ (Nov 1, 2025)
+- [x] ActivateEmailProvider - Activate provider ✅ (Nov 1, 2025)
+- [x] RemoveEmailProvider - Remove provider ✅ (Nov 1, 2025)
 
 **SMS Providers (5 endpoints):**
 - [ ] GetSMSProvider - Get active SMS provider
