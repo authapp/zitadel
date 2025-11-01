@@ -253,14 +253,14 @@ describe('Password Policy Projection Integration Tests', () => {
       expect(policy.expireWarnDays).toBe(0);
     });
 
-    it('should process instance.password.age.policy.added event', async () => {
+    it('should process instance.policy.password_age.added event', async () => {
       const instanceID = generateId();
       
       await eventstore.push({
         instanceID,
         aggregateType: 'instance',
         aggregateID: instanceID,
-        eventType: 'instance.password.age.policy.added',
+        eventType: 'instance.policy.password_age.added',
         payload: {
           maxAgeDays: 90,
           expireWarnDays: 7,
@@ -288,7 +288,7 @@ describe('Password Policy Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'instance',
         aggregateID: instanceID,
-        eventType: 'instance.password.age.policy.added',
+        eventType: 'instance.policy.password_age.added',
         payload: {
           maxAgeDays: 90,
           expireWarnDays: 7,
@@ -304,7 +304,7 @@ describe('Password Policy Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'org',
         aggregateID: orgID,
-        eventType: 'org.password.age.policy.added',
+        eventType: 'org.policy.password_age.added',
         payload: {
           maxAgeDays: 60,
           expireWarnDays: 14,
@@ -330,7 +330,7 @@ describe('Password Policy Projection Integration Tests', () => {
         instanceID,
         aggregateType: 'instance',
         aggregateID: instanceID,
-        eventType: 'instance.password.age.policy.added',
+        eventType: 'instance.policy.password_age.added',
         payload: {
           maxAgeDays: 90,
           expireWarnDays: 7,

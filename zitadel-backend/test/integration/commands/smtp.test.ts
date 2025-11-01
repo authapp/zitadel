@@ -115,7 +115,7 @@ describe('SMTP Configuration Commands - Complete Flow', () => {
         );
 
         expect(result).toBeDefined();
-        expect(result.resourceOwner).toBe(org);
+        expect(result.details.resourceOwner).toBe(org);
 
         // Verify event
         const event = await ctx.assertEventPublished('org.smtp.config.added');

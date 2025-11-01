@@ -726,3 +726,67 @@ export interface UpdateLockoutPolicyRequest {
 export interface UpdateLockoutPolicyResponse {
   details: ObjectDetails;
 }
+
+// Password Complexity Policy
+export interface PasswordComplexityPolicy {
+  details: ObjectDetails;
+  minLength: number;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSymbol: boolean;
+}
+
+export interface GetPasswordComplexityPolicyRequest {}
+
+export interface GetPasswordComplexityPolicyResponse {
+  policy: PasswordComplexityPolicy;
+}
+
+export interface UpdatePasswordComplexityPolicyRequest {
+  minLength?: number;
+  hasUppercase?: boolean;
+  hasLowercase?: boolean;
+  hasNumber?: boolean;
+  hasSymbol?: boolean;
+}
+
+export interface UpdatePasswordComplexityPolicyResponse {
+  details: ObjectDetails;
+}
+
+// Password Age Policy
+export interface PasswordAgePolicy {
+  details: ObjectDetails;
+  maxAgeDays: number;
+  expireWarnDays: number;
+}
+
+export interface GetPasswordAgePolicyRequest {}
+
+export interface GetPasswordAgePolicyResponse {
+  policy: PasswordAgePolicy;
+}
+
+export interface UpdatePasswordAgePolicyRequest {
+  maxAgeDays?: number;
+  expireWarnDays?: number;
+}
+
+export interface UpdatePasswordAgePolicyResponse {
+  details: ObjectDetails;
+}
+
+// Security Policy
+export interface SecurityPolicy {
+  details: ObjectDetails;
+  enableIframeEmbedding: boolean;
+  allowedOrigins: string[];
+  enableImpersonation: boolean;
+}
+
+export interface GetSecurityPolicyRequest {}
+
+export interface GetSecurityPolicyResponse {
+  policy: SecurityPolicy;
+}

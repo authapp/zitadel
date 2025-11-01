@@ -955,12 +955,12 @@
 - [x] GetLockoutPolicy - Get lockout settings ✅
 - [x] UpdateLockoutPolicy - Update lockout ✅
 
-**Password & Security (5 endpoints):**
-- [ ] GetPasswordComplexityPolicy - Get password rules
-- [ ] UpdatePasswordComplexityPolicy - Update rules
-- [ ] GetPasswordAgePolicy - Get age policy
-- [ ] UpdatePasswordAgePolicy - Update age policy
-- [ ] GetSecurityPolicy - Get security settings
+**Password & Security (5 endpoints):** ✅ **COMPLETE** (Nov 1, 2025)
+- [x] GetPasswordComplexityPolicy - Get password rules ✅
+- [x] UpdatePasswordComplexityPolicy - Update rules ✅
+- [x] GetPasswordAgePolicy - Get age policy ✅
+- [x] UpdatePasswordAgePolicy - Update age policy ✅
+- [x] GetSecurityPolicy - Get security settings ✅ (Query-only, no update command)
 
 **Organizations (5 endpoints):**
 - [ ] ListOrgs - List all organizations

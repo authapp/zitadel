@@ -120,7 +120,7 @@ describe('SMS Configuration Commands - Complete Flow', () => {
         );
 
         expect(result).toBeDefined();
-        expect(result.resourceOwner).toBe(org);
+        expect(result.details.resourceOwner).toBe(org);
 
         // Verify event
         const event = await ctx.assertEventPublished('org.sms.config.twilio.added');

@@ -51,6 +51,7 @@ export async function addDefaultPasswordAgePolicy(
 
 /**
  * Change default password age policy command
+ * Auto-creates policy if it doesn't exist (upsert pattern like password complexity)
  */
 export async function changeDefaultPasswordAgePolicy(
   this: Commands,
@@ -58,34 +59,64 @@ export async function changeDefaultPasswordAgePolicy(
   policy: PasswordAgePolicyData
 ): Promise<ObjectDetails> {
   // 1. Validate input
-  if (policy.expireWarnDays < 0) {
+  if (policy.expireWarnDays !== undefined && policy.expireWarnDays < 0) {
     throwInvalidArgument('expireWarnDays must be non-negative', 'COMMAND-Policy10');
   }
-  if (policy.maxAgeDays < 0) {
+  if (policy.maxAgeDays !== undefined && policy.maxAgeDays < 0) {
     throwInvalidArgument('maxAgeDays must be non-negative', 'COMMAND-Policy11');
   }
-  if (policy.expireWarnDays > policy.maxAgeDays && policy.maxAgeDays > 0) {
+  if (policy.expireWarnDays !== undefined && policy.maxAgeDays !== undefined &&
+      policy.expireWarnDays > policy.maxAgeDays && policy.maxAgeDays > 0) {
     throwInvalidArgument('expireWarnDays cannot be greater than maxAgeDays', 'COMMAND-Policy12');
   }
 
-  // 2. Load existing policy
+  await this.checkPermission(ctx, 'instance.policy', 'update', ctx.instanceID);
+
+  // 2. Load existing policy to check current state
   const existingPolicy = await getDefaultPasswordAgePolicyWriteModel.call(this, ctx);
+
+  // 3. If policy doesn't exist, add it first (auto-creation like password complexity)
   if (existingPolicy.state === PasswordAgePolicyState.UNSPECIFIED) {
-    throwNotFound('password age policy not found', 'COMMAND-Policy13');
+    const command: Command = {
+      eventType: 'instance.policy.password_age.added',
+      aggregateType: 'instance',
+      aggregateID: ctx.instanceID,
+      owner: ctx.instanceID,
+      instanceID: ctx.instanceID,
+      creator: ctx.userID || 'system',
+      payload: {
+        expireWarnDays: policy.expireWarnDays ?? 0,
+        maxAgeDays: policy.maxAgeDays ?? 0,
+      },
+    };
+
+    await this.getEventstore().push(command);
+
+    return {
+      sequence: 0n,
+      eventDate: new Date(),
+      resourceOwner: ctx.instanceID,
+    };
   }
 
-  // 3. Check if anything changed
-  if (existingPolicy.expireWarnDays === policy.expireWarnDays && 
-      existingPolicy.maxAgeDays === policy.maxAgeDays) {
-    throwPreconditionFailed('no changes detected', 'COMMAND-Policy14');
-  }
+  // 4. Update existing policy (push change event)
+  const command: Command = {
+    eventType: 'instance.policy.password_age.changed',
+    aggregateType: 'instance',
+    aggregateID: ctx.instanceID,
+    owner: ctx.instanceID,
+    instanceID: ctx.instanceID,
+    creator: ctx.userID || 'system',
+    payload: policy,
+  };
 
-  // 4. Use preparation pattern
-  const validation: Validation<ObjectDetails> = () => 
-    prepareChangeDefaultPasswordAgePolicy.call(this, ctx.instanceID, policy, existingPolicy);
+  await this.getEventstore().push(command);
 
-  const result = await prepareCommands(ctx, this.getEventstore(), [validation]);
-  return result[0];
+  return {
+    sequence: 0n,
+    eventDate: new Date(),
+    resourceOwner: ctx.instanceID,
+  };
 }
 
 /**
@@ -178,35 +209,6 @@ async function prepareAddDefaultPasswordAgePolicy(
     appendAndReduce(wm, event);
 
     return writeModelToObjectDetails(wm);
-  };
-}
-
-async function prepareChangeDefaultPasswordAgePolicy(
-  this: Commands,
-  instanceID: string,
-  policy: PasswordAgePolicyData,
-  existingPolicy: PasswordAgePolicyWriteModel
-) {
-  return async (ctx: Context, eventstore: any): Promise<ObjectDetails> => {
-    // Create command
-    const command: Command = {
-      eventType: 'instance.policy.password_age.changed',
-      aggregateType: 'instance',
-      aggregateID: instanceID,
-      owner: instanceID,
-      instanceID: instanceID,
-      creator: ctx.userID || 'system',
-      payload: {
-        expireWarnDays: policy.expireWarnDays,
-        maxAgeDays: policy.maxAgeDays,
-      },
-    };
-
-    // Push and update
-    const event = await eventstore.push(command);
-    appendAndReduce(existingPolicy, event);
-
-    return writeModelToObjectDetails(existingPolicy);
   };
 }
 

@@ -88,13 +88,13 @@ export class PasswordPolicyProjection extends Projection {
         await this.handleComplexityPolicyChanged(event);
         break;
 
-      case 'org.password.age.policy.added':
-      case 'instance.password.age.policy.added':
+      case 'org.policy.password_age.added':
+      case 'instance.policy.password_age.added':
         await this.handleAgePolicyAdded(event);
         break;
 
-      case 'org.password.age.policy.changed':
-      case 'instance.password.age.policy.changed':
+      case 'org.policy.password_age.changed':
+      case 'instance.policy.password_age.changed':
         await this.handleAgePolicyChanged(event);
         break;
 
@@ -103,8 +103,8 @@ export class PasswordPolicyProjection extends Projection {
         await this.handleComplexityPolicyRemoved(event);
         break;
 
-      case 'org.password.age.policy.removed':
-      case 'instance.password.age.policy.removed':
+      case 'org.policy.password_age.removed':
+      case 'instance.policy.password_age.removed':
         await this.handleAgePolicyRemoved(event);
         break;
 
@@ -305,12 +305,12 @@ export function createPasswordPolicyProjectionConfig() {
       'instance.password.complexity.policy.added',
       'instance.password.complexity.policy.changed',
       'instance.password.complexity.policy.removed',
-      'org.password.age.policy.added',
-      'org.password.age.policy.changed',
-      'org.password.age.policy.removed',
-      'instance.password.age.policy.added',
-      'instance.password.age.policy.changed',
-      'instance.password.age.policy.removed',
+      'org.policy.password_age.added',
+      'org.policy.password_age.changed',
+      'org.policy.password_age.removed',
+      'instance.policy.password_age.added',
+      'instance.policy.password_age.changed',
+      'instance.policy.password_age.removed',
       'org.removed',
       'instance.removed',
     ],

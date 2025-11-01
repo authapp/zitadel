@@ -11,6 +11,9 @@ import { DatabasePool } from '../../../../lib/database';
 import { InstanceQueries } from '../../../../lib/query/instance/instance-queries';
 import { OrgQueries } from '../../../../lib/query/org/org-queries';
 import { IDPQueries } from '../../../../lib/query/idp/idp-queries';
+import { PasswordComplexityQueries } from '../../../../lib/query/policy/password-complexity-queries';
+import { PasswordAgeQueries } from '../../../../lib/query/policy/password-age-queries';
+import { SecurityPolicyQueries } from '../../../../lib/query/policy/security-policy-queries';
 import {
   HealthzRequest,
   HealthzResponse,
@@ -101,6 +104,16 @@ import {
   GetLockoutPolicyResponse,
   UpdateLockoutPolicyRequest,
   UpdateLockoutPolicyResponse,
+  GetPasswordComplexityPolicyRequest,
+  GetPasswordComplexityPolicyResponse,
+  UpdatePasswordComplexityPolicyRequest,
+  UpdatePasswordComplexityPolicyResponse,
+  GetPasswordAgePolicyRequest,
+  GetPasswordAgePolicyResponse,
+  UpdatePasswordAgePolicyRequest,
+  UpdatePasswordAgePolicyResponse,
+  GetSecurityPolicyRequest,
+  GetSecurityPolicyResponse,
 } from '../../proto/admin/v1/admin_service';
 import { throwInvalidArgument, throwNotFound } from '../../../../lib/zerrors/errors';
 
@@ -134,6 +147,9 @@ export class AdminService {
   private readonly database: DatabasePool;
   private readonly instanceQueries: InstanceQueries;
   private readonly orgQueries: OrgQueries;
+  private readonly passwordComplexityQueries: PasswordComplexityQueries;
+  private readonly passwordAgeQueries: PasswordAgeQueries;
+  private readonly securityPolicyQueries: SecurityPolicyQueries;
   // Temporary state for HTTP provider (until command implementation)
   private httpProviderState: Map<string, { sequence: number; changeDate: Date }> = new Map();
 
@@ -142,6 +158,9 @@ export class AdminService {
     this.database = pool;
     this.instanceQueries = new InstanceQueries(pool);
     this.orgQueries = new OrgQueries(pool);
+    this.passwordComplexityQueries = new PasswordComplexityQueries(pool);
+    this.passwordAgeQueries = new PasswordAgeQueries(pool);
+    this.securityPolicyQueries = new SecurityPolicyQueries(pool);
   }
 
   // ============================================================================
@@ -1624,6 +1643,169 @@ export class AdminService {
         sequence: Number(result.sequence),
         changeDate: result.eventDate,
         resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetPasswordComplexityPolicy - Get instance-level password complexity policy
+   */
+  async getPasswordComplexityPolicy(
+    ctx: Context,
+    _request: GetPasswordComplexityPolicyRequest
+  ): Promise<GetPasswordComplexityPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Query the password complexity policy
+    const policy = await this.passwordComplexityQueries.getPasswordComplexityPolicy(instanceID);
+
+    if (!policy) {
+      // Return default policy
+      return {
+        policy: {
+          details: {
+            sequence: 0,
+            changeDate: new Date(),
+            resourceOwner: instanceID,
+          },
+          minLength: 8,
+          hasUppercase: true,
+          hasLowercase: true,
+          hasNumber: true,
+          hasSymbol: true,
+        },
+      };
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        minLength: policy.minLength,
+        hasUppercase: policy.hasUppercase,
+        hasLowercase: policy.hasLowercase,
+        hasNumber: policy.hasNumber,
+        hasSymbol: policy.hasSymbol,
+      },
+    };
+  }
+
+  /**
+   * UpdatePasswordComplexityPolicy - Update instance-level password complexity policy
+   */
+  async updatePasswordComplexityPolicy(
+    ctx: Context,
+    request: UpdatePasswordComplexityPolicyRequest
+  ): Promise<UpdatePasswordComplexityPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update password complexity policy
+    const result = await this.commands.changeDefaultPasswordComplexityPolicy(ctx, {
+      minLength: request.minLength,
+      hasLowercase: request.hasLowercase,
+      hasUppercase: request.hasUppercase,
+      hasNumber: request.hasNumber,
+      hasSymbol: request.hasSymbol,
+    });
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetPasswordAgePolicy - Get instance-level password age policy
+   */
+  async getPasswordAgePolicy(
+    ctx: Context,
+    _request: GetPasswordAgePolicyRequest
+  ): Promise<GetPasswordAgePolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Query the password age policy
+    const policy = await this.passwordAgeQueries.getPasswordAgePolicy(instanceID);
+
+    if (!policy) {
+      // Return default policy
+      return {
+        policy: {
+          details: {
+            sequence: 0,
+            changeDate: new Date(),
+            resourceOwner: instanceID,
+          },
+          maxAgeDays: 0, // 0 means no expiration
+          expireWarnDays: 0,
+        },
+      };
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        maxAgeDays: policy.maxAgeDays,
+        expireWarnDays: policy.expireWarnDays,
+      },
+    };
+  }
+
+  /**
+   * UpdatePasswordAgePolicy - Update instance-level password age policy
+   */
+  async updatePasswordAgePolicy(
+    ctx: Context,
+    request: UpdatePasswordAgePolicyRequest
+  ): Promise<UpdatePasswordAgePolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update password age policy
+    const result = await this.commands.changeDefaultPasswordAgePolicy(ctx, {
+      maxAgeDays: request.maxAgeDays ?? 0,
+      expireWarnDays: request.expireWarnDays ?? 0,
+    });
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetSecurityPolicy - Get instance-level security policy
+   */
+  async getSecurityPolicy(
+    ctx: Context,
+    _request: GetSecurityPolicyRequest
+  ): Promise<GetSecurityPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Query the security policy
+    const policy = await this.securityPolicyQueries.getSecurityPolicy(instanceID);
+
+    return {
+      policy: {
+        details: {
+          sequence: policy.sequence,
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        enableIframeEmbedding: policy.enableIframeEmbedding,
+        allowedOrigins: policy.allowedOrigins,
+        enableImpersonation: policy.enableImpersonation,
       },
     };
   }

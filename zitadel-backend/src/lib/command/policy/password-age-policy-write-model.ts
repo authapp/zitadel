@@ -25,7 +25,7 @@ export class PasswordAgePolicyWriteModel extends WriteModel {
   removedAt?: Date;
 
   constructor() {
-    super('password_age_policy');
+    super('instance');  // Policy events are attached to instance aggregate
   }
 
   reduce(event: Event): void {
