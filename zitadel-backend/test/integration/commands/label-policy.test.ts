@@ -471,6 +471,181 @@ describe('Label Policy - Complete Flow', () => {
   });
 
   // ============================================================================
+  // Default (Instance-Level) Label Policy Tests - NEW
+  // ============================================================================
+
+  describe('changeDefaultLabelPolicy', () => {
+    it('should change default label policy colors', async () => {
+      // Arrange - First add a default policy
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {
+        primaryColor: '#000000',
+      });
+      
+      // Act
+      await ctx.commands.changeDefaultLabelPolicy(
+        ctx.createContext(),
+        {
+          primaryColor: '#FF5500',
+          backgroundColor: '#FAFAFA',
+          warnColor: '#FFA500',
+          fontColor: '#333333',
+        }
+      );
+      
+      // Process projections
+      await processProjections();
+      
+      // Assert - Check event
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.label.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.primaryColor).toBe('#FF5500');
+      expect(changeEvent!.payload!.backgroundColor).toBe('#FAFAFA');
+      expect(changeEvent!.payload!.warnColor).toBe('#FFA500');
+      
+      console.log('✓ Default label policy colors changed');
+    });
+
+    it('should change default label policy assets', async () => {
+      // Arrange
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {});
+      
+      // Act
+      await ctx.commands.changeDefaultLabelPolicy(
+        ctx.createContext(),
+        {
+          logoURL: 'https://default.com/logo.png',
+          iconURL: 'https://default.com/icon.png',
+          fontURL: 'https://fonts.google.com/roboto',
+        }
+      );
+      
+      // Process projections
+      await processProjections();
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.label.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.logoURL).toBe('https://default.com/logo.png');
+      expect(changeEvent!.payload!.iconURL).toBe('https://default.com/icon.png');
+      
+      console.log('✓ Default label policy assets changed');
+    });
+
+    it('should change default label policy dark mode colors', async () => {
+      // Arrange
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {});
+      
+      // Act
+      await ctx.commands.changeDefaultLabelPolicy(
+        ctx.createContext(),
+        {
+          primaryColorDark: '#2563EB',
+          backgroundColorDark: '#111827',
+          warnColorDark: '#EF4444',
+          fontColorDark: '#F3F4F6',
+        }
+      );
+      
+      // Process projections
+      await processProjections();
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.label.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.primaryColorDark).toBe('#2563EB');
+      expect(changeEvent!.payload!.backgroundColorDark).toBe('#111827');
+      
+      console.log('✓ Default label policy dark mode colors changed');
+    });
+
+    it('should change default label policy UI preferences', async () => {
+      // Arrange
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {});
+      
+      // Act
+      await ctx.commands.changeDefaultLabelPolicy(
+        ctx.createContext(),
+        {
+          hideLoginNameSuffix: true,
+          errorMsgPopup: false,
+          disableWatermark: true,
+          themeMode: 'dark',
+        }
+      );
+      
+      // Process projections
+      await processProjections();
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.label.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.hideLoginNameSuffix).toBe(true);
+      expect(changeEvent!.payload!.errorMsgPopup).toBe(false);
+      expect(changeEvent!.payload!.disableWatermark).toBe(true);
+      expect(changeEvent!.payload!.themeMode).toBe('dark');
+      
+      console.log('✓ Default label policy UI preferences changed');
+    });
+
+    it('should be idempotent when no changes', async () => {
+      // Arrange
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {
+        primaryColor: '#123456',
+      });
+      
+      // Get initial change event count
+      const eventsBefore = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeCountBefore = eventsBefore.filter(e => e.eventType === 'instance.label.policy.changed').length;
+      
+      // Act - Change to same value
+      await ctx.commands.changeDefaultLabelPolicy(
+        ctx.createContext(),
+        {
+          primaryColor: '#123456',
+        }
+      );
+      
+      // Assert - No new change event
+      const eventsAfter = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeCountAfter = eventsAfter.filter(e => e.eventType === 'instance.label.policy.changed').length;
+      expect(changeCountAfter).toBe(changeCountBefore);
+      
+      console.log('✓ Idempotent - no event for same values');
+    });
+
+    it('should fail with no fields provided', async () => {
+      // Arrange
+      await ctx.commands.addInstanceLabelPolicy(ctx.createContext(), {});
+      
+      // Act & Assert
+      await expect(
+        ctx.commands.changeDefaultLabelPolicy(
+          ctx.createContext(),
+          {}
+        )
+      ).rejects.toThrow('at least one field must be provided');
+      
+      console.log('✓ Failed as expected - no fields provided');
+    });
+
+    it('should fail if default policy does not exist', async () => {
+      // Act & Assert
+      await expect(
+        ctx.commands.changeDefaultLabelPolicy(
+          ctx.createContext(),
+          { primaryColor: '#FF0000' }
+        )
+      ).rejects.toThrow('default label policy not found');
+      
+      console.log('✓ Failed as expected - default policy not found');
+    });
+  });
+
+  // ============================================================================
   // Complete Lifecycle Tests
   // ============================================================================
 

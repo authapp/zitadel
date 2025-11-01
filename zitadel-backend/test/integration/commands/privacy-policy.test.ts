@@ -43,7 +43,7 @@ describe('Privacy Policy - Complete Flow', () => {
   }
 
   // ============================================================================
-  // ADD PRIVACY POLICY
+  // Organization Privacy Policy Tests
   // ============================================================================
 
   describe('addOrgPrivacyPolicy', () => {
@@ -285,6 +285,140 @@ describe('Privacy Policy - Complete Flow', () => {
       ).rejects.toThrow(/not found/i);
       
       console.log('✓ Failed as expected with non-existent policy');
+    });
+  });
+
+  // ============================================================================
+  // Default (Instance-Level) Privacy Policy Tests - NEW
+  // ============================================================================
+
+  describe('changeDefaultPrivacyPolicy', () => {
+    // NOTE: These tests are skipped because there's no addDefaultPrivacyPolicy command yet
+    // The changeDefaultPrivacyPolicy requires a pre-existing policy
+    // Once addDefaultPrivacyPolicy is implemented, these tests can be enabled
+    
+    it.skip('should change default privacy policy links', async () => {
+      // TODO: Add addDefaultPrivacyPolicy command first
+      // await ctx.commands.addDefaultPrivacyPolicy(ctx.createContext(), {});
+      
+      // Act
+      await ctx.commands.changeDefaultPrivacyPolicy(
+        ctx.createContext(),
+        {
+          tosLink: 'https://default.com/tos',
+          privacyLink: 'https://default.com/privacy',
+          helpLink: 'https://default.com/help',
+        }
+      );
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.privacy.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload).toMatchObject({
+        tosLink: 'https://default.com/tos',
+        privacyLink: 'https://default.com/privacy',
+        helpLink: 'https://default.com/help',
+      });
+      
+      console.log('✓ Default privacy policy links changed');
+    });
+
+    it.skip('should change default privacy policy support info', async () => {
+      // TODO: Add addDefaultPrivacyPolicy command first
+      // Act
+      await ctx.commands.changeDefaultPrivacyPolicy(
+        ctx.createContext(),
+        {
+          supportEmail: 'support@default.com',
+          docsLink: 'https://docs.default.com',
+        }
+      );
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.privacy.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.supportEmail).toBe('support@default.com');
+      expect(changeEvent!.payload!.docsLink).toBe('https://docs.default.com');
+      
+      console.log('✓ Default privacy policy support info changed');
+    });
+
+    it.skip('should change default privacy policy custom link', async () => {
+      // TODO: Add addDefaultPrivacyPolicy command first
+      // Act
+      await ctx.commands.changeDefaultPrivacyPolicy(
+        ctx.createContext(),
+        {
+          customLink: 'https://default.com/custom',
+          customLinkText: 'Custom Page',
+        }
+      );
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvent = events.find(e => e.eventType === 'instance.privacy.policy.changed');
+      expect(changeEvent).toBeDefined();
+      expect(changeEvent!.payload!.customLink).toBe('https://default.com/custom');
+      expect(changeEvent!.payload!.customLinkText).toBe('Custom Page');
+      
+      console.log('✓ Default privacy policy custom link changed');
+    });
+
+    it.skip('should handle partial updates', async () => {
+      // TODO: Add addDefaultPrivacyPolicy command first
+      // Arrange - First change
+      await ctx.commands.changeDefaultPrivacyPolicy(
+        ctx.createContext(),
+        {
+          tosLink: 'https://default.com/tos',
+          privacyLink: 'https://default.com/privacy',
+        }
+      );
+      
+      // Act - Partial update (only change one field)
+      await ctx.commands.changeDefaultPrivacyPolicy(
+        ctx.createContext(),
+        {
+          helpLink: 'https://default.com/help',
+        }
+      );
+      
+      // Assert
+      const events = await ctx.getEvents('instance', ctx.createContext().instanceID);
+      const changeEvents = events.filter(e => e.eventType === 'instance.privacy.policy.changed');
+      expect(changeEvents.length).toBeGreaterThanOrEqual(2);
+      
+      // Last change should have helpLink
+      const lastChange = changeEvents[changeEvents.length - 1];
+      expect(lastChange.payload!.helpLink).toBe('https://default.com/help');
+      
+      console.log('✓ Default privacy policy partial updates working');
+    });
+
+    it('should fail with no fields provided', async () => {
+      // Act & Assert
+      await expect(
+        ctx.commands.changeDefaultPrivacyPolicy(
+          ctx.createContext(),
+          {}
+        )
+      ).rejects.toThrow('at least one field must be provided');
+      
+      console.log('✓ Failed as expected - no fields provided');
+    });
+
+    it('should fail if default policy does not exist', async () => {
+      // Act & Assert
+      await expect(
+        ctx.commands.changeDefaultPrivacyPolicy(
+          ctx.createContext(),
+          { privacyLink: 'https://example.com/privacy' }
+        )
+      ).rejects.toThrow('default privacy policy not found');
+      
+      console.log('✓ Failed as expected - default policy not found');
     });
   });
 

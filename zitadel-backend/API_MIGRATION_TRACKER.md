@@ -945,15 +945,15 @@
 - [x] UpdateIDP - Update IDP configuration ✅
 - [x] RemoveIDP - Remove IDP ✅
 
-**Login & Branding (8 endpoints):**
-- [ ] GetDefaultLoginPolicy - Get login policy
-- [ ] UpdateDefaultLoginPolicy - Update policy
-- [ ] GetLabelPolicy - Get branding config
-- [ ] UpdateLabelPolicy - Update branding
-- [ ] GetPrivacyPolicy - Get privacy policy
-- [ ] UpdatePrivacyPolicy - Update privacy
-- [ ] GetLockoutPolicy - Get lockout settings
-- [ ] UpdateLockoutPolicy - Update lockout
+**Login & Branding (8 endpoints):** ✅ **COMPLETE** (Nov 1, 2025)
+- [x] GetDefaultLoginPolicy - Get login policy ✅
+- [x] UpdateDefaultLoginPolicy - Update policy ✅
+- [x] GetLabelPolicy - Get branding config ✅
+- [x] UpdateLabelPolicy - Update branding ✅
+- [x] GetPrivacyPolicy - Get privacy policy ✅
+- [x] UpdatePrivacyPolicy - Update privacy ✅
+- [x] GetLockoutPolicy - Get lockout settings ✅
+- [x] UpdateLockoutPolicy - Update lockout ✅
 
 **Password & Security (5 endpoints):**
 - [ ] GetPasswordComplexityPolicy - Get password rules

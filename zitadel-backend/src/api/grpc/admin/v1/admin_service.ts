@@ -85,6 +85,22 @@ import {
   UpdateIDPResponse,
   RemoveIDPRequest,
   RemoveIDPResponse,
+  GetDefaultLoginPolicyRequest,
+  GetDefaultLoginPolicyResponse,
+  UpdateDefaultLoginPolicyRequest,
+  UpdateDefaultLoginPolicyResponse,
+  GetLabelPolicyRequest,
+  GetLabelPolicyResponse,
+  UpdateLabelPolicyRequest,
+  UpdateLabelPolicyResponse,
+  GetPrivacyPolicyRequest,
+  GetPrivacyPolicyResponse,
+  UpdatePrivacyPolicyRequest,
+  UpdatePrivacyPolicyResponse,
+  GetLockoutPolicyRequest,
+  GetLockoutPolicyResponse,
+  UpdateLockoutPolicyRequest,
+  UpdateLockoutPolicyResponse,
 } from '../../proto/admin/v1/admin_service';
 import { throwInvalidArgument, throwNotFound } from '../../../../lib/zerrors/errors';
 
@@ -115,6 +131,7 @@ const SUPPORTED_LANGUAGES = [
  */
 export class AdminService {
   private commands: Commands;
+  private readonly database: DatabasePool;
   private readonly instanceQueries: InstanceQueries;
   private readonly orgQueries: OrgQueries;
   // Temporary state for HTTP provider (until command implementation)
@@ -122,6 +139,7 @@ export class AdminService {
 
   constructor(commands: Commands, pool: DatabasePool) {
     this.commands = commands;
+    this.database = pool;
     this.instanceQueries = new InstanceQueries(pool);
     this.orgQueries = new OrgQueries(pool);
   }
@@ -1306,6 +1324,300 @@ export class AdminService {
 
     // Call command to remove IDP
     const result = await this.commands.removeInstanceIDP(ctx, instanceID, request.id);
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  // ============================================================================
+  // Policy Endpoints (Login & Branding)
+  // ============================================================================
+
+  /**
+   * GetDefaultLoginPolicy - Get instance-level login policy
+   */
+  async getDefaultLoginPolicy(
+    ctx: Context,
+    _request: GetDefaultLoginPolicyRequest
+  ): Promise<GetDefaultLoginPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Get login policy via queries
+    const loginPolicyQueries = new (await import('../../../../lib/query/login-policy/login-policy-queries')).LoginPolicyQueries(this.database);
+    
+    const policy = await loginPolicyQueries.getActiveLoginPolicy(instanceID, instanceID);
+    
+    if (!policy) {
+      throwNotFound('ADMIN-POL01', 'Login policy not found');
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        allowUsernamePassword: policy.allowUsernamePassword,
+        allowRegister: policy.allowRegister,
+        allowExternalIdp: policy.allowExternalIDP,
+        forceMfa: policy.forceMFA,
+        forceMfaLocalOnly: policy.forceMFALocalOnly,
+        hidePasswordReset: policy.hidePasswordReset,
+        ignoreUnknownUsernames: policy.ignoreUnknownUsernames,
+        allowDomainDiscovery: policy.allowDomainDiscovery,
+        disableLoginWithEmail: policy.disableLoginWithEmail,
+        disableLoginWithPhone: policy.disableLoginWithPhone,
+        defaultRedirectUri: policy.defaultRedirectURI,
+        passwordCheckLifetime: policy.passwordCheckLifetime,
+        externalLoginCheckLifetime: policy.externalLoginCheckLifetime,
+        mfaInitSkipLifetime: policy.mfaInitSkipLifetime,
+        secondFactorCheckLifetime: policy.secondFactorCheckLifetime,
+        multiFactorCheckLifetime: policy.multiFactorCheckLifetime,
+      },
+    };
+  }
+
+  /**
+   * UpdateDefaultLoginPolicy - Update instance-level login policy
+   */
+  async updateDefaultLoginPolicy(
+    ctx: Context,
+    request: UpdateDefaultLoginPolicyRequest
+  ): Promise<UpdateDefaultLoginPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update login policy
+    const result = await this.commands.changeDefaultLoginPolicy(ctx, {
+      allowUsernamePassword: request.allowUsernamePassword,
+      allowRegister: request.allowRegister,
+      allowExternalIDP: request.allowExternalIdp,
+      forceMFA: request.forceMfa,
+      forceMFALocalOnly: request.forceMfaLocalOnly,
+      hidePasswordReset: request.hidePasswordReset,
+      ignoreUnknownUsernames: request.ignoreUnknownUsernames,
+      allowDomainDiscovery: request.allowDomainDiscovery,
+      disableLoginWithEmail: request.disableLoginWithEmail,
+      disableLoginWithPhone: request.disableLoginWithPhone,
+      defaultRedirectURI: request.defaultRedirectUri,
+      passwordCheckLifetime: request.passwordCheckLifetime,
+      externalLoginCheckLifetime: request.externalLoginCheckLifetime,
+      mfaInitSkipLifetime: request.mfaInitSkipLifetime,
+      secondFactorCheckLifetime: request.secondFactorCheckLifetime,
+      multiFactorCheckLifetime: request.multiFactorCheckLifetime,
+    });
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetLabelPolicy - Get instance-level label/branding policy
+   */
+  async getLabelPolicy(
+    ctx: Context,
+    _request: GetLabelPolicyRequest
+  ): Promise<GetLabelPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Get label policy via queries
+    const labelPolicyQueries = new (await import('../../../../lib/query/policy/label-policy-queries')).LabelPolicyQueries(this.database);
+    
+    const policy = await labelPolicyQueries.getActiveLabelPolicy(instanceID, instanceID);
+    
+    if (!policy) {
+      throwNotFound('ADMIN-POL02', 'Label policy not found');
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        primaryColor: policy.primaryColor,
+        backgroundColor: policy.backgroundColor,
+        warnColor: policy.warnColor,
+        fontColor: policy.fontColor,
+        primaryColorDark: policy.primaryColorDark,
+        backgroundColorDark: policy.backgroundColorDark,
+        warnColorDark: policy.warnColorDark,
+        fontColorDark: policy.fontColorDark,
+        logoUrl: policy.logoURL,
+        iconUrl: policy.iconURL,
+        logoUrlDark: policy.logoURLDark,
+        iconUrlDark: policy.iconURLDark,
+        fontUrl: policy.fontURL,
+        hideLoginNameSuffix: policy.hideLoginNameSuffix,
+        errorMsgPopup: policy.errorMsgPopup,
+        disableWatermark: policy.disableWatermark,
+        themeMode: policy.themeMode,
+      },
+    };
+  }
+
+  /**
+   * UpdateLabelPolicy - Update instance-level label/branding policy
+   */
+  async updateLabelPolicy(
+    ctx: Context,
+    request: UpdateLabelPolicyRequest
+  ): Promise<UpdateLabelPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update label policy
+    const result = await this.commands.changeDefaultLabelPolicy(ctx, {
+      primaryColor: request.primaryColor,
+      backgroundColor: request.backgroundColor,
+      warnColor: request.warnColor,
+      fontColor: request.fontColor,
+      primaryColorDark: request.primaryColorDark,
+      backgroundColorDark: request.backgroundColorDark,
+      warnColorDark: request.warnColorDark,
+      fontColorDark: request.fontColorDark,
+      logoURL: request.logoUrl,
+      iconURL: request.iconUrl,
+      logoURLDark: request.logoUrlDark,
+      iconURLDark: request.iconUrlDark,
+      fontURL: request.fontUrl,
+      hideLoginNameSuffix: request.hideLoginNameSuffix,
+      errorMsgPopup: request.errorMsgPopup,
+      disableWatermark: request.disableWatermark,
+      themeMode: request.themeMode,
+    });
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetPrivacyPolicy - Get instance-level privacy policy
+   */
+  async getPrivacyPolicy(
+    ctx: Context,
+    _request: GetPrivacyPolicyRequest
+  ): Promise<GetPrivacyPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Get privacy policy via queries
+    const privacyPolicyQueries = new (await import('../../../../lib/query/policy/privacy-policy-queries')).PrivacyPolicyQueries(this.database);
+    
+    const policy = await privacyPolicyQueries.getPrivacyPolicy(instanceID, instanceID);
+    
+    if (!policy) {
+      throwNotFound('ADMIN-POL04', 'Privacy policy not found');
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        tosLink: policy.tosLink,
+        privacyLink: policy.privacyLink,
+        helpLink: policy.helpLink,
+        supportEmail: policy.supportEmail,
+        docsLink: policy.docsLink,
+        customLink: policy.customLink,
+        customLinkText: policy.customLinkText,
+      },
+    };
+  }
+
+  /**
+   * UpdatePrivacyPolicy - Update instance-level privacy policy
+   */
+  async updatePrivacyPolicy(
+    ctx: Context,
+    request: UpdatePrivacyPolicyRequest
+  ): Promise<UpdatePrivacyPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update privacy policy
+    const result = await this.commands.changeDefaultPrivacyPolicy(ctx, {
+      tosLink: request.tosLink,
+      privacyLink: request.privacyLink,
+      helpLink: request.helpLink,
+      supportEmail: request.supportEmail,
+      docsLink: request.docsLink,
+      customLink: request.customLink,
+      customLinkText: request.customLinkText,
+    });
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: instanceID,
+      },
+    };
+  }
+
+  /**
+   * GetLockoutPolicy - Get instance-level lockout policy
+   */
+  async getLockoutPolicy(
+    ctx: Context,
+    _request: GetLockoutPolicyRequest
+  ): Promise<GetLockoutPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Get lockout policy via queries
+    const lockoutPolicyQueries = new (await import('../../../../lib/query/policy/lockout-policy-queries')).LockoutPolicyQueries(this.database);
+    
+    const policy = await lockoutPolicyQueries.getLockoutPolicy(instanceID, instanceID);
+    
+    if (!policy) {
+      throwNotFound('ADMIN-POL06', 'Lockout policy not found');
+    }
+
+    return {
+      policy: {
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: instanceID,
+        },
+        maxPasswordAttempts: policy.maxPasswordAttempts,
+        maxOtpAttempts: policy.maxOTPAttempts,
+        showLockOutFailures: policy.showFailures,
+      },
+    };
+  }
+
+  /**
+   * UpdateLockoutPolicy - Update instance-level lockout policy
+   */
+  async updateLockoutPolicy(
+    ctx: Context,
+    request: UpdateLockoutPolicyRequest
+  ): Promise<UpdateLockoutPolicyResponse> {
+    const instanceID = ctx.instanceID || 'test-instance';
+
+    // Call command to update lockout policy
+    const result = await this.commands.changeDefaultPasswordLockoutPolicy(ctx, {
+      maxPasswordAttempts: request.maxPasswordAttempts,
+      maxOTPAttempts: request.maxOtpAttempts,
+      showLockoutFailures: request.showLockOutFailures,
+    });
 
     return {
       details: {

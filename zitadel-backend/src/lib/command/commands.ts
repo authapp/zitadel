@@ -1547,6 +1547,18 @@ export class Commands {
     require('./policy/login-policy-commands').addMultiFactorToDefaultLoginPolicy;
   
   /**
+   * Change default label policy (instance-level)
+   */
+  changeDefaultLabelPolicy: typeof import('./policy/label-policy-commands').changeDefaultLabelPolicy = 
+    require('./policy/label-policy-commands').changeDefaultLabelPolicy;
+  
+  /**
+   * Change default privacy policy (instance-level)
+   */
+  changeDefaultPrivacyPolicy: typeof import('./policy/privacy-policy-commands').changeDefaultPrivacyPolicy = 
+    require('./policy/privacy-policy-commands').changeDefaultPrivacyPolicy;
+  
+  /**
    * Add default password complexity policy
    */
   addDefaultPasswordComplexityPolicy: typeof import('./policy/password-complexity-policy-commands').addDefaultPasswordComplexityPolicy = 

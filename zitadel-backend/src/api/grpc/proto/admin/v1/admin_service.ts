@@ -564,3 +564,165 @@ export interface RemoveIDPRequest {
 export interface RemoveIDPResponse {
   details: ObjectDetails;
 }
+
+// ============================================================================
+// Policy Types (Login & Branding)
+// ============================================================================
+
+// Login Policy
+export interface LoginPolicy {
+  details: ObjectDetails;
+  allowUsernamePassword: boolean;
+  allowRegister: boolean;
+  allowExternalIdp: boolean;
+  forceMfa: boolean;
+  forceMfaLocalOnly: boolean;
+  hidePasswordReset: boolean;
+  ignoreUnknownUsernames: boolean;
+  allowDomainDiscovery: boolean;
+  disableLoginWithEmail: boolean;
+  disableLoginWithPhone: boolean;
+  defaultRedirectUri?: string;
+  passwordCheckLifetime: number; // seconds
+  externalLoginCheckLifetime: number; // seconds
+  mfaInitSkipLifetime: number; // seconds
+  secondFactorCheckLifetime: number; // seconds
+  multiFactorCheckLifetime: number; // seconds
+}
+
+export interface GetDefaultLoginPolicyRequest {}
+
+export interface GetDefaultLoginPolicyResponse {
+  policy: LoginPolicy;
+}
+
+export interface UpdateDefaultLoginPolicyRequest {
+  allowUsernamePassword?: boolean;
+  allowRegister?: boolean;
+  allowExternalIdp?: boolean;
+  forceMfa?: boolean;
+  forceMfaLocalOnly?: boolean;
+  hidePasswordReset?: boolean;
+  ignoreUnknownUsernames?: boolean;
+  allowDomainDiscovery?: boolean;
+  disableLoginWithEmail?: boolean;
+  disableLoginWithPhone?: boolean;
+  defaultRedirectUri?: string;
+  passwordCheckLifetime?: number;
+  externalLoginCheckLifetime?: number;
+  mfaInitSkipLifetime?: number;
+  secondFactorCheckLifetime?: number;
+  multiFactorCheckLifetime?: number;
+}
+
+export interface UpdateDefaultLoginPolicyResponse {
+  details: ObjectDetails;
+}
+
+// Label Policy (Branding)
+export interface LabelPolicy {
+  details: ObjectDetails;
+  primaryColor: string;
+  backgroundColor: string;
+  warnColor: string;
+  fontColor: string;
+  primaryColorDark: string;
+  backgroundColorDark: string;
+  warnColorDark: string;
+  fontColorDark: string;
+  logoUrl?: string;
+  iconUrl?: string;
+  logoUrlDark?: string;
+  iconUrlDark?: string;
+  fontUrl?: string;
+  hideLoginNameSuffix: boolean;
+  errorMsgPopup: boolean;
+  disableWatermark: boolean;
+  themeMode: string; // 'auto' | 'light' | 'dark'
+}
+
+export interface GetLabelPolicyRequest {}
+
+export interface GetLabelPolicyResponse {
+  policy: LabelPolicy;
+}
+
+export interface UpdateLabelPolicyRequest {
+  primaryColor?: string;
+  backgroundColor?: string;
+  warnColor?: string;
+  fontColor?: string;
+  primaryColorDark?: string;
+  backgroundColorDark?: string;
+  warnColorDark?: string;
+  fontColorDark?: string;
+  logoUrl?: string;
+  iconUrl?: string;
+  logoUrlDark?: string;
+  iconUrlDark?: string;
+  fontUrl?: string;
+  hideLoginNameSuffix?: boolean;
+  errorMsgPopup?: boolean;
+  disableWatermark?: boolean;
+  themeMode?: string;
+}
+
+export interface UpdateLabelPolicyResponse {
+  details: ObjectDetails;
+}
+
+// Privacy Policy
+export interface PrivacyPolicy {
+  details: ObjectDetails;
+  tosLink?: string;
+  privacyLink?: string;
+  helpLink?: string;
+  supportEmail?: string;
+  docsLink?: string;
+  customLink?: string;
+  customLinkText?: string;
+}
+
+export interface GetPrivacyPolicyRequest {}
+
+export interface GetPrivacyPolicyResponse {
+  policy: PrivacyPolicy;
+}
+
+export interface UpdatePrivacyPolicyRequest {
+  tosLink?: string;
+  privacyLink?: string;
+  helpLink?: string;
+  supportEmail?: string;
+  docsLink?: string;
+  customLink?: string;
+  customLinkText?: string;
+}
+
+export interface UpdatePrivacyPolicyResponse {
+  details: ObjectDetails;
+}
+
+// Lockout Policy
+export interface LockoutPolicy {
+  details: ObjectDetails;
+  maxPasswordAttempts: number;
+  maxOtpAttempts: number;
+  showLockOutFailures: boolean;
+}
+
+export interface GetLockoutPolicyRequest {}
+
+export interface GetLockoutPolicyResponse {
+  policy: LockoutPolicy;
+}
+
+export interface UpdateLockoutPolicyRequest {
+  maxPasswordAttempts?: number;
+  maxOtpAttempts?: number;
+  showLockOutFailures?: boolean;
+}
+
+export interface UpdateLockoutPolicyResponse {
+  details: ObjectDetails;
+}

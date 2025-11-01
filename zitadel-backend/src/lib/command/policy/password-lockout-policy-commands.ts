@@ -17,8 +17,9 @@ import { WriteModel } from '../write-model';
  * Password Lockout Policy data
  */
 export interface PasswordLockoutPolicyData {
-  maxPasswordAttempts: number; // Max failed attempts before lockout
-  showLockoutFailures: boolean; // Show remaining attempts to user
+  maxPasswordAttempts?: number; // Max failed password attempts before lockout
+  maxOTPAttempts?: number;       // Max failed OTP attempts before lockout
+  showLockoutFailures?: boolean; // Show remaining attempts to user
 }
 
 /**
@@ -26,6 +27,7 @@ export interface PasswordLockoutPolicyData {
  */
 class PasswordLockoutPolicyWriteModel extends WriteModel {
   maxPasswordAttempts: number = 5;
+  maxOTPAttempts: number = 5;
   showLockoutFailures: boolean = true;
   isDefault: boolean = true; // true = using default/instance policy, false = has org-specific policy
 
@@ -39,12 +41,16 @@ class PasswordLockoutPolicyWriteModel extends WriteModel {
       case 'org.lockout.policy.added':
         this.isDefault = false;
         this.maxPasswordAttempts = event.payload?.maxPasswordAttempts ?? 5;
+        this.maxOTPAttempts = event.payload?.maxOTPAttempts ?? 5;
         this.showLockoutFailures = event.payload?.showLockoutFailures ?? true;
         break;
       case 'instance.password.lockout.policy.changed':
       case 'org.lockout.policy.changed':
         if (event.payload?.maxPasswordAttempts !== undefined) {
           this.maxPasswordAttempts = event.payload.maxPasswordAttempts;
+        }
+        if (event.payload?.maxOTPAttempts !== undefined) {
+          this.maxOTPAttempts = event.payload.maxOTPAttempts;
         }
         if (event.payload?.showLockoutFailures !== undefined) {
           this.showLockoutFailures = event.payload.showLockoutFailures;
@@ -66,8 +72,11 @@ export async function addDefaultPasswordLockoutPolicy(
   ctx: Context,
   data: PasswordLockoutPolicyData
 ): Promise<ObjectDetails> {
-  if (data.maxPasswordAttempts < 1) {
+  if (data.maxPasswordAttempts !== undefined && data.maxPasswordAttempts < 1) {
     throwInvalidArgument('maxPasswordAttempts must be at least 1', 'POLICY-PL10');
+  }
+  if (data.maxOTPAttempts !== undefined && data.maxOTPAttempts < 1) {
+    throwInvalidArgument('maxOTPAttempts must be at least 1', 'POLICY-PL11');
   }
 
   await this.checkPermission(ctx, 'instance.policy', 'create', ctx.instanceID);
@@ -102,6 +111,9 @@ export async function changeDefaultPasswordLockoutPolicy(
 ): Promise<ObjectDetails> {
   if (data.maxPasswordAttempts !== undefined && data.maxPasswordAttempts < 1) {
     throwInvalidArgument('maxPasswordAttempts must be at least 1', 'POLICY-PL20');
+  }
+  if (data.maxOTPAttempts !== undefined && data.maxOTPAttempts < 1) {
+    throwInvalidArgument('maxOTPAttempts must be at least 1', 'POLICY-PL21');
   }
 
   await this.checkPermission(ctx, 'instance.policy', 'update', ctx.instanceID);
@@ -166,8 +178,11 @@ export async function addOrgPasswordLockoutPolicy(
 ): Promise<ObjectDetails> {
   validateRequired(orgID, 'orgID');
 
-  if (data.maxPasswordAttempts < 1) {
+  if (data.maxPasswordAttempts !== undefined && data.maxPasswordAttempts < 1) {
     throwInvalidArgument('maxPasswordAttempts must be at least 1', 'POLICY-PL30');
+  }
+  if (data.maxOTPAttempts !== undefined && data.maxOTPAttempts < 1) {
+    throwInvalidArgument('maxOTPAttempts must be at least 1', 'POLICY-PL31');
   }
 
   await this.checkPermission(ctx, 'org.policy', 'create', orgID);

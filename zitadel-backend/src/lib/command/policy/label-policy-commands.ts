@@ -129,6 +129,57 @@ export async function changeOrgLabelPolicy(
 }
 
 /**
+ * Change default (instance-level) label policy
+ */
+export async function changeDefaultLabelPolicy(
+  this: Commands,
+  ctx: Context,
+  data: LabelPolicyData
+): Promise<ObjectDetails> {
+  // 1. Validate input
+  const instanceID = ctx.instanceID;
+  validateRequired(instanceID, 'instanceID');
+  
+  // At least one field must be provided
+  if (!Object.keys(data).length) {
+    throwInvalidArgument('at least one field must be provided', 'COMMAND-LabelPolicy10');
+  }
+  
+  // 2. Check permissions (instance-level)
+  await this.checkPermission(ctx, 'policy.label', 'update', instanceID);
+  
+  // 3. Load write model (instance-level)
+  const wm = new LabelPolicyWriteModel('instance');
+  await wm.load(this.getEventstore(), instanceID, instanceID);
+  
+  if (!wm.exists()) {
+    throwNotFound('default label policy not found', 'COMMAND-LabelPolicy11');
+  }
+  
+  // 4. Check if there are actual changes
+  if (!wm.hasChanged(data)) {
+    return writeModelToObjectDetails(wm); // Idempotent
+  }
+  
+  // 5. Create command (instance-level event)
+  const command: Command = {
+    eventType: 'instance.label.policy.changed',
+    aggregateType: 'instance',
+    aggregateID: instanceID,
+    owner: instanceID,
+    instanceID: instanceID,
+    creator: ctx.userID || 'system',
+    payload: data,
+  };
+  
+  // 6. Push and update
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+  
+  return writeModelToObjectDetails(wm);
+}
+
+/**
  * Remove organization label policy
  */
 export async function removeOrgLabelPolicy(
