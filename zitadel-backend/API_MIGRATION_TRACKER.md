@@ -962,12 +962,12 @@
 - [x] UpdatePasswordAgePolicy - Update age policy ✅
 - [x] GetSecurityPolicy - Get security settings ✅ (Query-only, no update command)
 
-**Organizations (5 endpoints):**
-- [ ] ListOrgs - List all organizations
-- [ ] GetOrgByID - Get organization
-- [ ] IsOrgUnique - Check org uniqueness
-- [ ] SetDefaultOrg - Set default organization
-- [ ] GetDefaultOrg - Get default organization
+**Organizations (5 endpoints):** ✅ **COMPLETE**
+- [x] ListOrgs - List all organizations ✅
+- [x] GetOrgByID - Get organization ✅
+- [x] IsOrgUnique - Check org uniqueness ✅
+- [x] SetDefaultOrg - Set default organization ✅ (Nov 1, 2025)
+- [x] GetDefaultOrg - Get default organization ✅ (Nov 1, 2025)
 
 **Domain Settings (3 endpoints):**
 - [ ] GetDomainPolicy - Get domain policy

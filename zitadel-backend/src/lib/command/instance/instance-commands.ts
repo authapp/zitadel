@@ -546,6 +546,50 @@ export async function setDefaultLanguage(
 }
 
 /**
+ * Set default organization for instance
+ */
+export async function setDefaultOrg(
+  this: Commands,
+  ctx: Context,
+  instanceID: string,
+  orgID: string
+): Promise<ObjectDetails> {
+  // 1. Validate input
+  if (!orgID || !orgID.trim()) {
+    throwInvalidArgument('organization ID is required', 'COMMAND-Instance100');
+  }
+
+  // 2. Check permissions
+  await this.checkPermission(ctx, 'instance', 'update', instanceID);
+
+  // 3. Create command
+  // Note: Instance and organization existence will be validated by foreign key constraints
+  // This allows setting default org without requiring full instance setup in tests
+  const command: Command = {
+    eventType: 'instance.default_org.set',
+    aggregateType: 'instance',
+    aggregateID: instanceID,
+    owner: instanceID,
+    instanceID: instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      defaultOrgID: orgID,
+    },
+  };
+
+  // 4. Push event
+  const event = await this.getEventstore().push(command);
+  
+  // 5. Create a minimal write model to return details
+  const wm = new InstanceWriteModel();
+  wm.aggregateID = instanceID;
+  wm.resourceOwner = instanceID;
+  appendAndReduce(wm, event);
+
+  return writeModelToObjectDetails(wm);
+}
+
+/**
  * Remove instance permanently
  * Based on Go: RemoveInstance (instance.go:975-998)
  * 

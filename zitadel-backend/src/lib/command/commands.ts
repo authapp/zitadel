@@ -1483,6 +1483,12 @@ export class Commands {
     require('./instance/instance-commands').setDefaultLanguage;
   
   /**
+   * Set default organization for instance
+   */
+  setDefaultOrg: typeof import('./instance/instance-commands').setDefaultOrg = 
+    require('./instance/instance-commands').setDefaultOrg;
+  
+  /**
    * Remove instance (destructive operation)
    */
   removeInstance: typeof import('./instance/instance-commands').removeInstance = 

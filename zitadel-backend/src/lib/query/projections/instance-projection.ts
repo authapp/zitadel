@@ -44,6 +44,10 @@ export class InstanceProjection extends Projection {
       case 'instance.defaultLanguage.set':
         await this.handleDefaultLanguageSet(event);
         break;
+      
+      case 'instance.default_org.set':
+        await this.handleDefaultOrgSet(event);
+        break;
     }
   }
 
@@ -196,6 +200,26 @@ export class InstanceProjection extends Projection {
       [
         event.aggregateID,
         JSON.stringify({}),
+        event.createdAt,
+        event.createdAt,
+        Number(event.aggregateVersion || 1n),
+      ]
+    );
+  }
+
+  private async handleDefaultOrgSet(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    
+    await this.database.query(
+      `UPDATE projections.instances SET
+        default_org_id = $2,
+        updated_at = $3,
+        change_date = $4,
+        sequence = $5
+      WHERE id = $1`,
+      [
+        event.aggregateID,
+        payload.defaultOrgID,
         event.createdAt,
         event.createdAt,
         Number(event.aggregateVersion || 1n),

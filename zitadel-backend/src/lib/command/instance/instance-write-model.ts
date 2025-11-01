@@ -177,6 +177,13 @@ export class InstanceWriteModel extends WriteModel {
         this.updatedAt = event.createdAt;
         break;
 
+      case 'instance.default_org.set':
+        if (event.payload?.defaultOrgID) {
+          this.defaultOrgID = event.payload.defaultOrgID;
+        }
+        this.updatedAt = event.createdAt;
+        break;
+
       case 'instance.removed':
         this.state = InstanceState.REMOVED;
         this.updatedAt = event.createdAt;

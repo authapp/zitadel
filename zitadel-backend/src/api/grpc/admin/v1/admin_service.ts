@@ -31,6 +31,10 @@ import {
   GetOrgByIDResponse,
   IsOrgUniqueRequest,
   IsOrgUniqueResponse,
+  SetDefaultOrgRequest,
+  SetDefaultOrgResponse,
+  GetDefaultOrgRequest,
+  GetDefaultOrgResponse,
   OrgState,
   ListSecretGeneratorsRequest,
   ListSecretGeneratorsResponse,
@@ -375,6 +379,76 @@ export class AdminService {
 
     return {
       isUnique: result.total === 0,
+    };
+  }
+
+  /**
+   * SetDefaultOrg - Set default organization for instance
+   */
+  async setDefaultOrg(
+    ctx: Context,
+    request: { orgId: string }
+  ): Promise<{ details: { sequence: number; changeDate: Date; resourceOwner: string } }> {
+    // Validate request
+    if (!request.orgId || request.orgId.trim().length === 0) {
+      throwInvalidArgument('organization ID is required', 'ADMIN-012');
+    }
+
+    // Get instance ID from context
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throwInvalidArgument('instance ID required', 'ADMIN-013');
+    }
+
+    // Execute command
+    const result = await this.commands.setDefaultOrg(ctx, instanceID, request.orgId);
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: result.resourceOwner,
+      },
+    };
+  }
+
+  /**
+   * GetDefaultOrg - Get default organization for instance
+   */
+  async getDefaultOrg(
+    ctx: Context,
+    _request: Record<string, never>
+  ): Promise<{ org: { id: string; details: { sequence: number; changeDate: Date; resourceOwner: string }; state: OrgState; name: string; primaryDomain: string } | null }> {
+    // Get instance ID from context
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throwInvalidArgument('instance ID required', 'ADMIN-014');
+    }
+
+    // Get instance to find defaultOrgID
+    const instance = await this.instanceQueries.getInstanceByID(instanceID);
+    if (!instance || !instance.defaultOrgID) {
+      return { org: null };
+    }
+
+    // Get the default organization
+    const org = await this.orgQueries.getOrgByID(instance.defaultOrgID, instanceID);
+    if (!org) {
+      return { org: null };
+    }
+
+    return {
+      org: {
+        id: org.id,
+        details: {
+          sequence: org.sequence,
+          changeDate: org.updatedAt,
+          resourceOwner: org.id,
+        },
+        state: this.mapOrgState(org.state),
+        name: org.name,
+        primaryDomain: org.primaryDomain || '',
+      },
     };
   }
 
