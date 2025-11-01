@@ -836,3 +836,181 @@ export interface ListViewsRequest {}
 export interface ListViewsResponse {
   result: ProjectionView[];
 }
+
+// ============================================================================
+// Milestones & Events Types
+// ============================================================================
+
+export interface Milestone {
+  type: number;  // 1=instance, 2=org, 3=project, 4=user
+  instanceID: string;
+  reached: boolean;
+  pushedDate?: Date;
+  reachedDate?: Date;
+  name?: string;
+  aggregateID?: string;
+}
+
+export interface ListMilestonesRequest {}
+
+export interface ListMilestonesResponse {
+  result: Milestone[];
+}
+
+export interface EventRecord {
+  instanceID: string;
+  aggregateType: string;
+  aggregateID: string;
+  eventType: string;
+  aggregateVersion: string;
+  createdAt: Date;
+  creator: string;
+  owner: string;
+  position: string;
+  payload?: any;
+}
+
+export interface ListEventsRequest {
+  limit?: number;
+  aggregateTypes?: string[];
+  aggregateIDs?: string[];
+  eventTypes?: string[];
+  from?: Date;
+  to?: Date;
+}
+
+export interface ListEventsResponse {
+  events: EventRecord[];
+  totalCount?: number;
+}
+
+export interface ListEventTypesRequest {}
+
+export interface ListEventTypesResponse {
+  eventTypes: string[];
+}
+
+export interface ListAggregateTypesRequest {}
+
+export interface ListAggregateTypesResponse {
+  aggregateTypes: string[];
+}
+
+export interface FailedEventRecord {
+  id: string;
+  projectionName: string;
+  failedSequence: number;
+  failureCount: number;
+  error: string;
+  lastFailed: Date;
+  instanceID: string;
+}
+
+export interface ListFailedEventsRequest {
+  limit?: number;
+}
+
+export interface ListFailedEventsResponse {
+  failedEvents: FailedEventRecord[];
+}
+
+// ============================================================================
+// Feature Flags (Restrictions) Types
+// ============================================================================
+
+export interface Restrictions {
+  disallowPublicOrgRegistration: boolean;
+  allowedLanguages: string[];
+}
+
+export interface GetRestrictionsRequest {}
+
+export interface GetRestrictionsResponse {
+  restrictions: Restrictions;
+}
+
+export interface SetRestrictionsRequest {
+  disallowPublicOrgRegistration?: boolean;
+  allowedLanguages?: string[];
+}
+
+export interface SetRestrictionsResponse {
+  details: {
+    sequence: number;
+    changeDate: Date;
+  };
+}
+
+// ============================================================================
+// Import/Export Types
+// ============================================================================
+
+export interface ExportDataRequest {
+  /**
+   * Optional timeout in seconds (default: 60)
+   */
+  timeout?: number;
+  /**
+   * Export format (default: 'json')
+   */
+  format?: 'json' | 'yaml';
+}
+
+export interface ExportDataResponse {
+  /**
+   * Exported data as JSON string
+   */
+  data: string;
+  /**
+   * Export metadata
+   */
+  metadata: {
+    exportDate: Date;
+    instanceID: string;
+    format: string;
+    version: string;
+  };
+}
+
+export interface ImportDataRequest {
+  /**
+   * Data to import (JSON string)
+   */
+  data: string;
+  /**
+   * Import options
+   */
+  options?: {
+    /**
+     * Skip existing entities (default: false)
+     */
+    skipExisting?: boolean;
+    /**
+     * Validate only, don't import (default: false)
+     */
+    dryRun?: boolean;
+  };
+}
+
+export interface ImportDataResponse {
+  /**
+   * Import summary
+   */
+  summary: {
+    totalEntities: number;
+    imported: number;
+    skipped: number;
+    failed: number;
+  };
+  /**
+   * Import details
+   */
+  details: {
+    sequence: number;
+    changeDate: Date;
+  };
+  /**
+   * Errors encountered
+   */
+  errors?: string[];
+}

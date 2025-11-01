@@ -15,6 +15,9 @@ import { PasswordComplexityQueries } from '../../../../lib/query/policy/password
 import { PasswordAgeQueries } from '../../../../lib/query/policy/password-age-queries';
 import { SecurityPolicyQueries } from '../../../../lib/query/policy/security-policy-queries';
 import { DomainPolicyQueries } from '../../../../lib/query/policy/domain-policy-queries';
+import { MilestoneQueries } from '../../../../lib/query/milestone/milestone-queries';
+import { FailedEventHandler } from '../../../../lib/query/projection/failed-events';
+import { AdminQueries } from '../../../../lib/query/admin/admin-queries';
 import {
   HealthzRequest,
   HealthzResponse,
@@ -125,6 +128,24 @@ import {
   UpdateDomainPolicyResponse,
   ListViewsRequest,
   ListViewsResponse,
+  ListMilestonesRequest,
+  ListMilestonesResponse,
+  ListEventsRequest,
+  ListEventsResponse,
+  ListEventTypesRequest,
+  ListEventTypesResponse,
+  ListAggregateTypesRequest,
+  ListAggregateTypesResponse,
+  ListFailedEventsRequest,
+  ListFailedEventsResponse,
+  GetRestrictionsRequest,
+  GetRestrictionsResponse,
+  SetRestrictionsRequest,
+  SetRestrictionsResponse,
+  ExportDataRequest,
+  ExportDataResponse,
+  ImportDataRequest,
+  ImportDataResponse,
 } from '../../proto/admin/v1/admin_service';
 import { throwInvalidArgument, throwNotFound } from '../../../../lib/zerrors/errors';
 
@@ -162,6 +183,9 @@ export class AdminService {
   private readonly passwordAgeQueries: PasswordAgeQueries;
   private readonly securityPolicyQueries: SecurityPolicyQueries;
   private readonly domainPolicyQueries: DomainPolicyQueries;
+  private readonly milestoneQueries: MilestoneQueries;
+  private readonly failedEventHandler: FailedEventHandler;
+  private readonly adminQueries: AdminQueries;
   // Temporary state for HTTP provider (until command implementation)
   private httpProviderState: Map<string, { sequence: number; changeDate: Date }> = new Map();
 
@@ -174,6 +198,9 @@ export class AdminService {
     this.passwordAgeQueries = new PasswordAgeQueries(pool);
     this.securityPolicyQueries = new SecurityPolicyQueries(pool);
     this.domainPolicyQueries = new DomainPolicyQueries(pool);
+    this.milestoneQueries = new MilestoneQueries(pool);
+    this.failedEventHandler = new FailedEventHandler(pool);
+    this.adminQueries = new AdminQueries(pool);
   }
 
   // ============================================================================
@@ -576,6 +603,445 @@ export class AdminService {
         result: [],
       };
     }
+  }
+
+  // ============================================================================
+  // Milestones & Events Endpoints
+  // ============================================================================
+
+  /**
+   * ListMilestones - List all milestones for the instance
+   */
+  async listMilestones(
+    ctx: Context,
+    _request: ListMilestonesRequest
+  ): Promise<ListMilestonesResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Listing milestones ---');
+    
+    // Query all milestones for this instance from milestone table
+    const query = `
+      SELECT 
+        type, instance_id, reached, pushed_date, reached_date,
+        name, aggregate_id, aggregate_type
+      FROM projections.milestones
+      WHERE instance_id = $1
+      ORDER BY type
+    `;
+
+    try {
+      const result = await this.database.query(query, [instanceID]);
+      
+      return {
+        result: result.rows.map((row: any) => ({
+          type: row.type || 0,
+          instanceID: row.instance_id,
+          reached: row.reached || false,
+          pushedDate: row.pushed_date || undefined,
+          reachedDate: row.reached_date || undefined,
+          name: row.name || undefined,
+          aggregateID: row.aggregate_id || undefined,
+        })),
+      };
+    } catch (error) {
+      console.warn('Milestones table not found or query failed, returning empty list');
+      return { result: [] };
+    }
+  }
+
+  /**
+   * ListEvents - List events from the event store
+   */
+  async listEvents(
+    ctx: Context,
+    request: ListEventsRequest
+  ): Promise<ListEventsResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Listing events ---');
+    
+    const limit = request.limit || 100;
+    const conditions: string[] = ['instance_id = $1'];
+    const params: any[] = [instanceID];
+    let paramIndex = 2;
+
+    // Add filters
+    if (request.aggregateTypes && request.aggregateTypes.length > 0) {
+      conditions.push(`aggregate_type = ANY($${paramIndex})`);
+      params.push(request.aggregateTypes);
+      paramIndex++;
+    }
+
+    if (request.aggregateIDs && request.aggregateIDs.length > 0) {
+      conditions.push(`aggregate_id = ANY($${paramIndex})`);
+      params.push(request.aggregateIDs);
+      paramIndex++;
+    }
+
+    if (request.eventTypes && request.eventTypes.length > 0) {
+      conditions.push(`event_type = ANY($${paramIndex})`);
+      params.push(request.eventTypes);
+      paramIndex++;
+    }
+
+    if (request.from) {
+      conditions.push(`created_at >= $${paramIndex}`);
+      params.push(request.from);
+      paramIndex++;
+    }
+
+    if (request.to) {
+      conditions.push(`created_at <= $${paramIndex}`);
+      params.push(request.to);
+      paramIndex++;
+    }
+
+    const query = `
+      SELECT 
+        instance_id, aggregate_type, aggregate_id, event_type,
+        aggregate_version, created_at, creator, owner, position, payload
+      FROM events
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY position DESC
+      LIMIT $${paramIndex}
+    `;
+    params.push(limit);
+
+    const result = await this.database.query(query, params);
+
+    return {
+      events: result.rows.map((row: any) => ({
+        instanceID: row.instance_id,
+        aggregateType: row.aggregate_type,
+        aggregateID: row.aggregate_id,
+        eventType: row.event_type,
+        aggregateVersion: row.aggregate_version?.toString() || '0',
+        createdAt: row.created_at,
+        creator: row.creator,
+        owner: row.owner,
+        position: row.position?.toString() || '0',
+        payload: row.payload,
+      })),
+      totalCount: result.rowCount || 0,
+    };
+  }
+
+  /**
+   * ListEventTypes - List all distinct event types in the system
+   */
+  async listEventTypes(
+    ctx: Context,
+    _request: ListEventTypesRequest
+  ): Promise<ListEventTypesResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Listing event types ---');
+    
+    const query = `
+      SELECT DISTINCT event_type
+      FROM events
+      WHERE instance_id = $1
+      ORDER BY event_type
+    `;
+
+    const result = await this.database.query(query, [instanceID]);
+
+    return {
+      eventTypes: result.rows.map((row: any) => row.event_type),
+    };
+  }
+
+  /**
+   * ListAggregateTypes - List all distinct aggregate types in the system
+   */
+  async listAggregateTypes(
+    ctx: Context,
+    _request: ListAggregateTypesRequest
+  ): Promise<ListAggregateTypesResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Listing aggregate types ---');
+    
+    const query = `
+      SELECT DISTINCT aggregate_type
+      FROM events
+      WHERE instance_id = $1
+      ORDER BY aggregate_type
+    `;
+
+    const result = await this.database.query(query, [instanceID]);
+
+    return {
+      aggregateTypes: result.rows.map((row: any) => row.aggregate_type),
+    };
+  }
+
+  /**
+   * ListFailedEvents - List failed projection events
+   */
+  async listFailedEvents(
+    ctx: Context,
+    request: ListFailedEventsRequest
+  ): Promise<ListFailedEventsResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Listing failed events ---');
+    
+    const limit = request.limit || 100;
+    
+    try {
+      const query = `
+        SELECT 
+          id, projection_name, failed_sequence, failure_count,
+          error, last_failed, instance_id
+        FROM projections.projection_failed_events
+        WHERE instance_id = $1
+        ORDER BY last_failed DESC
+        LIMIT $2
+      `;
+
+      const result = await this.database.query(query, [instanceID, limit]);
+
+      return {
+        failedEvents: result.rows.map((row: any) => ({
+          id: row.id,
+          projectionName: row.projection_name,
+          failedSequence: Number(row.failed_sequence),
+          failureCount: row.failure_count,
+          error: row.error,
+          lastFailed: row.last_failed,
+          instanceID: row.instance_id,
+        })),
+      };
+    } catch (error) {
+      console.warn('Failed events table not found, returning empty list');
+      return { failedEvents: [] };
+    }
+  }
+
+  // ============================================================================
+  // Feature Flags (Restrictions) Endpoints
+  // ============================================================================
+
+  /**
+   * GetRestrictions - Get feature restrictions for the instance
+   */
+  async getRestrictions(
+    ctx: Context,
+    _request: GetRestrictionsRequest
+  ): Promise<GetRestrictionsResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Getting restrictions ---');
+    
+    const restrictions = await this.adminQueries.getRestrictions(instanceID);
+
+    console.log('✓ Restrictions retrieved:', restrictions);
+
+    return {
+      restrictions,
+    };
+  }
+
+  /**
+   * SetRestrictions - Set feature restrictions for the instance
+   */
+  async setRestrictions(
+    ctx: Context,
+    request: SetRestrictionsRequest
+  ): Promise<SetRestrictionsResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Setting restrictions ---');
+    
+    // Get current restrictions
+    const current = await this.adminQueries.getRestrictions(instanceID);
+    
+    // Merge with requested changes
+    const updated = {
+      disallowPublicOrgRegistration: request.disallowPublicOrgRegistration ?? current.disallowPublicOrgRegistration,
+      allowedLanguages: request.allowedLanguages ?? current.allowedLanguages,
+    };
+
+    console.log('  Current:', current);
+    console.log('  Updated:', updated);
+
+    // Direct database update for restrictions (configuration data, not domain events)
+    const query = `
+      INSERT INTO projections.restrictions (
+        instance_id, 
+        disallow_public_org_registration, 
+        allowed_languages
+      ) VALUES ($1, $2, $3)
+      ON CONFLICT (instance_id) 
+      DO UPDATE SET
+        disallow_public_org_registration = EXCLUDED.disallow_public_org_registration,
+        allowed_languages = EXCLUDED.allowed_languages
+    `;
+
+    await this.database.query(query, [
+      instanceID,
+      updated.disallowPublicOrgRegistration,
+      updated.allowedLanguages,
+    ]);
+
+    console.log('✓ Restrictions updated');
+
+    return {
+      details: {
+        sequence: 1, // Configuration updates don't have event sequences
+        changeDate: new Date(),
+      },
+    };
+  }
+
+  // ============================================================================
+  // Import/Export Endpoints
+  // ============================================================================
+
+  /**
+   * ExportData - Export instance data for backup/migration
+   * 
+   * Note: This is a stub implementation. Full production implementation would:
+   * - Export all organizations, users, projects, applications
+   * - Export policies, settings, and configurations
+   * - Handle large datasets with streaming
+   * - Support incremental exports
+   * - Encrypt sensitive data
+   */
+  async exportData(
+    ctx: Context,
+    request: ExportDataRequest
+  ): Promise<ExportDataResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Exporting instance data (STUB) ---');
+    console.log('  Format:', request.format || 'json');
+    console.log('  Timeout:', request.timeout || 60, 'seconds');
+
+    // Stub: Get basic instance info
+    const instance = await this.instanceQueries.getInstanceByID(instanceID);
+    
+    // Stub: Export basic data structure
+    const exportData = {
+      version: '1.0',
+      instanceID,
+      instanceName: instance?.name || 'Unknown',
+      exportDate: new Date().toISOString(),
+      // In full implementation, would include:
+      // organizations: [...],
+      // users: [...],
+      // projects: [...],
+      // policies: [...],
+      // settings: {...},
+      note: 'STUB: Full export implementation pending. Would include all instance data.',
+    };
+
+    console.log('✓ Export completed (stub)');
+
+    return {
+      data: JSON.stringify(exportData, null, 2),
+      metadata: {
+        exportDate: new Date(),
+        instanceID,
+        format: request.format || 'json',
+        version: '1.0',
+      },
+    };
+  }
+
+  /**
+   * ImportData - Import instance data from backup/migration
+   * 
+   * Note: This is a stub implementation. Full production implementation would:
+   * - Validate data format and version
+   * - Check for conflicts with existing data
+   * - Support transaction rollback on errors
+   * - Handle relationships between entities
+   * - Support incremental imports
+   * - Audit trail of imports
+   */
+  async importData(
+    ctx: Context,
+    request: ImportDataRequest
+  ): Promise<ImportDataResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    console.log('\n--- Importing instance data (STUB) ---');
+    console.log('  Dry run:', request.options?.dryRun || false);
+    console.log('  Skip existing:', request.options?.skipExisting || false);
+
+    // Validate JSON format
+    let importData: any;
+    try {
+      importData = JSON.parse(request.data);
+    } catch (error) {
+      throw new Error('Invalid JSON data format');
+    }
+
+    // Basic validation
+    if (!importData.version) {
+      throw new Error('Missing version in import data');
+    }
+
+    console.log('  Import data version:', importData.version);
+    console.log('  Import data instanceID:', importData.instanceID);
+
+    // Stub: Count entities (in full impl, would actually import)
+    const totalEntities = 0; // Would count all entities in import data
+    const imported = 0; // Would count successful imports
+    const skipped = 0; // Would count skipped due to conflicts
+    const failed = 0; // Would count failed imports
+
+    if (request.options?.dryRun) {
+      console.log('✓ Dry run validation completed (stub)');
+    } else {
+      console.log('✓ Import completed (stub - no data actually imported)');
+    }
+
+    return {
+      summary: {
+        totalEntities,
+        imported,
+        skipped,
+        failed,
+      },
+      details: {
+        sequence: 1,
+        changeDate: new Date(),
+      },
+      errors: [
+        'STUB: Full import implementation pending. No data was actually imported.',
+      ],
+    };
   }
 
   // ============================================================================

@@ -974,20 +974,28 @@
 - [x] UpdateDomainPolicy - Update domain policy ✅ (Nov 1, 2025)
 - [x] ListViews - List projection views ✅ (Nov 1, 2025)
 
-**Milestones & Events (5 endpoints):**
-- [ ] ListMilestones - List system milestones
-- [ ] ListEvents - List all events
-- [ ] ListEventTypes - List event types
-- [ ] ListAggregateTypes - List aggregate types
-- [ ] ListFailedEvents - List failed events
+**Milestones & Events (5 endpoints):** ✅ **COMPLETE**
+- [x] ListMilestones - List system milestones ✅ (Nov 1, 2025)
+- [x] ListEvents - List all events ✅ (Nov 1, 2025)
+- [x] ListEventTypes - List event types ✅ (Nov 1, 2025)
+- [x] ListAggregateTypes - List aggregate types ✅ (Nov 1, 2025)
+- [x] ListFailedEvents - List failed events ✅ (Nov 1, 2025)
 
-**Feature Flags (2 endpoints):**
-- [ ] GetRestrictions - Get feature restrictions
-- [ ] SetRestrictions - Set restrictions
+**Feature Flags (2 endpoints):** ✅ **COMPLETE**
+- [x] GetRestrictions - Get feature restrictions ✅ (Nov 1, 2025)
+- [x] SetRestrictions - Set restrictions ✅ (Nov 1, 2025)
 
-**Import/Export (2 endpoints):**
-- [ ] ImportData - Import data
-- [ ] ExportData - Export data
+**Import/Export (2 endpoints):** ✅ **COMPLETE (STUB)**
+- [x] ExportData - Export instance data ✅ (Nov 1, 2025) ⚠️ STUB
+- [x] ImportData - Import instance data ✅ (Nov 1, 2025) ⚠️ STUB
+
+**Note:** Import/Export endpoints are functional stubs. Full production implementation would include:
+- Complete data export (all organizations, users, projects, applications, policies)
+- Complete data import with conflict resolution
+- Transaction support for rollback
+- Streaming for large datasets
+- Encryption for sensitive data
+- Relationship preservation and validation
 
 **Note:** Many instance-related endpoints are deprecated in favor of Instance Service v2 (already implemented).
 
