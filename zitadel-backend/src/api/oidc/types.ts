@@ -55,6 +55,8 @@ export interface AuthorizationRequest {
   acr_values?: string;
   code_challenge?: string;
   code_challenge_method?: string;
+  // RFC 9126: Pushed Authorization Requests
+  request_uri?: string;
 }
 
 /**

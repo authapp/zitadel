@@ -1257,6 +1257,28 @@ export class Commands {
     require('./oauth/client-registration-commands').deleteClient;
 
   // ============================================================================
+  // Pushed Authorization Requests (RFC 9126) - Sprint 12-13 Phase 3
+  // ============================================================================
+  
+  /**
+   * Create pushed authorization request
+   */
+  createPushedAuthRequest: typeof import('./oauth/par-commands').createPushedAuthRequest = 
+    require('./oauth/par-commands').createPushedAuthRequest;
+  
+  /**
+   * Retrieve pushed authorization request
+   */
+  retrievePushedAuthRequest: typeof import('./oauth/par-commands').retrievePushedAuthRequest = 
+    require('./oauth/par-commands').retrievePushedAuthRequest;
+  
+  /**
+   * Cleanup expired PAR requests
+   */
+  cleanupExpiredPARRequests: typeof import('./oauth/par-commands').cleanupExpiredPARRequests = 
+    require('./oauth/par-commands').cleanupExpiredPARRequests;
+
+  // ============================================================================
   // Logout Commands (Phase 3 - Week 19-20)
   // ============================================================================
   

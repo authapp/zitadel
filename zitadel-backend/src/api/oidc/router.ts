@@ -14,6 +14,7 @@ import { introspectHandler } from './introspect';
 import { revokeHandler } from './revoke';
 import { handleDeviceAuthorization, handleDeviceUserApproval } from './device-authorization';
 import { handleClientRegistration, handleClientUpdate, handleClientDeletion } from './client-registration';
+import { handlePAR } from './par';
 import { asyncHandler } from '../middleware';
 import { Commands } from '@/lib/command/commands';
 import { DatabasePool } from '@/lib/database';
@@ -31,8 +32,13 @@ export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Rout
   router.get('/.well-known/jwks.json', asyncHandler(jwksHandler));
 
   // Authorization endpoint (supports both GET and POST)
-  router.get('/oauth/v2/authorize', asyncHandler(authorizeHandler));
-  router.post('/oauth/v2/authorize', asyncHandler(authorizeHandler));
+  // Pass commands for PAR support (RFC 9126)
+  router.get('/oauth/v2/authorize', asyncHandler(async (req, res, next) => {
+    await authorizeHandler(req, res, next, commands, pool);
+  }));
+  router.post('/oauth/v2/authorize', asyncHandler(async (req, res, next) => {
+    await authorizeHandler(req, res, next, commands, pool);
+  }));
 
   // Token endpoint
   router.post('/oauth/v2/token', asyncHandler(tokenHandler));
@@ -49,6 +55,7 @@ export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Rout
 
   // Device Authorization Flow (RFC 8628)
   // Dynamic Client Registration (RFC 7591)
+  // Pushed Authorization Requests (RFC 9126)
   // Only register routes if commands and pool are provided
   if (commands && pool) {
     router.post('/oauth/device_authorization', async (req, res) => {
@@ -71,6 +78,11 @@ export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Rout
 
     router.delete('/oauth/register/:client_id', async (req, res) => {
       await handleClientDeletion(req, res, commands, pool);
+    });
+
+    // Pushed Authorization Requests (RFC 9126)
+    router.post('/oauth/par', async (req, res) => {
+      await handlePAR(req, res, commands, pool);
     });
   }
 

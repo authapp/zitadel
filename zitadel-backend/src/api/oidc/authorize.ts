@@ -3,12 +3,15 @@
  * 
  * OAuth 2.0 and OIDC authorization endpoint
  * Implements Authorization Code Flow and Implicit Flow
+ * Supports Pushed Authorization Requests (RFC 9126)
  */
 
 import { Request, Response, NextFunction } from 'express';
 import { createHash } from 'crypto';
 import { AuthorizationRequest } from './types';
 import { getTokenStore } from './token-store';
+import { Commands } from '@/lib/command/commands';
+import { DatabasePool } from '@/lib/database';
 
 /**
  * Validate authorization request
@@ -128,19 +131,86 @@ export function verifyCodeChallenge(
 }
 
 /**
+ * Retrieve PAR request if request_uri is provided
+ */
+async function retrievePARRequest(
+  requestURI: string,
+  commands: Commands,
+  instanceID: string
+): Promise<Partial<AuthorizationRequest> | null> {
+  try {
+    const ctx = {
+      instanceID,
+      orgID: '',
+      userID: undefined,
+    };
+    
+    const parRequest = await commands.retrievePushedAuthRequest(ctx, requestURI);
+    return parRequest;
+  } catch (error) {
+    console.error('[Authorize] Error retrieving PAR request:', error);
+    return null;
+  }
+}
+
+/**
  * Authorization endpoint handler
  * GET/POST /oauth/v2/authorize
  */
 export async function authorizeHandler(
   req: Request,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
+  commands?: Commands,
+  _pool?: DatabasePool
 ): Promise<void> {
   try {
     // Support both GET and POST
-    const params: Partial<AuthorizationRequest> =
+    let params: Partial<AuthorizationRequest> =
       req.method === 'POST' ? req.body : req.query;
+    
+    // RFC 9126: Check if request_uri is provided (PAR)
+    if (params.request_uri && commands) {
+      const instanceID = (req.headers['x-zitadel-instance'] as string) || 'default';
+      
+      // Retrieve stored PAR request
+      const parRequest = await retrievePARRequest(
+        params.request_uri,
+        commands,
+        instanceID
+      );
+      
+      if (!parRequest) {
+        res.status(400).json({
+          error: 'invalid_request_uri',
+          error_description: 'Invalid or expired request_uri',
+        });
+        return;
+      }
+      
+      // Use PAR parameters, but allow client_id to be in query for validation
+      params = {
+        ...parRequest,
+        client_id: params.client_id || parRequest.client_id,
+      };
+    }
 
+    // RFC 9126: If request_uri was used, only client_id should be in query
+    // All other parameters should come from PAR
+    if (req.query.request_uri || req.body.request_uri) {
+      const queryKeys = Object.keys(req.method === 'POST' ? req.body : req.query);
+      const allowedKeys = ['request_uri', 'client_id'];
+      const extraKeys = queryKeys.filter(k => !allowedKeys.includes(k));
+      
+      if (extraKeys.length > 0) {
+        res.status(400).json({
+          error: 'invalid_request',
+          error_description: 'When using request_uri, only client_id may be present in the query',
+        });
+        return;
+      }
+    }
+    
     // Validate request
     const validation = validateAuthorizationRequest(params);
     if (!validation.valid) {
