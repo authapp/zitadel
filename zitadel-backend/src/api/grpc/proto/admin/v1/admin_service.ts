@@ -375,3 +375,192 @@ export interface RemoveEmailProviderRequest {
 export interface RemoveEmailProviderResponse {
   details: ObjectDetails;
 }
+
+// ============================================================================
+// SMS Provider Types
+// ============================================================================
+
+export enum SMSProviderState {
+  SMS_PROVIDER_STATE_UNSPECIFIED = 0,
+  SMS_PROVIDER_STATE_INACTIVE = 1,
+  SMS_PROVIDER_STATE_ACTIVE = 2,
+}
+
+export interface SMSProvider {
+  id: string;
+  details: ObjectDetails;
+  state: SMSProviderState;
+  description: string;
+  twilioConfig?: TwilioSMSConfig;
+}
+
+export interface TwilioSMSConfig {
+  sid: string;
+  senderNumber: string;
+  verifyServiceSid?: string;
+}
+
+export interface GetSMSProviderRequest {}
+
+export interface GetSMSProviderResponse {
+  config: SMSProvider;
+}
+
+export interface AddSMSProviderTwilioRequest {
+  sid: string;
+  token: string;
+  senderNumber: string;
+  verifyServiceSid?: string;
+  description?: string;
+}
+
+export interface AddSMSProviderTwilioResponse {
+  details: ObjectDetails;
+  id: string;
+}
+
+export interface UpdateSMSProviderTwilioRequest {
+  id: string;
+  sid?: string;
+  token?: string;
+  senderNumber?: string;
+  verifyServiceSid?: string;
+  description?: string;
+}
+
+export interface UpdateSMSProviderTwilioResponse {
+  details: ObjectDetails;
+}
+
+export interface ActivateSMSProviderRequest {
+  id: string;
+}
+
+export interface ActivateSMSProviderResponse {
+  details: ObjectDetails;
+}
+
+export interface RemoveSMSProviderRequest {
+  id: string;
+}
+
+export interface RemoveSMSProviderResponse {
+  details: ObjectDetails;
+}
+
+// ============================================================================
+// Identity Provider (IDP) Types
+// ============================================================================
+
+export enum IDPType {
+  UNSPECIFIED = 0,
+  OIDC = 1,
+  OAUTH = 2,
+  LDAP = 3,
+  SAML = 4,
+  JWT = 5,
+  AZURE = 6,
+  GOOGLE = 7,
+  APPLE = 8,
+}
+
+export enum IDPState {
+  UNSPECIFIED = 0,
+  ACTIVE = 1,
+  INACTIVE = 2,
+  REMOVED = 3,
+}
+
+export interface IDP {
+  id: string;
+  details: ObjectDetails;
+  name: string;
+  type: IDPType;
+  state: IDPState;
+  stylingType?: number;
+  isCreationAllowed: boolean;
+  isLinkingAllowed: boolean;
+  isAutoCreation: boolean;
+  isAutoUpdate: boolean;
+  // Type-specific config stored as JSONB
+  config?: any;
+}
+
+export interface ListIDPsRequest {
+  query?: {
+    offset?: number;
+    limit?: number;
+    name?: string;
+    type?: IDPType;
+  };
+}
+
+export interface ListIDPsResponse {
+  idps: IDP[];
+  totalResults: number;
+}
+
+export interface GetIDPRequest {
+  id: string;
+}
+
+export interface GetIDPResponse {
+  idp: IDP;
+}
+
+export interface AddOIDCIDPRequest {
+  name: string;
+  clientId: string;
+  clientSecret: string;
+  issuer: string;
+  scopes?: string[];
+  displayNameMapping?: string;
+  usernameMapping?: string;
+  isCreationAllowed?: boolean;
+  isLinkingAllowed?: boolean;
+  isAutoCreation?: boolean;
+  isAutoUpdate?: boolean;
+}
+
+export interface AddOIDCIDPResponse {
+  details: ObjectDetails;
+  id: string;
+}
+
+export interface AddOAuthIDPRequest {
+  name: string;
+  clientId: string;
+  clientSecret: string;
+  authorizationEndpoint: string;
+  tokenEndpoint: string;
+  userEndpoint: string;
+  scopes?: string[];
+  idAttribute?: string;
+  isCreationAllowed?: boolean;
+  isLinkingAllowed?: boolean;
+  isAutoCreation?: boolean;
+  isAutoUpdate?: boolean;
+}
+
+export interface AddOAuthIDPResponse {
+  details: ObjectDetails;
+  id: string;
+}
+
+export interface UpdateIDPRequest {
+  id: string;
+  name?: string;
+  stylingType?: number;
+}
+
+export interface UpdateIDPResponse {
+  details: ObjectDetails;
+}
+
+export interface RemoveIDPRequest {
+  id: string;
+}
+
+export interface RemoveIDPResponse {
+  details: ObjectDetails;
+}

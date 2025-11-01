@@ -133,7 +133,7 @@ export async function addSMTPConfigToOrg(
   ctx: Context,
   orgID: string,
   data: SMTPConfigData
-): Promise<ObjectDetails> {
+): Promise<{ details: ObjectDetails; configID: string }> {
   // 1. Validation
   validateRequired(orgID, 'orgID');
   validateSMTPConfig(data);
@@ -177,7 +177,10 @@ export async function addSMTPConfigToOrg(
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
 
-  return writeModelToObjectDetails(wm);
+  return {
+    details: writeModelToObjectDetails(wm),
+    configID: configID,
+  };
 }
 
 /**

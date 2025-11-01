@@ -894,7 +894,7 @@
 
 ### Sprint 15: Admin API (Week 16)
 
-**Status:** 🚧 **IN PROGRESS** | System & Health (10/10) ✅ | Secret Gen (5/5) ✅ | Email Providers (9/9) ✅
+**Status:** 🚧 **IN PROGRESS** | System (10/10) ✅ | Secret Gen (5/5) ✅ | Email (9/9) ✅ | SMS (5/5) ✅
 
 **Overview:** System-level administration APIs for managing ZITADEL instance configuration, settings, and global policies.
 
@@ -930,20 +930,20 @@
 - [x] ActivateEmailProvider - Activate provider ✅ (Nov 1, 2025)
 - [x] RemoveEmailProvider - Remove provider ✅ (Nov 1, 2025)
 
-**SMS Providers (5 endpoints):**
-- [ ] GetSMSProvider - Get active SMS provider
-- [ ] AddSMSProviderTwilio - Add Twilio provider
-- [ ] UpdateSMSProviderTwilio - Update Twilio
-- [ ] ActivateSMSProvider - Activate provider
-- [ ] RemoveSMSProvider - Remove provider
+**SMS Providers (5 endpoints):** ✅ **COMPLETE**
+- [x] GetSMSProvider - Get active SMS provider ✅ (Nov 1, 2025)
+- [x] AddSMSProviderTwilio - Add Twilio provider ✅ (Nov 1, 2025)
+- [x] UpdateSMSProviderTwilio - Update Twilio ✅ (Nov 1, 2025)
+- [x] ActivateSMSProvider - Activate provider ✅ (Nov 1, 2025)
+- [x] RemoveSMSProvider - Remove provider ✅ (Nov 1, 2025)
 
-**Identity Providers (6 endpoints):**
-- [ ] GetDefaultIDPSettings - Get default IDP config
-- [ ] AddDefaultIDPSettings - Add IDP settings
-- [ ] UpdateDefaultIDPSettings - Update settings
-- [ ] ListIDPs - List all IDPs
-- [ ] AddOIDCIDP - Add OIDC provider
-- [ ] UpdateIDP - Update IDP configuration
+**Identity Providers (6 endpoints):** ✅ **COMPLETE** (Nov 1, 2025)
+- [x] ListIDPs - List all IDPs ✅
+- [x] GetIDP - Get single IDP ✅
+- [x] AddOIDCIDP - Add OIDC provider ✅
+- [x] AddOAuthIDP - Add OAuth provider ✅
+- [x] UpdateIDP - Update IDP configuration ✅
+- [x] RemoveIDP - Remove IDP ✅
 
 **Login & Branding (8 endpoints):**
 - [ ] GetDefaultLoginPolicy - Get login policy

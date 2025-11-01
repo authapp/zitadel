@@ -146,7 +146,7 @@ export async function addTwilioSMSConfigToOrg(
   ctx: Context,
   orgID: string,
   data: TwilioSMSConfigData
-): Promise<ObjectDetails> {
+): Promise<{ details: ObjectDetails; configID: string }> {
   // 1. Validation
   validateRequired(orgID, 'orgID');
   validateTwilioConfig(data);
@@ -187,7 +187,10 @@ export async function addTwilioSMSConfigToOrg(
   const event = await this.getEventstore().push(command);
   appendAndReduce(wm, event);
 
-  return writeModelToObjectDetails(wm);
+  return {
+    details: writeModelToObjectDetails(wm),
+    configID: configID,
+  };
 }
 
 /**

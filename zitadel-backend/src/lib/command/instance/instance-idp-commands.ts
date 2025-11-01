@@ -126,7 +126,7 @@ export async function addOIDCIDPToInstance(
   ctx: Context,
   instanceID: string,
   data: InstanceOIDCIDPData
-): Promise<ObjectDetails> {
+): Promise<{ details: ObjectDetails; idpID: string }> {
   // 1. Validation
   validateRequired(instanceID, 'instanceID');
   validateIDPName(data.name);
@@ -135,12 +135,11 @@ export async function addOIDCIDPToInstance(
   validateRequired(data.issuer, 'issuer');
 
   // 2. Generate ID if not provided
-  if (!data.idpID) {
-    data.idpID = await this.nextID();
-  }
+  const idpID = data.idpID || await this.nextID();
+  data.idpID = idpID;
 
   // 3. Check if IDP already exists
-  const idpWM = new InstanceIDPWriteModel(instanceID, data.idpID);
+  const idpWM = new InstanceIDPWriteModel(instanceID, idpID);
   await idpWM.load(this.getEventstore(), instanceID, instanceID);
 
   if (idpWM.state === IDPState.ACTIVE) {
@@ -159,7 +158,7 @@ export async function addOIDCIDPToInstance(
     instanceID: instanceID,
     creator: ctx.userID || 'system',
     payload: {
-      id: data.idpID,
+      id: idpID,
       name: data.name,
       type: IDPType.OIDC,
       stylingType: data.stylingType || 0,
@@ -180,7 +179,10 @@ export async function addOIDCIDPToInstance(
   const event = await this.getEventstore().push(command);
   appendAndReduce(idpWM, event);
 
-  return writeModelToObjectDetails(idpWM);
+  return {
+    details: writeModelToObjectDetails(idpWM),
+    idpID: idpID,
+  };
 }
 
 /**
@@ -192,7 +194,7 @@ export async function addOAuthIDPToInstance(
   ctx: Context,
   instanceID: string,
   data: InstanceOAuthIDPData
-): Promise<ObjectDetails> {
+): Promise<{ details: ObjectDetails; idpID: string }> {
   // 1. Validation
   validateRequired(instanceID, 'instanceID');
   validateIDPName(data.name);
@@ -203,12 +205,11 @@ export async function addOAuthIDPToInstance(
   validateRequired(data.userEndpoint, 'userEndpoint');
 
   // 2. Generate ID if not provided
-  if (!data.idpID) {
-    data.idpID = await this.nextID();
-  }
+  const idpID = data.idpID || await this.nextID();
+  data.idpID = idpID;
 
   // 3. Check if IDP already exists
-  const idpWM = new InstanceIDPWriteModel(instanceID, data.idpID);
+  const idpWM = new InstanceIDPWriteModel(instanceID, idpID);
   await idpWM.load(this.getEventstore(), instanceID, instanceID);
 
   if (idpWM.state === IDPState.ACTIVE) {
@@ -227,7 +228,7 @@ export async function addOAuthIDPToInstance(
     instanceID: instanceID,
     creator: ctx.userID || 'system',
     payload: {
-      id: data.idpID,
+      id: idpID,
       name: data.name,
       type: IDPType.OAUTH,
       stylingType: data.stylingType || 0,
@@ -249,7 +250,10 @@ export async function addOAuthIDPToInstance(
   const event = await this.getEventstore().push(command);
   appendAndReduce(idpWM, event);
 
-  return writeModelToObjectDetails(idpWM);
+  return {
+    details: writeModelToObjectDetails(idpWM),
+    idpID: idpID,
+  };
 }
 
 /**
