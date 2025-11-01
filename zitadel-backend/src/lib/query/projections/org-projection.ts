@@ -75,7 +75,12 @@ export class OrgProjection extends Projection {
       `INSERT INTO projections.orgs (
         id, instance_id, name, state, resource_owner, created_at, updated_at, change_date, sequence
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (instance_id, id) DO NOTHING`,
+      ON CONFLICT (instance_id, id) DO UPDATE SET
+        name = EXCLUDED.name,
+        state = EXCLUDED.state,
+        updated_at = EXCLUDED.updated_at,
+        change_date = EXCLUDED.change_date,
+        sequence = EXCLUDED.sequence`,
       [
         event.aggregateID,
         event.instanceID || 'default',

@@ -496,6 +496,56 @@ export async function removeInstanceMember(
 }
 
 /**
+ * Set default language command
+ */
+export async function setDefaultLanguage(
+  this: Commands,
+  ctx: Context,
+  instanceID: string,
+  language: string
+): Promise<ObjectDetails> {
+  // 1. Validate input
+  if (!language || !language.trim()) {
+    throwInvalidArgument('language is required', 'COMMAND-Instance90');
+  }
+
+  // 2. Load instance write model
+  const wm = new InstanceWriteModel();
+  await wm.load(this.getEventstore(), instanceID, instanceID);
+
+  if (wm.state === InstanceState.UNSPECIFIED) {
+    throwNotFound('instance not found', 'COMMAND-Instance91');
+  }
+
+  // 3. Check permissions
+  await this.checkPermission(ctx, 'instance.write', 'update', instanceID);
+
+  // 4. Check if language is already set to this value (idempotency)
+  if (wm.defaultLanguage === language) {
+    return writeModelToObjectDetails(wm);
+  }
+
+  // 5. Create command
+  const command: Command = {
+    eventType: 'instance.defaultLanguage.set',
+    aggregateType: 'instance',
+    aggregateID: instanceID,
+    owner: instanceID,
+    instanceID: instanceID,
+    creator: ctx.userID || 'system',
+    payload: {
+      language,
+    },
+  };
+
+  // 6. Push event
+  const event = await this.getEventstore().push(command);
+  appendAndReduce(wm, event);
+
+  return writeModelToObjectDetails(wm);
+}
+
+/**
  * Remove instance permanently
  * Based on Go: RemoveInstance (instance.go:975-998)
  * 

@@ -40,6 +40,10 @@ export class InstanceProjection extends Projection {
       case 'instance.features.reset':
         await this.handleInstanceFeaturesReset(event);
         break;
+      
+      case 'instance.defaultLanguage.set':
+        await this.handleDefaultLanguageSet(event);
+        break;
     }
   }
 
@@ -192,6 +196,26 @@ export class InstanceProjection extends Projection {
       [
         event.aggregateID,
         JSON.stringify({}),
+        event.createdAt,
+        event.createdAt,
+        Number(event.aggregateVersion || 1n),
+      ]
+    );
+  }
+
+  private async handleDefaultLanguageSet(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    
+    await this.database.query(
+      `UPDATE projections.instances SET
+        default_language = $2,
+        updated_at = $3,
+        change_date = $4,
+        sequence = $5
+      WHERE id = $1`,
+      [
+        event.aggregateID,
+        payload.language,
         event.createdAt,
         event.createdAt,
         Number(event.aggregateVersion || 1n),

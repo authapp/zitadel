@@ -14,6 +14,8 @@ import {
   InstanceTrustedDomainSearchQuery,
   InstanceTrustedDomainSearchResult,
   InstanceFeatures,
+  InstanceSearchQuery,
+  InstanceSearchResult,
 } from './instance-types';
 
 export class InstanceQueries {
@@ -72,6 +74,82 @@ export class InstanceQueries {
 
     const instanceID = domainResult.rows[0].instance_id;
     return this.getInstanceByID(instanceID);
+  }
+
+  /**
+   * Search instances with filters
+   */
+  async searchInstances(query: InstanceSearchQuery): Promise<InstanceSearchResult> {
+    const conditions: string[] = [];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (query.instanceIDs && query.instanceIDs.length > 0) {
+      conditions.push(`i.id = ANY($${paramIndex++})`);
+      params.push(query.instanceIDs);
+    }
+
+    if (query.name) {
+      conditions.push(`i.name ILIKE $${paramIndex++}`);
+      params.push(`%${query.name}%`);
+    }
+
+    if (query.state) {
+      conditions.push(`i.state = $${paramIndex++}`);
+      params.push(query.state);
+    }
+
+    if (query.hasDefaultOrg !== undefined) {
+      if (query.hasDefaultOrg) {
+        conditions.push(`i.default_org_id IS NOT NULL`);
+      } else {
+        conditions.push(`i.default_org_id IS NULL`);
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    // Get total count
+    const countResult = await this.database.query<{ count: string }>(
+      `SELECT COUNT(*) as count
+      FROM projections.instances i
+      ${whereClause}`,
+      params
+    );
+    const total = parseInt(countResult.rows[0]?.count || '0', 10);
+
+    // Get paginated results
+    const limit = query.limit || 50;
+    const offset = query.offset || 0;
+
+    const result = await this.database.query<any>(
+      `SELECT 
+        i.id,
+        i.name,
+        i.default_org_id,
+        i.default_language,
+        i.state,
+        i.features,
+        i.created_at,
+        i.updated_at,
+        i.sequence
+      FROM projections.instances i
+      ${whereClause}
+      ORDER BY i.created_at DESC
+      LIMIT $${paramIndex++} OFFSET $${paramIndex++}`,
+      [...params, limit, offset]
+    );
+
+    // For each instance, get domains and trusted domains
+    const instances = await Promise.all(
+      result.rows.map(async (row) => {
+        const domains = await this.getInstanceDomainsByInstanceID(row.id);
+        const trustedDomains = await this.getInstanceTrustedDomainsByInstanceID(row.id);
+        return this.mapRowToInstance(row, domains, trustedDomains);
+      })
+    );
+
+    return { instances, total };
   }
 
   /**

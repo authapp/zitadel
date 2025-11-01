@@ -858,12 +858,13 @@
 
 ### Sprint 14: Instance API (Week 15)
 
-**Status:** ✅ **100% COMPLETE** | All Tests Passing (18/18)
+**Status:** ✅ **100% COMPLETE** | All Tests Passing (19/19)
 
-**Endpoints (16 endpoints implemented):**
+**Endpoints (17 endpoints implemented):**
 - [x] SetupInstance - Create new instance with default org and admin
 - [x] GetInstance - Retrieve instance by ID (with query layer)
 - [x] RemoveInstance - Delete instance (destructive)
+- [x] ListInstances - List all instances with filters (with query layer)
 - [x] AddInstanceDomain - Add domain to instance
 - [x] SetDefaultInstanceDomain - Set primary domain
 - [x] RemoveInstanceDomain - Remove non-default domain
@@ -875,17 +876,17 @@
 - [x] UpdateInstanceMember - Update member roles
 - [x] RemoveInstanceMember - Remove IAM admin
 - [x] ListInstanceMembers - List all members (with query layer)
-- [ ] ListInstances - Deferred to Admin API
 
 **Files Created:**
 - `src/api/grpc/proto/instance/v2/instance_service.ts` (+239 lines)
-- `src/api/grpc/instance/v2/instance_service.ts` (+498 lines)
+- `src/api/grpc/instance/v2/instance_service.ts` (+538 lines)
 - `src/api/grpc/instance/v2/converters.ts` (+132 lines)
-- `test/integration/api/grpc/instance-service.integration.test.ts` (+745 lines)
+- `src/lib/query/instance/instance-queries.ts` (+71 lines for searchInstances)
+- `test/integration/api/grpc/instance-service.integration.test.ts` (+790 lines)
 
-**Total New Code:** ~1,614 lines
-**Tests:** 18/18 passing (100%)
-**Duration:** ~1 hour
+**Total New Code:** ~1,770 lines
+**Tests:** 19/19 passing (100%)
+**Duration:** ~1.5 hours
 
 **Completion Date:** November 1, 2025
 
@@ -893,15 +894,104 @@
 
 ### Sprint 15: Admin API (Week 16)
 
-**Endpoints (40+ endpoints):**
-- [ ] System-level user operations
-- [ ] Instance management
-- [ ] Global policy management
-- [ ] Feature flag management
-- [ ] Quota management
-- [ ] Audit log access
+**Status:** 🚧 **IN PROGRESS** | System & Health Complete (8/10)
 
-**Estimated Effort:** 1 week
+**Overview:** System-level administration APIs for managing ZITADEL instance configuration, settings, and global policies.
+
+**Endpoint Categories:**
+
+**System & Health (8/10 endpoints):**
+- [x] Healthz - System health check
+- [x] GetSupportedLanguages - Available languages
+- [x] GetAllowedLanguages - Restricted languages
+- [ ] SetDefaultLanguage - Configure default language (command needed)
+- [x] GetDefaultLanguage - Retrieve default language
+- [x] ListOrgs - List all organizations
+- [ ] GetOrgByID - Get specific org (projection timing issue)
+- [x] IsOrgUnique - Check uniqueness
+
+**Secret Generators (5 endpoints):**
+- [ ] ListSecretGenerators - List all generators
+- [ ] GetSecretGenerator - Get generator by type
+- [ ] UpdateSecretGenerator - Update generator config
+- [ ] GetSMTPConfig - Get SMTP configuration (deprecated)
+- [ ] UpdateSMTPConfig - Update SMTP (deprecated)
+
+**Email Providers (9 endpoints):**
+- [ ] ListEmailProviders - List all email providers
+- [ ] GetEmailProvider - Get active provider
+- [ ] GetEmailProviderById - Get specific provider
+- [ ] AddEmailProviderSMTP - Add SMTP provider
+- [ ] UpdateEmailProviderSMTP - Update SMTP provider
+- [ ] AddEmailProviderHTTP - Add HTTP provider
+- [ ] UpdateEmailProviderHTTP - Update HTTP provider
+- [ ] UpdateEmailProviderSMTPPassword - Update SMTP password
+- [ ] ActivateEmailProvider - Activate provider
+- [ ] RemoveEmailProvider - Remove provider
+
+**SMS Providers (5 endpoints):**
+- [ ] GetSMSProvider - Get active SMS provider
+- [ ] AddSMSProviderTwilio - Add Twilio provider
+- [ ] UpdateSMSProviderTwilio - Update Twilio
+- [ ] ActivateSMSProvider - Activate provider
+- [ ] RemoveSMSProvider - Remove provider
+
+**Identity Providers (6 endpoints):**
+- [ ] GetDefaultIDPSettings - Get default IDP config
+- [ ] AddDefaultIDPSettings - Add IDP settings
+- [ ] UpdateDefaultIDPSettings - Update settings
+- [ ] ListIDPs - List all IDPs
+- [ ] AddOIDCIDP - Add OIDC provider
+- [ ] UpdateIDP - Update IDP configuration
+
+**Login & Branding (8 endpoints):**
+- [ ] GetDefaultLoginPolicy - Get login policy
+- [ ] UpdateDefaultLoginPolicy - Update policy
+- [ ] GetLabelPolicy - Get branding config
+- [ ] UpdateLabelPolicy - Update branding
+- [ ] GetPrivacyPolicy - Get privacy policy
+- [ ] UpdatePrivacyPolicy - Update privacy
+- [ ] GetLockoutPolicy - Get lockout settings
+- [ ] UpdateLockoutPolicy - Update lockout
+
+**Password & Security (5 endpoints):**
+- [ ] GetPasswordComplexityPolicy - Get password rules
+- [ ] UpdatePasswordComplexityPolicy - Update rules
+- [ ] GetPasswordAgePolicy - Get age policy
+- [ ] UpdatePasswordAgePolicy - Update age policy
+- [ ] GetSecurityPolicy - Get security settings
+
+**Organizations (5 endpoints):**
+- [ ] ListOrgs - List all organizations
+- [ ] GetOrgByID - Get organization
+- [ ] IsOrgUnique - Check org uniqueness
+- [ ] SetDefaultOrg - Set default organization
+- [ ] GetDefaultOrg - Get default organization
+
+**Domain Settings (3 endpoints):**
+- [ ] GetDomainPolicy - Get domain policy
+- [ ] UpdateDomainPolicy - Update domain policy
+- [ ] ListViews - List projection views
+
+**Milestones & Events (5 endpoints):**
+- [ ] ListMilestones - List system milestones
+- [ ] ListEvents - List all events
+- [ ] ListEventTypes - List event types
+- [ ] ListAggregateTypes - List aggregate types
+- [ ] ListFailedEvents - List failed events
+
+**Feature Flags (2 endpoints):**
+- [ ] GetRestrictions - Get feature restrictions
+- [ ] SetRestrictions - Set restrictions
+
+**Import/Export (2 endpoints):**
+- [ ] ImportData - Import data
+- [ ] ExportData - Export data
+
+**Note:** Many instance-related endpoints are deprecated in favor of Instance Service v2 (already implemented).
+
+**Total Endpoints:** ~65 endpoints (non-deprecated)
+**Estimated Effort:** 1-2 weeks
 
 ---
 

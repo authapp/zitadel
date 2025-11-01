@@ -1477,6 +1477,12 @@ export class Commands {
     require('./instance/instance-commands').removeInstanceMember;
   
   /**
+   * Set default language for instance
+   */
+  setDefaultLanguage: typeof import('./instance/instance-commands').setDefaultLanguage = 
+    require('./instance/instance-commands').setDefaultLanguage;
+  
+  /**
    * Remove instance (destructive operation)
    */
   removeInstance: typeof import('./instance/instance-commands').removeInstance = 

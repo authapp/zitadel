@@ -209,6 +209,55 @@ describe('Instance Service - COMPREHENSIVE Integration Tests (Full Stack)', () =
     });
   });
 
+  describe('ListInstances', () => {
+    it('should list all instances', async () => {
+      const context = ctx.createContext();
+
+      // Setup multiple instances
+      const instance1Response = await instanceService.setupInstance(context, {
+        instanceName: `List Test Instance 1 ${Date.now()}`,
+        defaultOrgName: 'Test Org 1',
+        adminUser: {
+          username: `admin1-${Date.now()}`,
+          email: `admin1-${Date.now()}@test.com`,
+          firstName: 'Admin',
+          lastName: 'One',
+        },
+      });
+
+      const instance2Response = await instanceService.setupInstance(context, {
+        instanceName: `List Test Instance 2 ${Date.now()}`,
+        defaultOrgName: 'Test Org 2',
+        adminUser: {
+          username: `admin2-${Date.now()}`,
+          email: `admin2-${Date.now()}@test.com`,
+          firstName: 'Admin',
+          lastName: 'Two',
+        },
+      });
+
+      await processProjections();
+
+      console.log('\n--- Listing instances ---');
+
+      // List instances via gRPC service
+      const response = await instanceService.listInstances(context, {});
+
+      expect(response.result).toBeDefined();
+      expect(response.result.length).toBeGreaterThanOrEqual(2);
+      expect(response.details.totalResult).toBeGreaterThanOrEqual(2);
+
+      // Verify our created instances are in the list
+      const foundInstance1 = response.result.find((i: any) => i.id === instance1Response.instanceId);
+      const foundInstance2 = response.result.find((i: any) => i.id === instance2Response.instanceId);
+
+      expect(foundInstance1).toBeDefined();
+      expect(foundInstance2).toBeDefined();
+
+      console.log(`✓ Found ${response.result.length} instances`);
+    });
+  });
+
   describe('GetInstance', () => {
     it('should retrieve instance with domains through query layer', async () => {
       const context = ctx.createContext();

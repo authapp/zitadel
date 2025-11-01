@@ -170,6 +170,13 @@ export class InstanceWriteModel extends WriteModel {
         this.updatedAt = event.createdAt;
         break;
 
+      case 'instance.defaultLanguage.set':
+        if (event.payload?.language) {
+          this.defaultLanguage = event.payload.language;
+        }
+        this.updatedAt = event.createdAt;
+        break;
+
       case 'instance.removed':
         this.state = InstanceState.REMOVED;
         this.updatedAt = event.createdAt;

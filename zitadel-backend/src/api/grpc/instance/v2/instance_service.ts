@@ -419,6 +419,49 @@ export class InstanceService {
   }
 
   /**
+   * ListInstances - List all instances with filters
+   */
+  async listInstances(
+    _ctx: Context,
+    request: { query?: any; queries?: any[] }
+  ): Promise<any> {
+    // Query instances from database
+    const result = await this.instanceQueries.searchInstances({
+      limit: request.query?.limit || 50,
+      offset: request.query?.offset || 0,
+    });
+
+    return {
+      details: {
+        totalResult: result.total,
+        processedSequence: 0,
+        timestamp: new Date(),
+      },
+      result: result.instances.map(i => ({
+        id: i.id,
+        details: {
+          sequence: i.sequence,
+          changeDate: i.updatedAt,
+          resourceOwner: i.id,
+        },
+        state: instanceStateToProto(i.state),
+        name: i.name,
+        version: '1.0.0',
+        domains: i.domains.map(d => ({
+          domain: d.domain,
+          details: {
+            sequence: d.sequence,
+            changeDate: d.updatedAt,
+            resourceOwner: i.id,
+          },
+          isGenerated: d.isGenerated,
+          isPrimary: d.isPrimary,
+        })),
+      })),
+    };
+  }
+
+  /**
    * ListInstanceDomains - List all domains for an instance
    */
   async listInstanceDomains(
