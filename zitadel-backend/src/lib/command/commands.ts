@@ -1235,6 +1235,28 @@ export class Commands {
     require('./oauth/oauth-token-commands').introspectOAuthToken;
 
   // ============================================================================
+  // Dynamic Client Registration (RFC 7591) - Sprint 12-13 Phase 2
+  // ============================================================================
+  
+  /**
+   * Register OAuth client dynamically
+   */
+  registerClient: typeof import('./oauth/client-registration-commands').registerClient = 
+    require('./oauth/client-registration-commands').registerClient;
+  
+  /**
+   * Update registered client
+   */
+  updateClient: typeof import('./oauth/client-registration-commands').updateClient = 
+    require('./oauth/client-registration-commands').updateClient;
+  
+  /**
+   * Delete registered client
+   */
+  deleteClient: typeof import('./oauth/client-registration-commands').deleteClient = 
+    require('./oauth/client-registration-commands').deleteClient;
+
+  // ============================================================================
   // Logout Commands (Phase 3 - Week 19-20)
   // ============================================================================
   

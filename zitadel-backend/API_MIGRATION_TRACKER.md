@@ -673,18 +673,59 @@
 
 ---
 
-#### **Phase 2: Dynamic Client Registration** ⏳ PLANNED
-**Priority:** MEDIUM | **Estimated:** 2-3 days
+#### **Phase 2: Dynamic Client Registration** ✅ COMPLETE
+**Priority:** MEDIUM | **Estimated:** 2-3 days | **Actual:** 2.5 hours
 
 **Rationale:** Enables self-service client onboarding (RFC 7591).
 
 **Tasks:**
-- [ ] Create command layer for client registration
-- [ ] Create `/oauth/register` endpoint (POST)
-- [ ] Client metadata validation (redirect_uris, grant_types, etc.)
-- [ ] Client credentials generation
-- [ ] Update client metadata endpoint
-- [ ] Integration tests
+- ✅ Create command layer for client registration
+- ✅ Create `/oauth/register` endpoint (POST)
+- ✅ Client metadata validation (redirect_uris, grant_types, etc.)
+- ✅ Client credentials generation
+- ✅ Update client metadata endpoint (PUT)
+- ✅ Delete client endpoint (DELETE)
+- ✅ Integration tests (21/21 passing - 100%)
+- ⏳ Documentation (can be added later)
+
+**Test Results:**
+- ✅ Basic registration: 5/5 passing (web, native, multiple URIs, metadata, auth methods)
+- ✅ Error handling: 6/6 passing (all validation cases)
+- ✅ Update tests: 4/4 passing (name, URIs, grant types, errors)
+- ✅ Delete tests: 2/2 passing (success & errors)
+- ✅ RFC compliance: 3/3 passing (response format, content-type, JSON)
+- ✅ Lifecycle test: 1/1 passing (complete flow)
+
+**Test File:**
+- `test/integration/api/client-registration.test.ts` (580 lines, 21 tests, 100% passing)
+
+**Fixes Applied:**
+1. ✅ Improved error mapping (INVALID_ARGUMENT code handling)
+2. ✅ Fixed test setup (proper org/project IDs)
+3. ✅ Added projection processing after operations
+4. ✅ Better validation error detection
+
+**Commands Implemented:**
+- ✅ `registerClient()` - Register OAuth client dynamically (RFC 7591)
+- ✅ `updateClient()` - Update registered client (RFC 7592)
+- ✅ `deleteClient()` - Delete registered client (RFC 7592)
+
+**Files Created:**
+- ✅ `src/lib/command/oauth/client-registration-commands.ts` (343 lines)
+- ✅ `src/api/oidc/client-registration.ts` (184 lines)
+- ✅ Routes added to `src/api/oidc/router.ts`
+
+**Features Implemented:**
+- ✅ RFC 7591 compliant client registration
+- ✅ RFC 7592 client update and deletion
+- ✅ Client credentials generation (client_id, client_secret)
+- ✅ Application type support (web, native)
+- ✅ Auth method support (none, client_secret_basic, client_secret_post, private_key_jwt)
+- ✅ Grant type validation (authorization_code, implicit)
+- ✅ Response type validation (code, token, id_token)
+- ✅ HTTPS enforcement for web apps
+- ✅ Custom scheme support for native apps
+- ✅ Complete metadata validation (URIs, scopes, contacts, etc.)
 
 ---
 

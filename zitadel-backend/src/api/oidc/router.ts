@@ -13,6 +13,7 @@ import { userinfoHandler } from './userinfo';
 import { introspectHandler } from './introspect';
 import { revokeHandler } from './revoke';
 import { handleDeviceAuthorization, handleDeviceUserApproval } from './device-authorization';
+import { handleClientRegistration, handleClientUpdate, handleClientDeletion } from './client-registration';
 import { asyncHandler } from '../middleware';
 import { Commands } from '@/lib/command/commands';
 import { DatabasePool } from '@/lib/database';
@@ -47,6 +48,7 @@ export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Rout
   router.post('/oauth/v2/revoke', asyncHandler(revokeHandler));
 
   // Device Authorization Flow (RFC 8628)
+  // Dynamic Client Registration (RFC 7591)
   // Only register routes if commands and pool are provided
   if (commands && pool) {
     router.post('/oauth/device_authorization', async (req, res) => {
@@ -55,6 +57,20 @@ export function createOIDCRouter(commands?: Commands, pool?: DatabasePool): Rout
 
     router.post('/oauth/device', async (req, res) => {
       await handleDeviceUserApproval(req, res, commands, pool);
+    });
+
+    // Dynamic Client Registration (RFC 7591)
+    router.post('/oauth/register', async (req, res) => {
+      await handleClientRegistration(req, res, commands, pool);
+    });
+
+    // Dynamic Client Management (RFC 7592)
+    router.put('/oauth/register/:client_id', async (req, res) => {
+      await handleClientUpdate(req, res, commands, pool);
+    });
+
+    router.delete('/oauth/register/:client_id', async (req, res) => {
+      await handleClientDeletion(req, res, commands, pool);
     });
   }
 
