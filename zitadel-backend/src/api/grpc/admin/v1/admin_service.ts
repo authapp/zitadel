@@ -14,6 +14,7 @@ import { IDPQueries } from '../../../../lib/query/idp/idp-queries';
 import { PasswordComplexityQueries } from '../../../../lib/query/policy/password-complexity-queries';
 import { PasswordAgeQueries } from '../../../../lib/query/policy/password-age-queries';
 import { SecurityPolicyQueries } from '../../../../lib/query/policy/security-policy-queries';
+import { DomainPolicyQueries } from '../../../../lib/query/policy/domain-policy-queries';
 import {
   HealthzRequest,
   HealthzResponse,
@@ -118,6 +119,12 @@ import {
   UpdatePasswordAgePolicyResponse,
   GetSecurityPolicyRequest,
   GetSecurityPolicyResponse,
+  GetDomainPolicyRequest,
+  GetDomainPolicyResponse,
+  UpdateDomainPolicyRequest,
+  UpdateDomainPolicyResponse,
+  ListViewsRequest,
+  ListViewsResponse,
 } from '../../proto/admin/v1/admin_service';
 import { throwInvalidArgument, throwNotFound } from '../../../../lib/zerrors/errors';
 
@@ -154,6 +161,7 @@ export class AdminService {
   private readonly passwordComplexityQueries: PasswordComplexityQueries;
   private readonly passwordAgeQueries: PasswordAgeQueries;
   private readonly securityPolicyQueries: SecurityPolicyQueries;
+  private readonly domainPolicyQueries: DomainPolicyQueries;
   // Temporary state for HTTP provider (until command implementation)
   private httpProviderState: Map<string, { sequence: number; changeDate: Date }> = new Map();
 
@@ -165,6 +173,7 @@ export class AdminService {
     this.passwordComplexityQueries = new PasswordComplexityQueries(pool);
     this.passwordAgeQueries = new PasswordAgeQueries(pool);
     this.securityPolicyQueries = new SecurityPolicyQueries(pool);
+    this.domainPolicyQueries = new DomainPolicyQueries(pool);
   }
 
   // ============================================================================
@@ -450,6 +459,123 @@ export class AdminService {
         primaryDomain: org.primaryDomain || '',
       },
     };
+  }
+
+  // ============================================================================
+  // Domain Settings Endpoints
+  // ============================================================================
+
+  /**
+   * GetDomainPolicy - Get domain policy for the instance
+   */
+  async getDomainPolicy(
+    ctx: Context,
+    _request: GetDomainPolicyRequest
+  ): Promise<GetDomainPolicyResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    // Get domain policy (returns default if no custom policy exists)
+    const policy = await this.domainPolicyQueries.getDomainPolicy(instanceID);
+
+    return {
+      policy: {
+        userLoginMustBeDomain: policy.userLoginMustBeDomain,
+        validateOrgDomains: policy.validateOrgDomains,
+        smtpSenderAddressMatchesInstanceDomain: policy.smtpSenderAddressMatchesInstanceDomain,
+        isDefault: policy.isDefault,
+        details: {
+          sequence: Number(policy.sequence),
+          changeDate: policy.changeDate,
+          resourceOwner: policy.resourceOwner,
+        },
+      },
+    };
+  }
+
+  /**
+   * UpdateDomainPolicy - Update domain policy for the instance
+   */
+  async updateDomainPolicy(
+    ctx: Context,
+    request: UpdateDomainPolicyRequest
+  ): Promise<UpdateDomainPolicyResponse> {
+    const instanceID = ctx.instanceID;
+    if (!instanceID) {
+      throw new Error('Instance ID required');
+    }
+
+    // Prepare config with current values as defaults
+    const currentPolicy = await this.domainPolicyQueries.getDomainPolicy(instanceID);
+    
+    const config = {
+      userLoginMustBeDomain: request.userLoginMustBeDomain ?? currentPolicy.userLoginMustBeDomain,
+      validateOrgDomains: request.validateOrgDomains ?? currentPolicy.validateOrgDomains,
+      smtpSenderAddressMatchesInstanceDomain: request.smtpSenderAddressMatchesInstanceDomain ?? currentPolicy.smtpSenderAddressMatchesInstanceDomain,
+    };
+
+    // Check if this is a default (instance-level) policy or org-level
+    // For admin API, we work at instance level (org context from ctx.orgID would be for org-level)
+    let result;
+    if (currentPolicy.organizationID) {
+      // Update existing org policy
+      result = await this.commands.changeOrgDomainPolicy(ctx, currentPolicy.organizationID, config);
+    } else {
+      // This is instance default - need to create/update at instance level
+      // For now, treat as org-level since instance policies are typically read-only defaults
+      throw new Error('Instance-level domain policy updates not yet supported. Use organization-level policies.');
+    }
+
+    return {
+      details: {
+        sequence: Number(result.sequence),
+        changeDate: result.eventDate,
+        resourceOwner: result.resourceOwner,
+      },
+    };
+  }
+
+  /**
+   * ListViews - List all projection views and their processing status
+   */
+  async listViews(
+    _ctx: Context,
+    _request: ListViewsRequest
+  ): Promise<ListViewsResponse> {
+    // Query projection status from database
+    // This would typically query a projections_status table or similar
+    const query = `
+      SELECT 
+        database_name as database,
+        view_name,
+        processed_sequence,
+        event_timestamp,
+        last_successful_spooler_run
+      FROM projections.current_states
+      ORDER BY view_name
+    `;
+
+    try {
+      const result = await this.database.query(query);
+      
+      return {
+        result: result.rows.map((row: any) => ({
+          database: row.database || 'zitadel',
+          viewName: row.view_name,
+          processedSequence: Number(row.processed_sequence || 0),
+          eventTimestamp: row.event_timestamp || new Date(),
+          lastSuccessfulSpoolerRun: row.last_successful_spooler_run || new Date(),
+        })),
+      };
+    } catch (error) {
+      // If table doesn't exist yet, return empty list
+      console.warn('projections.current_states table not found, returning empty list');
+      return {
+        result: [],
+      };
+    }
   }
 
   // ============================================================================

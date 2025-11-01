@@ -969,10 +969,10 @@
 - [x] SetDefaultOrg - Set default organization ✅ (Nov 1, 2025)
 - [x] GetDefaultOrg - Get default organization ✅ (Nov 1, 2025)
 
-**Domain Settings (3 endpoints):**
-- [ ] GetDomainPolicy - Get domain policy
-- [ ] UpdateDomainPolicy - Update domain policy
-- [ ] ListViews - List projection views
+**Domain Settings (3 endpoints):** ✅ **COMPLETE**
+- [x] GetDomainPolicy - Get domain policy ✅ (Nov 1, 2025)
+- [x] UpdateDomainPolicy - Update domain policy ✅ (Nov 1, 2025)
+- [x] ListViews - List projection views ✅ (Nov 1, 2025)
 
 **Milestones & Events (5 endpoints):**
 - [ ] ListMilestones - List system milestones

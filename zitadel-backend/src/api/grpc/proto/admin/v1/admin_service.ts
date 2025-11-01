@@ -790,3 +790,49 @@ export interface GetSecurityPolicyRequest {}
 export interface GetSecurityPolicyResponse {
   policy: SecurityPolicy;
 }
+
+// ============================================================================
+// Domain Policy Types
+// ============================================================================
+
+export interface DomainPolicy {
+  userLoginMustBeDomain: boolean;
+  validateOrgDomains: boolean;
+  smtpSenderAddressMatchesInstanceDomain: boolean;
+  isDefault?: boolean;
+  details?: ObjectDetails;
+}
+
+export interface GetDomainPolicyRequest {}
+
+export interface GetDomainPolicyResponse {
+  policy: DomainPolicy;
+}
+
+export interface UpdateDomainPolicyRequest {
+  userLoginMustBeDomain?: boolean;
+  validateOrgDomains?: boolean;
+  smtpSenderAddressMatchesInstanceDomain?: boolean;
+}
+
+export interface UpdateDomainPolicyResponse {
+  details: ObjectDetails;
+}
+
+// ============================================================================
+// Projection Views Types  
+// ============================================================================
+
+export interface ProjectionView {
+  database: string;
+  viewName: string;
+  processedSequence: number;
+  eventTimestamp: Date;
+  lastSuccessfulSpoolerRun: Date;
+}
+
+export interface ListViewsRequest {}
+
+export interface ListViewsResponse {
+  result: ProjectionView[];
+}
