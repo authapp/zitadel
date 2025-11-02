@@ -10,8 +10,8 @@
  */
 export enum ActionState {
   UNSPECIFIED = 0,
-  ACTIVE = 1,
-  INACTIVE = 2,
+  INACTIVE = 1,
+  ACTIVE = 2,
   REMOVED = 3,
 }
 
