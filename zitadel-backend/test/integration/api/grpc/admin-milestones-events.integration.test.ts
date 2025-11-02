@@ -118,11 +118,11 @@ describe('Admin Milestones & Events Endpoints - Integration Tests', () => {
       expect(response.events.length).toBeGreaterThan(0);
       
       const firstEvent = response.events[0];
-      expect(firstEvent.instanceID).toBe(context.instanceID);
+      expect(firstEvent.resourceOwner).toBeDefined();
       expect(firstEvent.aggregateType).toBeDefined();
-      expect(firstEvent.aggregateID).toBeDefined();
+      expect(firstEvent.aggregateId).toBeDefined();
       expect(firstEvent.eventType).toBeDefined();
-      expect(firstEvent.createdAt).toBeInstanceOf(Date);
+      expect(firstEvent.creationDate).toBeInstanceOf(Date);
       
       console.log(`✓ Events listed: ${response.events.length} events`);
       console.log('  Sample event:', {
@@ -322,23 +322,24 @@ describe('Admin Milestones & Events Endpoints - Integration Tests', () => {
       });
       
       expect(response).toBeDefined();
-      expect(response.failedEvents).toBeDefined();
-      expect(Array.isArray(response.failedEvents)).toBe(true);
+      expect(response.result).toBeDefined();
+      expect(Array.isArray(response.result)).toBe(true);
       
-      console.log(`✓ Failed events listed: ${response.failedEvents.length} failed events`);
+      console.log(`✓ Failed events listed: ${response.result.length} failed events`);
       
-      if (response.failedEvents.length > 0) {
-        const firstFailed = response.failedEvents[0];
-        expect(firstFailed.id).toBeDefined();
-        expect(firstFailed.projectionName).toBeDefined();
+      if (response.result.length > 0) {
+        const firstFailed = response.result[0];
+        expect(firstFailed.viewName).toBeDefined();
         expect(typeof firstFailed.failureCount).toBe('number');
-        expect(firstFailed.error).toBeDefined();
-        expect(firstFailed.lastFailed).toBeInstanceOf(Date);
+        expect(firstFailed.errorMessage).toBeDefined();
+        if (firstFailed.lastFailed) {
+          expect(firstFailed.lastFailed).toBeInstanceOf(Date);
+        }
         
         console.log('  Sample failed event:', {
-          projectionName: firstFailed.projectionName,
+          viewName: firstFailed.viewName,
           failureCount: firstFailed.failureCount,
-          error: firstFailed.error.substring(0, 50),
+          error: firstFailed.errorMessage.substring(0, 50),
         });
       } else {
         console.log('  (No failed events - table may not exist or be empty)');

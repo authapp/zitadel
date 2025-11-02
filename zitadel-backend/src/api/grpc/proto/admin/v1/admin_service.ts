@@ -820,24 +820,6 @@ export interface UpdateDomainPolicyResponse {
 }
 
 // ============================================================================
-// Projection Views Types  
-// ============================================================================
-
-export interface ProjectionView {
-  database: string;
-  viewName: string;
-  processedSequence: number;
-  eventTimestamp: Date;
-  lastSuccessfulSpoolerRun: Date;
-}
-
-export interface ListViewsRequest {}
-
-export interface ListViewsResponse {
-  result: ProjectionView[];
-}
-
-// ============================================================================
 // Milestones & Events Types
 // ============================================================================
 
@@ -880,8 +862,7 @@ export interface ListEventsRequest {
 }
 
 export interface ListEventsResponse {
-  events: EventRecord[];
-  totalCount?: number;
+  events: EventData[];
 }
 
 export interface ListEventTypesRequest {}
@@ -896,23 +877,28 @@ export interface ListAggregateTypesResponse {
   aggregateTypes: string[];
 }
 
-export interface FailedEventRecord {
-  id: string;
-  projectionName: string;
+export interface FailedEvent {
+  database: string;
+  viewName: string;
   failedSequence: number;
   failureCount: number;
-  error: string;
-  lastFailed: Date;
-  instanceID: string;
+  errorMessage: string;
+  lastFailed?: Date;
 }
 
-export interface ListFailedEventsRequest {
-  limit?: number;
-}
+export interface ListFailedEventsRequest {}
 
 export interface ListFailedEventsResponse {
-  failedEvents: FailedEventRecord[];
+  result: FailedEvent[];
 }
+
+export interface RemoveFailedEventRequest {
+  database: string;
+  viewName: string;
+  failedSequence: number;
+}
+
+export interface RemoveFailedEventResponse {}
 
 // ============================================================================
 // Feature Flags (Restrictions) Types
@@ -939,6 +925,132 @@ export interface SetRestrictionsResponse {
     sequence: number;
     changeDate: Date;
   };
+}
+
+// ============================================================================
+// System API Types (Sprint 16) - Aligned with Zitadel Go
+// ============================================================================
+
+/**
+ * View state (projection) for monitoring - matches Zitadel Go
+ */
+export interface View {
+  database: string;
+  viewName: string;
+  processedSequence: number;
+  eventTimestamp?: Date;
+  lastSuccessfulSpoolerRun?: Date;
+}
+
+export interface ListViewsRequest {}
+
+export interface ListViewsResponse {
+  result: View[];
+}
+
+/**
+ * Failed event tracking - matches Zitadel Go
+ */
+export interface FailedEvent {
+  database: string;
+  viewName: string;
+  failedSequence: number;
+  failureCount: number;
+  errorMessage: string;
+  lastFailed?: Date;
+}
+
+export interface ListFailedEventsRequest {}
+
+export interface ListFailedEventsResponse {
+  result: FailedEvent[];
+}
+
+export interface RemoveFailedEventRequest {
+  database: string;
+  viewName: string;
+  failedSequence: number;
+}
+
+export interface RemoveFailedEventResponse {}
+
+/**
+ * Event search - matches Zitadel Go
+ */
+export interface ListEventsRequest {
+  sequence?: number;
+  limit?: number;
+  asc?: boolean;
+  eventTypes?: string[];
+  aggregateTypes?: string[];
+  aggregateId?: string;
+  resourceOwner?: string;
+  editorUserId?: string;
+}
+
+export interface EventData {
+  sequence: number;
+  creationDate: Date;
+  eventType: string;
+  aggregateType: string;
+  aggregateId: string;
+  resourceOwner: string;
+  editorUserId?: string;
+  payload: any;
+}
+
+export interface ListEventsResponse {
+  events: EventData[];
+}
+
+export interface ListEventTypesRequest {}
+
+export interface ListEventTypesResponse {
+  eventTypes: string[];
+}
+
+export interface ListAggregateTypesRequest {}
+
+export interface ListAggregateTypesResponse {
+  aggregateTypes: string[];
+}
+
+// ============================================================================
+// Enhanced System Monitoring (Our Extensions - Not in Zitadel Go)
+// ============================================================================
+
+export interface GetSystemHealthRequest {}
+
+export interface GetSystemHealthResponse {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  checks: {
+    database: { status: string; responseTime?: number };
+    eventstore: { status: string; responseTime?: number };
+    projections: { status: string; healthy: number; unhealthy: number };
+  };
+  timestamp: Date;
+}
+
+export interface GetSystemMetricsRequest {}
+
+export interface GetSystemMetricsResponse {
+  metrics: {
+    totalEvents: number;
+    totalOrganizations: number;
+    totalUsers: number;
+    totalProjects: number;
+    projectionLag: number;
+  };
+  timestamp: Date;
+}
+
+export interface GetDatabaseStatusRequest {}
+
+export interface GetDatabaseStatusResponse {
+  connected: boolean;
+  version: string;
+  poolSize: number;
+  activeConnections: number;
 }
 
 // ============================================================================

@@ -15,9 +15,10 @@ import { PasswordComplexityQueries } from '../../../../lib/query/policy/password
 import { PasswordAgeQueries } from '../../../../lib/query/policy/password-age-queries';
 import { SecurityPolicyQueries } from '../../../../lib/query/policy/security-policy-queries';
 import { DomainPolicyQueries } from '../../../../lib/query/policy/domain-policy-queries';
-import { MilestoneQueries } from '../../../../lib/query/milestone/milestone-queries';
-import { FailedEventHandler } from '../../../../lib/query/projection/failed-events';
+// import { MilestoneQueries } from '../../../../lib/query/milestone/milestone-queries'; // TODO: Use for ListMilestones
+// import { FailedEventHandler } from '../../../../lib/query/projection/failed-events'; // TODO: Use for advanced operations
 import { AdminQueries } from '../../../../lib/query/admin/admin-queries';
+import { CurrentStateTracker } from '../../../../lib/query/projection/current-state';
 import {
   HealthzRequest,
   HealthzResponse,
@@ -35,10 +36,6 @@ import {
   GetOrgByIDResponse,
   IsOrgUniqueRequest,
   IsOrgUniqueResponse,
-  SetDefaultOrgRequest,
-  SetDefaultOrgResponse,
-  GetDefaultOrgRequest,
-  GetDefaultOrgResponse,
   OrgState,
   ListSecretGeneratorsRequest,
   ListSecretGeneratorsResponse,
@@ -136,8 +133,6 @@ import {
   ListEventTypesResponse,
   ListAggregateTypesRequest,
   ListAggregateTypesResponse,
-  ListFailedEventsRequest,
-  ListFailedEventsResponse,
   GetRestrictionsRequest,
   GetRestrictionsResponse,
   SetRestrictionsRequest,
@@ -146,6 +141,18 @@ import {
   ExportDataResponse,
   ImportDataRequest,
   ImportDataResponse,
+  // Additional types for failed events
+  ListFailedEventsRequest,
+  ListFailedEventsResponse,
+  RemoveFailedEventRequest,
+  RemoveFailedEventResponse,
+  // Enhanced monitoring (our extensions)
+  GetSystemHealthRequest,
+  GetSystemHealthResponse,
+  GetSystemMetricsRequest,
+  GetSystemMetricsResponse,
+  GetDatabaseStatusRequest,
+  GetDatabaseStatusResponse,
 } from '../../proto/admin/v1/admin_service';
 import { throwInvalidArgument, throwNotFound } from '../../../../lib/zerrors/errors';
 
@@ -183,9 +190,10 @@ export class AdminService {
   private readonly passwordAgeQueries: PasswordAgeQueries;
   private readonly securityPolicyQueries: SecurityPolicyQueries;
   private readonly domainPolicyQueries: DomainPolicyQueries;
-  private readonly milestoneQueries: MilestoneQueries;
-  private readonly failedEventHandler: FailedEventHandler;
+  // private readonly milestoneQueries: MilestoneQueries; // TODO: Use for ListMilestones
+  // private readonly failedEventHandler: FailedEventHandler; // TODO: Use for advanced failed event operations
   private readonly adminQueries: AdminQueries;
+  private readonly stateTracker: CurrentStateTracker;
   // Temporary state for HTTP provider (until command implementation)
   private httpProviderState: Map<string, { sequence: number; changeDate: Date }> = new Map();
 
@@ -198,9 +206,10 @@ export class AdminService {
     this.passwordAgeQueries = new PasswordAgeQueries(pool);
     this.securityPolicyQueries = new SecurityPolicyQueries(pool);
     this.domainPolicyQueries = new DomainPolicyQueries(pool);
-    this.milestoneQueries = new MilestoneQueries(pool);
-    this.failedEventHandler = new FailedEventHandler(pool);
+    // this.milestoneQueries = new MilestoneQueries(pool); // TODO: Re-enable when implementing ListMilestones
+    // this.failedEventHandler = new FailedEventHandler(pool); // TODO: Re-enable for advanced failed event operations
     this.adminQueries = new AdminQueries(pool);
+    this.stateTracker = new CurrentStateTracker(pool);
   }
 
   // ============================================================================
@@ -564,46 +573,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * ListViews - List all projection views and their processing status
-   */
-  async listViews(
-    _ctx: Context,
-    _request: ListViewsRequest
-  ): Promise<ListViewsResponse> {
-    // Query projection status from database
-    // This would typically query a projections_status table or similar
-    const query = `
-      SELECT 
-        database_name as database,
-        view_name,
-        processed_sequence,
-        event_timestamp,
-        last_successful_spooler_run
-      FROM projections.current_states
-      ORDER BY view_name
-    `;
-
-    try {
-      const result = await this.database.query(query);
-      
-      return {
-        result: result.rows.map((row: any) => ({
-          database: row.database || 'zitadel',
-          viewName: row.view_name,
-          processedSequence: Number(row.processed_sequence || 0),
-          eventTimestamp: row.event_timestamp || new Date(),
-          lastSuccessfulSpoolerRun: row.last_successful_spooler_run || new Date(),
-        })),
-      };
-    } catch (error) {
-      // If table doesn't exist yet, return empty list
-      console.warn('projections.current_states table not found, returning empty list');
-      return {
-        result: [],
-      };
-    }
-  }
 
   // ============================================================================
   // Milestones & Events Endpoints
@@ -718,18 +687,15 @@ export class AdminService {
 
     return {
       events: result.rows.map((row: any) => ({
-        instanceID: row.instance_id,
-        aggregateType: row.aggregate_type,
-        aggregateID: row.aggregate_id,
+        sequence: Number(row.position) || 0,
+        creationDate: row.created_at,
         eventType: row.event_type,
-        aggregateVersion: row.aggregate_version?.toString() || '0',
-        createdAt: row.created_at,
-        creator: row.creator,
-        owner: row.owner,
-        position: row.position?.toString() || '0',
+        aggregateType: row.aggregate_type,
+        aggregateId: row.aggregate_id,
+        resourceOwner: row.owner,
+        editorUserId: row.creator,
         payload: row.payload,
       })),
-      totalCount: result.rowCount || 0,
     };
   }
 
@@ -789,51 +755,6 @@ export class AdminService {
     };
   }
 
-  /**
-   * ListFailedEvents - List failed projection events
-   */
-  async listFailedEvents(
-    ctx: Context,
-    request: ListFailedEventsRequest
-  ): Promise<ListFailedEventsResponse> {
-    const instanceID = ctx.instanceID;
-    if (!instanceID) {
-      throw new Error('Instance ID required');
-    }
-
-    console.log('\n--- Listing failed events ---');
-    
-    const limit = request.limit || 100;
-    
-    try {
-      const query = `
-        SELECT 
-          id, projection_name, failed_sequence, failure_count,
-          error, last_failed, instance_id
-        FROM projections.projection_failed_events
-        WHERE instance_id = $1
-        ORDER BY last_failed DESC
-        LIMIT $2
-      `;
-
-      const result = await this.database.query(query, [instanceID, limit]);
-
-      return {
-        failedEvents: result.rows.map((row: any) => ({
-          id: row.id,
-          projectionName: row.projection_name,
-          failedSequence: Number(row.failed_sequence),
-          failureCount: row.failure_count,
-          error: row.error,
-          lastFailed: row.last_failed,
-          instanceID: row.instance_id,
-        })),
-      };
-    } catch (error) {
-      console.warn('Failed events table not found, returning empty list');
-      return { failedEvents: [] };
-    }
-  }
 
   // ============================================================================
   // Feature Flags (Restrictions) Endpoints
@@ -1041,6 +962,312 @@ export class AdminService {
       errors: [
         'STUB: Full import implementation pending. No data was actually imported.',
       ],
+    };
+  }
+
+  // ============================================================================
+  // System API Endpoints (Sprint 16)
+  // ============================================================================
+
+  /**
+   * GetSystemHealth - Comprehensive system health check
+   */
+  async getSystemHealth(
+    _ctx: Context,
+    _request: GetSystemHealthRequest
+  ): Promise<GetSystemHealthResponse> {
+    console.log('\n--- Checking system health ---');
+    
+    const checks = {
+      database: { status: 'unknown', responseTime: 0 },
+      eventstore: { status: 'unknown', responseTime: 0 },
+      projections: { status: 'unknown', healthy: 0, unhealthy: 0 },
+    };
+
+    // Check database
+    try {
+      const dbStart = Date.now();
+      await this.database.query('SELECT 1', []);
+      checks.database = {
+        status: 'healthy',
+        responseTime: Date.now() - dbStart,
+      };
+    } catch (error) {
+      checks.database = { status: 'unhealthy', responseTime: 0 };
+    }
+
+    // Check eventstore (via events table)
+    try {
+      const esStart = Date.now();
+      await this.database.query('SELECT COUNT(*) FROM public.events LIMIT 1', []);
+      checks.eventstore = {
+        status: 'healthy',
+        responseTime: Date.now() - esStart,
+      };
+    } catch (error) {
+      checks.eventstore = { status: 'unhealthy', responseTime: 0 };
+    }
+
+    // Check projections
+    try {
+      const states = await this.stateTracker.getAllProjectionStates();
+      let healthy = 0;
+      let unhealthy = 0;
+      
+      for (const state of states) {
+        // Consider healthy if processed recently (within last 5 minutes)
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        if (state.lastUpdated && new Date(state.lastUpdated) > fiveMinutesAgo) {
+          healthy++;
+        } else {
+          unhealthy++;
+        }
+      }
+      
+      checks.projections = {
+        status: unhealthy === 0 ? 'healthy' : 'degraded',
+        healthy,
+        unhealthy,
+      };
+    } catch (error) {
+      checks.projections = { status: 'unhealthy', healthy: 0, unhealthy: 0 };
+    }
+
+    // Determine overall status
+    let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    if (checks.database.status === 'unhealthy' || checks.eventstore.status === 'unhealthy') {
+      overallStatus = 'unhealthy';
+    } else if (checks.projections.status !== 'healthy') {
+      overallStatus = 'degraded';
+    }
+
+    console.log(`✓ System health: ${overallStatus}`);
+
+    return {
+      status: overallStatus,
+      checks,
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * GetSystemMetrics - Get system-wide metrics
+   */
+  async getSystemMetrics(
+    ctx: Context,
+    _request: GetSystemMetricsRequest
+  ): Promise<GetSystemMetricsResponse> {
+    const instanceID = ctx.instanceID || 'default';
+    
+    console.log('\n--- Gathering system metrics ---');
+
+    // Get event count
+    const eventResult = await this.database.query(
+      'SELECT COUNT(*) as count FROM public.events WHERE instance_id = $1',
+      [instanceID]
+    );
+    const totalEvents = Number(eventResult.rows[0]?.count || 0);
+
+    // Get organization count
+    const orgResult = await this.database.query(
+      'SELECT COUNT(*) as count FROM projections.orgs WHERE instance_id = $1 AND state = $2',
+      [instanceID, 'active']
+    );
+    const totalOrganizations = Number(orgResult.rows[0]?.count || 0);
+
+    // Get user count
+    const userResult = await this.database.query(
+      'SELECT COUNT(*) as count FROM projections.users WHERE instance_id = $1 AND state = $2',
+      [instanceID, 'active']
+    );
+    const totalUsers = Number(userResult.rows[0]?.count || 0);
+
+    // Get project count
+    const projectResult = await this.database.query(
+      'SELECT COUNT(*) as count FROM projections.projects WHERE instance_id = $1 AND state = $2',
+      [instanceID, 'active']
+    );
+    const totalProjects = Number(projectResult.rows[0]?.count || 0);
+
+    // Calculate max projection lag
+    let maxLag = 0;
+    try {
+      const latestEventResult = await this.database.query(
+        'SELECT MAX(position) as max_pos FROM public.events WHERE instance_id = $1',
+        [instanceID]
+      );
+      const latestPosition = Number(latestEventResult.rows[0]?.max_pos || 0);
+      
+      const states = await this.stateTracker.getAllProjectionStates();
+      for (const state of states) {
+        const lag = latestPosition - state.position;
+        if (lag > maxLag) {
+          maxLag = lag;
+        }
+      }
+    } catch (error) {
+      console.warn('Could not calculate projection lag:', error);
+    }
+
+    console.log('✓ Metrics gathered');
+
+    return {
+      metrics: {
+        totalEvents,
+        totalOrganizations,
+        totalUsers,
+        totalProjects,
+        projectionLag: maxLag,
+      },
+      timestamp: new Date(),
+    };
+  }
+
+  /**
+   * ListViews - List all projection states (Zitadel Go aligned)
+   */
+  async listViews(
+    _ctx: Context,
+    _request: ListViewsRequest
+  ): Promise<ListViewsResponse> {
+    console.log('\n--- Listing views (projections) ---');
+    
+    const states = await this.stateTracker.getAllProjectionStates();
+
+    const result = states.map(state => ({
+      database: this.database.constructor.name,
+      viewName: state.projectionName,
+      processedSequence: Number(state.position),
+      eventTimestamp: state.eventTimestamp || new Date(0),
+      lastSuccessfulSpoolerRun: state.lastUpdated || new Date(0),
+    }));
+
+    console.log(`✓ Found ${result.length} views`);
+
+    return { result };
+  }
+
+  /**
+   * ListFailedEvents - List failed projection events (Zitadel Go aligned)
+   */
+  async listFailedEvents(
+    ctx: Context,
+    _request: ListFailedEventsRequest
+  ): Promise<ListFailedEventsResponse> {
+    console.log('\n--- Listing failed events ---');
+    
+    const instanceID = ctx.instanceID || 'default';
+    
+    // Query failed events from database
+    const query = `
+      SELECT 
+        projection_name,
+        failed_sequence,
+        failure_count,
+        error,
+        last_failed
+      FROM projections.projection_failed_events
+      WHERE instance_id = $1
+      ORDER BY last_failed DESC
+    `;
+    
+    const queryResult = await this.database.query(query, [instanceID]);
+    
+    const result = queryResult.rows.map((row: any) => ({
+      database: this.database.constructor.name,
+      viewName: row.projection_name,
+      failedSequence: Number(row.failed_sequence),
+      failureCount: Number(row.failure_count),
+      errorMessage: row.error,
+      lastFailed: row.last_failed ? new Date(row.last_failed) : undefined,
+    }));
+
+    console.log(`✓ Found ${result.length} failed events`);
+
+    return { result };
+  }
+
+  /**
+   * RemoveFailedEvent - Remove a failed event (Zitadel Go aligned)
+   */
+  async removeFailedEvent(
+    ctx: Context,
+    request: RemoveFailedEventRequest
+  ): Promise<RemoveFailedEventResponse> {
+    console.log(`\n--- Removing failed event: ${request.viewName} @ ${request.failedSequence} ---`);
+    
+    const instanceID = ctx.instanceID || 'default';
+    
+    // Delete the failed event
+    const query = `
+      DELETE FROM projections.projection_failed_events
+      WHERE instance_id = $1
+        AND projection_name = $2
+        AND failed_sequence = $3
+    `;
+    
+    const result = await this.database.query(query, [
+      instanceID,
+      request.viewName,
+      request.failedSequence,
+    ]);
+    
+    if (result.rowCount === 0) {
+      console.log('⚠ Failed event not found');
+      throwNotFound('Failed event not found', 'ADMIN-FE01');
+    }
+    
+    console.log('✓ Failed event removed');
+
+    return {};
+  }
+
+  /**
+   * GetDatabaseStatus - Get database connection status
+   */
+  async getDatabaseStatus(
+    _ctx: Context,
+    _request: GetDatabaseStatusRequest
+  ): Promise<GetDatabaseStatusResponse> {
+    console.log('\n--- Checking database status ---');
+    
+    let connected = false;
+    let version = 'unknown';
+    let poolSize = 0;
+    let activeConnections = 0;
+
+    try {
+      // Check connection
+      await this.database.query('SELECT 1', []);
+      connected = true;
+
+      // Get PostgreSQL version
+      const versionResult = await this.database.query('SELECT version()', []);
+      version = versionResult.rows[0]?.version || 'unknown';
+      
+      // Get connection pool stats (if available)
+      try {
+        const poolStats = await this.database.query(
+          'SELECT count(*) as total FROM pg_stat_activity WHERE datname = current_database()',
+          []
+        );
+        activeConnections = Number(poolStats.rows[0]?.total || 0);
+      } catch (error) {
+        // Pool stats might not be available
+      }
+
+      poolSize = 10; // Default pool size (would get from config in production)
+    } catch (error) {
+      console.error('Database check failed:', error);
+    }
+
+    console.log(`✓ Database ${connected ? 'connected' : 'disconnected'}`);
+
+    return {
+      connected,
+      version,
+      poolSize,
+      activeConnections,
     };
   }
 
