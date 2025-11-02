@@ -8,6 +8,7 @@ import { InstanceDomainProjection, createInstanceDomainProjectionConfig } from '
 import { InstanceQueries } from '../../../../src/lib/query/instance/instance-queries';
 import { Command } from '../../../../src/lib/eventstore';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionsCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Instance Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -22,7 +23,7 @@ describe('Instance Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -51,6 +52,9 @@ describe('Instance Projection Integration Tests', () => {
     ]);
 
     instanceQueries = new InstanceQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -67,9 +71,10 @@ describe('Instance Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process (fast with 100ms polling)
-  const waitForProjection = (ms: number = 300) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projections to process events
+  const waitForEvents = async () => {
+    await waitForProjectionsCatchUp(registry, eventstore, ['instance_projection', 'instance_domain_projection'], 8000);
+  };
 
   describe('Instance Events', () => {
     it('should process instance.added event', async () => {
@@ -96,7 +101,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -109,7 +114,7 @@ describe('Instance Projection Integration Tests', () => {
         loginDefaultOrg: true,
         actions: true,
       });
-    }, 5000);
+    }, 10000);
 
     it('should process instance.changed event', async () => {
       const instanceID = generateId();
@@ -147,7 +152,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -155,7 +160,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(instance!.name).toBe('Updated Name');
       expect(instance!.defaultOrgID).toBe(defaultOrgID);
       expect(instance!.defaultLanguage).toBe('de');
-    }, 5000);
+    }, 10000);
 
     it('should process instance.removed event', async () => {
       const instanceID = generateId();
@@ -189,13 +194,13 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
       expect(instance).toBeTruthy();
       expect(instance!.state).toBe('removed');
-    }, 5000);
+    }, 10000);
 
     it('should process instance.features.set event', async () => {
       const instanceID = generateId();
@@ -234,7 +239,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const features = await instanceQueries.getInstanceFeatures(instanceID);
       
@@ -242,7 +247,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(features!.loginDefaultOrg).toBe(true);
       expect(features!.tokenExchange).toBe(true);
       expect(features!.improvedPerformance).toEqual(['caching', 'indexing']);
-    }, 5000);
+    }, 10000);
   });
 
   describe('Instance Domain Events', () => {
@@ -280,7 +285,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -289,7 +294,7 @@ describe('Instance Projection Integration Tests', () => {
       expect(instance!.domains[0].domain).toBe('example.com');
       expect(instance!.domains[0].isPrimary).toBe(true);
       expect(instance!.primaryDomain).toBe('example.com');
-    }, 5000);
+    }, 10000);
 
     it('should resolve instance by host', async () => {
       const instanceID = generateId();
@@ -326,14 +331,14 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByHost(domain);
       
       expect(instance).toBeTruthy();
       expect(instance!.id).toBe(instanceID);
       expect(instance!.name).toBe('Host Resolution Test');
-    }, 5000);
+    }, 10000);
 
     it('should process instance.domain.primary.set event', async () => {
       const instanceID = generateId();
@@ -391,7 +396,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
@@ -403,7 +408,7 @@ describe('Instance Projection Integration Tests', () => {
       const primaryDomains = instance!.domains.filter(d => d.isPrimary);
       expect(primaryDomains).toHaveLength(1);
       expect(primaryDomains[0].domain).toBe('second.com');
-    }, 5000);
+    }, 10000);
 
     it('should process instance.domain.removed event', async () => {
       const instanceID = generateId();
@@ -449,13 +454,13 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getInstanceByID(instanceID);
       
       expect(instance).toBeTruthy();
       expect(instance!.domains).toHaveLength(0);
-    }, 5000);
+    }, 10000);
   });
 
   describe('Instance Trusted Domain Events', () => {
@@ -491,7 +496,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await instanceQueries.searchInstanceTrustedDomains({
         instanceID,
@@ -499,7 +504,7 @@ describe('Instance Projection Integration Tests', () => {
       
       expect(result.total).toBe(1);
       expect(result.domains[0].domain).toBe('trusted.com');
-    }, 5000);
+    }, 10000);
 
     it('should process instance.trusted_domain.removed event', async () => {
       const instanceID = generateId();
@@ -544,14 +549,14 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await instanceQueries.searchInstanceTrustedDomains({
         instanceID,
       });
       
       expect(result.total).toBe(0);
-    }, 5000);
+    }, 10000);
   });
 
   describe('Query Methods', () => {
@@ -574,13 +579,13 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await instanceQueries.getDefaultInstance();
       
       expect(instance).toBeTruthy();
       // Should get the first active instance
-    }, 5000);
+    }, 10000);
 
     it('should search instance domains', async () => {
       const instanceID = generateId();
@@ -628,7 +633,7 @@ describe('Instance Projection Integration Tests', () => {
       // Push all commands in one transaction to get proper in_tx_order
       await eventstore.pushMany(commands);
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Search all domains for instance
       const allResult = await instanceQueries.searchInstanceDomains({
@@ -651,6 +656,6 @@ describe('Instance Projection Integration Tests', () => {
       });
       expect(generatedResult.total).toBe(1);
       expect(generatedResult.domains[0].domain).toBe('search2.com');
-    }, 5000);
+    }, 10000);
   });
 });

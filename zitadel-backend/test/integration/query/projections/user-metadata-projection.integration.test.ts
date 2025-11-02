@@ -11,6 +11,7 @@ import { ProjectionRegistry } from '../../../../src/lib/query/projection/project
 import { UserMetadataProjection, createUserMetadataProjectionConfig } from '../../../../src/lib/query/projections/user-metadata-projection';
 import { UserMetadataQueries } from '../../../../src/lib/query/user/user-metadata-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('User Metadata Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -26,7 +27,7 @@ describe('User Metadata Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -47,6 +48,9 @@ describe('User Metadata Projection Integration Tests', () => {
 
     // Initialize query layer
     userMetadataQueries = new UserMetadataQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   })
 
   afterAll(async () => {
@@ -78,8 +82,10 @@ describe('User Metadata Projection Integration Tests', () => {
     );
   };
 
-  const waitForProjection = (ms: number = 300) =>
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'user_metadata_projection', 2000);
+  };
 
   describe('Metadata Set Events', () => {
     it('should process user.metadata.set event', async () => {
@@ -99,7 +105,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'department');
 
@@ -127,7 +133,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'employee_id');
 
@@ -159,7 +165,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'preferences');
 
@@ -186,7 +192,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Update
       await eventstore.push({
@@ -202,7 +208,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'status');
 
@@ -229,7 +235,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'app_role', appId);
 
@@ -257,7 +263,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'temp_key');
       expect(result).toBeDefined();
@@ -275,7 +281,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       result = await userMetadataQueries.getUserMetadata(userId, TEST_INSTANCE_ID, 'temp_key');
       expect(result).toBeNull();
@@ -308,7 +314,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Remove only scope1
       await eventstore.push({
@@ -321,7 +327,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const results = await userMetadataQueries.getUserMetadataList(userId, TEST_INSTANCE_ID);
       const roleMetadata = results.filter(m => m.metadataKey === 'role');
@@ -355,7 +361,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Remove all
       await eventstore.push({
@@ -368,7 +374,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const results = await userMetadataQueries.getUserMetadataList(userId, TEST_INSTANCE_ID);
 
@@ -391,7 +397,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -403,7 +409,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadataList(userId, TEST_INSTANCE_ID);
       expect(result.length).toBe(0);
@@ -426,7 +432,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -438,7 +444,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userMetadataQueries.getUserMetadataList(userId, TEST_INSTANCE_ID);
       expect(result.length).toBe(0);
@@ -461,7 +467,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await pool.queryOne(
         'SELECT * FROM projections.user_metadata WHERE instance_id = $1 AND user_id = $2',
@@ -489,7 +495,7 @@ describe('User Metadata Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const results = await pool.query(
         'SELECT * FROM projections.user_metadata WHERE instance_id = $1 AND user_id = $2',

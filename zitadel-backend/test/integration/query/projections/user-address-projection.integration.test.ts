@@ -11,6 +11,7 @@ import { ProjectionRegistry } from '../../../../src/lib/query/projection/project
 import { UserAddressProjection, createUserAddressProjectionConfig } from '../../../../src/lib/query/projections/user-address-projection';
 import { UserAddressQueries } from '../../../../src/lib/query/user/user-address-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('User Address Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -26,7 +27,7 @@ describe('User Address Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -47,6 +48,9 @@ describe('User Address Projection Integration Tests', () => {
 
     // Initialize query layer
     userAddressQueries = new UserAddressQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   })
 
   afterAll(async () => {
@@ -78,8 +82,10 @@ describe('User Address Projection Integration Tests', () => {
     );
   };
 
-  const waitForProjection = (ms: number = 300) =>
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'user_address_projection', 2000);
+  };
 
   describe('Address Changed Events', () => {
     it('should process user.human.address.changed event', async () => {
@@ -102,7 +108,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 
@@ -135,7 +141,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 
@@ -166,7 +172,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 
@@ -192,7 +198,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Updated address
       await eventstore.push({
@@ -209,7 +215,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 
@@ -236,7 +242,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 
@@ -260,7 +266,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
       expect(result).toBeDefined();
@@ -275,7 +281,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
       expect(result).toBeNull();
@@ -298,7 +304,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
       expect(result).toBeDefined();
@@ -313,7 +319,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
       expect(result).toBeNull();
@@ -337,7 +343,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, otherInstance);
 
@@ -363,7 +369,7 @@ describe('User Address Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await userAddressQueries.getUserAddress(userId, TEST_INSTANCE_ID);
 

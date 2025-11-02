@@ -18,7 +18,7 @@ import {
 import { AppQueries } from '../../../../src/lib/query/app/app-queries';
 import { AppState, AppType } from '../../../../src/lib/query/app/app-types';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
-import { waitForProjectionCatchUp } from '../../../helpers/projection-test-helpers';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Application Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -99,6 +99,7 @@ describe('Application Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
+      enableSubscriptions: true,
     });
     
     registry = new ProjectionRegistry({
@@ -116,6 +117,9 @@ describe('Application Projection Integration Tests', () => {
     appConfig.interval = 50;
     registry.register(appConfig, appProjection);
     await registry.start('app_projection');
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
     
     // Load ALL test data in beforeAll
     const events = [

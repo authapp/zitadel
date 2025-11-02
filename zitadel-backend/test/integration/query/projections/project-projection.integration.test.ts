@@ -39,6 +39,7 @@ describe('Project Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
+      enableSubscriptions: true,
     });
     
     // Create projection registry

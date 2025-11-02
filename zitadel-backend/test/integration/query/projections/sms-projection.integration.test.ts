@@ -12,6 +12,7 @@ import { SMSProjection, createSMSProjectionConfig } from '../../../../src/lib/qu
 import { SMSQueries } from '../../../../src/lib/query/sms/sms-queries';
 import { SMSConfigState, SMSProviderType } from '../../../../src/lib/query/sms/sms-types';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('SMS Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -27,7 +28,7 @@ describe('SMS Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -47,6 +48,9 @@ describe('SMS Projection Integration Tests', () => {
     await registry.start('sms_projection');
 
     smsQueries = new SMSQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -60,8 +64,10 @@ describe('SMS Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'sms_projection', 2000);
+  };
 
   describe('Twilio SMS Config', () => {
     it('should process instance.sms.config.twilio.added event', async () => {
@@ -85,7 +91,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smsQueries.getSMSConfigByID(instanceID, configID);
       
@@ -114,7 +120,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID,
@@ -130,7 +136,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smsQueries.getSMSConfigByID(instanceID, configID);
       
@@ -159,7 +165,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smsQueries.getSMSConfigByID(instanceID, configID);
       
@@ -192,7 +198,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smsQueries.getActiveSMSConfig(instanceID, orgID);
       
@@ -220,7 +226,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let config = await smsQueries.getSMSConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMSConfigState.INACTIVE);
@@ -235,7 +241,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smsQueries.getSMSConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMSConfigState.ACTIVE);
@@ -250,7 +256,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smsQueries.getSMSConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMSConfigState.INACTIVE);
@@ -277,7 +283,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let config = await smsQueries.getSMSConfigByID(instanceID, configID);
       expect(config).toBeTruthy();
@@ -292,7 +298,7 @@ describe('SMS Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smsQueries.getSMSConfigByID(instanceID, configID);
       expect(config).toBeNull();
