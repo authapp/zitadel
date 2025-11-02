@@ -648,9 +648,9 @@ export class AdminService {
       paramIndex++;
     }
 
-    if (request.aggregateIDs && request.aggregateIDs.length > 0) {
-      conditions.push(`aggregate_id = ANY($${paramIndex})`);
-      params.push(request.aggregateIDs);
+    if (request.aggregateId) {
+      conditions.push(`aggregate_id = $${paramIndex}`);
+      params.push(request.aggregateId);
       paramIndex++;
     }
 
@@ -660,15 +660,21 @@ export class AdminService {
       paramIndex++;
     }
 
-    if (request.from) {
-      conditions.push(`created_at >= $${paramIndex}`);
-      params.push(request.from);
+    if (request.resourceOwner) {
+      conditions.push(`owner = $${paramIndex}`);
+      params.push(request.resourceOwner);
       paramIndex++;
     }
 
-    if (request.to) {
-      conditions.push(`created_at <= $${paramIndex}`);
-      params.push(request.to);
+    if (request.editorUserId) {
+      conditions.push(`creator = $${paramIndex}`);
+      params.push(request.editorUserId);
+      paramIndex++;
+    }
+
+    if (request.sequence !== undefined) {
+      conditions.push(`position >= $${paramIndex}`);
+      params.push(request.sequence.toString());
       paramIndex++;
     }
 

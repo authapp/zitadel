@@ -852,54 +852,6 @@ export interface EventRecord {
   payload?: any;
 }
 
-export interface ListEventsRequest {
-  limit?: number;
-  aggregateTypes?: string[];
-  aggregateIDs?: string[];
-  eventTypes?: string[];
-  from?: Date;
-  to?: Date;
-}
-
-export interface ListEventsResponse {
-  events: EventData[];
-}
-
-export interface ListEventTypesRequest {}
-
-export interface ListEventTypesResponse {
-  eventTypes: string[];
-}
-
-export interface ListAggregateTypesRequest {}
-
-export interface ListAggregateTypesResponse {
-  aggregateTypes: string[];
-}
-
-export interface FailedEvent {
-  database: string;
-  viewName: string;
-  failedSequence: number;
-  failureCount: number;
-  errorMessage: string;
-  lastFailed?: Date;
-}
-
-export interface ListFailedEventsRequest {}
-
-export interface ListFailedEventsResponse {
-  result: FailedEvent[];
-}
-
-export interface RemoveFailedEventRequest {
-  database: string;
-  viewName: string;
-  failedSequence: number;
-}
-
-export interface RemoveFailedEventResponse {}
-
 // ============================================================================
 // Feature Flags (Restrictions) Types
 // ============================================================================
