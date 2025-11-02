@@ -17,6 +17,7 @@ import {
 } from '../../../../src/lib/query/projections/user-projection';
 import { UserQueries } from '../../../../src/lib/query/user/user-queries';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('User Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -45,9 +46,9 @@ describe('User Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Create and register user projection with fast polling interval
+    // Create and register user projection
     const config = createUserProjectionConfig();
-    config.interval = 50; // Optimized: 50ms for faster projection detection
+    config.interval = 50; // Fast polling for tests
     projection = createUserProjection(eventstore, pool);
     registry.register(config, projection);
     
@@ -57,8 +58,8 @@ describe('User Projection Integration Tests', () => {
     // Initialize query layer
     userQueries = new UserQueries(pool);
     
-    // Wait a bit for projection to fully start
-    await waitForProjection();
+    // Give projection time to start and establish subscription
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -75,9 +76,11 @@ describe('User Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process (optimized)
-  const waitForProjection = (ms: number = 100) => // Optimized: 100ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    // Wait for projection to catch up with all events in eventstore
+    await waitForProjectionCatchUp(registry, eventstore, 'user_projection', 2000);
+  };
 
   describe('Projection Registration', () => {
     it('should register user projection successfully', () => {
@@ -110,7 +113,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       const result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -140,7 +143,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       // Update user
       await eventstore.push({
@@ -156,7 +159,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       const result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -181,7 +184,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       await eventstore.push({
         eventType: 'user.email.changed',
@@ -195,7 +198,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       const result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -219,7 +222,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       await eventstore.push({
         eventType: 'user.email.verified',
@@ -231,7 +234,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       const result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -255,7 +258,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       let result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -271,7 +274,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -294,7 +297,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       await eventstore.push({
         eventType: 'user.locked',
@@ -306,7 +309,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       const result = await userQueries.getUserByID(userId, 'test-instance');
       expect(result).toBeDefined();
@@ -329,7 +332,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       await eventstore.push({
         eventType: 'user.removed',
@@ -341,7 +344,7 @@ describe('User Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await waitForProjection();
+      await waitForEvents();
       
       // Note: getUserByID() returns deleted users so the API can show deletion status
       // Only search/list operations filter out deleted users
@@ -386,7 +389,7 @@ describe('User Projection Integration Tests', () => {
         });
       }
       
-      await waitForProjection();
+      await waitForEvents();
       
       for (const userId of userIds) {
         const result = await userQueries.getUserByID(userId, 'test-instance');

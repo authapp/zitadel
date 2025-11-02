@@ -11,6 +11,7 @@ import { ProjectionRegistry } from '../../../../src/lib/query/projection/project
 import { ActionsProjection, createActionsProjectionConfig } from '../../../../src/lib/query/projections/actions-projection';
 import { ActionQueries } from '../../../../src/lib/query/action/action-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Actions Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -44,6 +45,9 @@ describe('Actions Projection Integration Tests', () => {
 
     // Initialize query layer
     actionQueries = new ActionQueries(pool);
+
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -63,11 +67,13 @@ describe('Actions Projection Integration Tests', () => {
     // Clean up test data
     await pool.query('DELETE FROM projections.actions WHERE instance_id = $1', [TEST_INSTANCE_ID]);
     await pool.query('DELETE FROM projections.action_flows WHERE instance_id = $1', [TEST_INSTANCE_ID]);
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   });
 
-  const waitForProjection = (ms: number = 300) =>
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'actions_projection', 2000);
+  };
 
   describe('Action Added Events', () => {
     it('should process action.added event', async () => {
@@ -89,7 +95,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -116,7 +122,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -144,7 +150,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change action
       await eventstore.push({
@@ -161,7 +167,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -189,7 +195,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -201,7 +207,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -222,7 +228,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -234,7 +240,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -246,7 +252,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -269,7 +275,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -281,7 +287,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
@@ -304,7 +310,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Set execution flow
       await eventstore.push({
@@ -329,7 +335,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // TODO: Add ActionQueries.getActionFlow() method to query layer
       // For now, using direct table query for action_flows
@@ -357,7 +363,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -372,7 +378,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID: TEST_INSTANCE_ID,
@@ -386,7 +392,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // TODO: Add ActionQueries.getActionFlow() method to query layer
       // For now, using direct table query for action_flows
@@ -414,7 +420,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
       expect(result).toBeDefined();
@@ -429,7 +435,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: orgId,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
       expect(result).toBeNull();
@@ -451,7 +457,7 @@ describe('Actions Projection Integration Tests', () => {
         owner: TEST_INSTANCE_ID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await actionQueries.getActionByID(otherInstance, actionId);
 

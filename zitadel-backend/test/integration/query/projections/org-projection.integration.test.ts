@@ -21,6 +21,7 @@ import {
 import { OrgQueries } from '../../../../src/lib/query/org/org-queries';
 import { OrgState } from '../../../../src/lib/query/org/org-types';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { waitForProjectionsCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Organization Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -45,15 +46,15 @@ describe('Organization Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register org projection with optimized interval
+    // Register org projection
     const orgConfig = createOrgProjectionConfig();
-    orgConfig.interval = 50; // Optimized: 50ms for faster projection detection
+    orgConfig.interval = 50; // Fast polling for tests
     const orgProjection = createOrgProjection(eventstore, pool);
     registry.register(orgConfig, orgProjection);
     
-    // Register org domain projection with optimized interval
+    // Register org domain projection
     const domainConfig = createOrgDomainProjectionConfig();
-    domainConfig.interval = 50; // Optimized: 50ms for faster projection detection
+    domainConfig.interval = 50; // Fast polling for tests
     const domainProjection = createOrgDomainProjection(eventstore, pool);
     registry.register(domainConfig, domainProjection);
     
@@ -64,6 +65,9 @@ describe('Organization Projection Integration Tests', () => {
     ]);
     
     orgQueries = new OrgQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -79,6 +83,17 @@ describe('Organization Projection Integration Tests', () => {
     
     await closeTestDatabase();
   });
+
+  // Helper to wait for projections to process events
+  const waitForOrgEvents = async () => {
+    // Only wait for org_projection since these events don't affect domain projection
+    await waitForProjectionsCatchUp(registry, eventstore, ['org_projection'], 2000);
+  };
+  
+  const waitForDomainEvents = async () => {
+    // Wait for domain projection only since org projection is already caught up
+    await waitForProjectionsCatchUp(registry, eventstore, ['org_domain_projection'], 2000);
+  };
 
   describe('Organization Events', () => {
     it('should process org.added event', async () => {
@@ -97,7 +112,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForOrgEvents();
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
@@ -130,7 +145,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForOrgEvents();
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
@@ -161,7 +176,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForOrgEvents();
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
@@ -202,7 +217,7 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForOrgEvents();
       
       const org = await orgQueries.getOrgByID(orgID);
       expect(org).toBeDefined();
@@ -242,7 +257,7 @@ describe('Organization Projection Integration Tests', () => {
       ]);
       
       // Wait for projections to process (both org and org_domain)
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForDomainEvents();
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(1);
@@ -267,7 +282,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForOrgEvents();
       
       // Verify org exists
       const org = await orgQueries.getOrgByID(orgID, 'test-instance');
@@ -285,7 +300,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain was added
       let domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -304,7 +319,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain is now verified
       domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -329,7 +344,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForOrgEvents();
       
       // Verify org exists
       let org = await orgQueries.getOrgByID(orgID, 'test-instance');
@@ -347,7 +362,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain added
       let domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -366,7 +381,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain is verified
       domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -384,7 +399,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain is primary
       domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -433,7 +448,7 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForDomainEvents();
       
       const domains = await orgQueries.getOrgDomainsByID(orgID);
       expect(domains).toHaveLength(0);
@@ -457,7 +472,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForOrgEvents();
       
       // Verify org exists in orgs_projection
       const orgDirect = await orgQueries.getOrgByID(orgID, 'test-instance');
@@ -475,7 +490,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain exists in org_domains_projection
       const domains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -493,7 +508,7 @@ describe('Organization Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await waitForDomainEvents();
       
       // Verify domain is verified
       const verifiedDomains = await orgQueries.getOrgDomainsByID(orgID, 'test-instance');
@@ -535,7 +550,7 @@ describe('Organization Projection Integration Tests', () => {
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForOrgEvents();
       
       const result = await orgQueries.searchOrgs({ name: 'Alpha-Search' });
       expect(result.total).toBeGreaterThanOrEqual(1);

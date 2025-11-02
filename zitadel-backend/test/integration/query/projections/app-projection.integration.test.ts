@@ -18,9 +18,12 @@ import {
 import { AppQueries } from '../../../../src/lib/query/app/app-queries';
 import { AppState, AppType } from '../../../../src/lib/query/app/app-types';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { waitForProjectionCatchUp } from '../../../helpers/projection-test-helpers';
 
 describe('Application Projection Integration Tests', () => {
   let pool: DatabasePool;
+  let eventstore: PostgresEventstore;
+  let registry: ProjectionRegistry;
   let appQueries: AppQueries;
   
   // Test data IDs - each test uses different data
@@ -93,12 +96,12 @@ describe('Application Projection Integration Tests', () => {
     const migrator = new DatabaseMigrator(pool);
     await migrator.migrate();
     
-    const eventstore = new PostgresEventstore(pool, {
+    eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
     });
     
-    const registry = new ProjectionRegistry({
+    registry = new ProjectionRegistry({
       eventstore,
       database: pool,
     });
@@ -317,8 +320,8 @@ describe('Application Projection Integration Tests', () => {
       await eventstore.push(event);
     }
     
-    // Wait for projections to process all events (longer wait for many events)
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    // Wait for projection to catch up with all events
+    await waitForProjectionCatchUp(registry, eventstore, 'app_projection', 5000);
     
     // Initialize queries
     appQueries = new AppQueries(pool);

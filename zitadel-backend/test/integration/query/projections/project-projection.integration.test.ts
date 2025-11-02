@@ -21,6 +21,7 @@ import {
 import { ProjectQueries } from '../../../../src/lib/query/project/project-queries';
 import { ProjectState } from '../../../../src/lib/query/project/project-types';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { waitForProjectionsCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Project Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -67,6 +68,9 @@ describe('Project Projection Integration Tests', () => {
     ]);
     
     projectQueries = new ProjectQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -83,9 +87,14 @@ describe('Project Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process (fast with 100ms polling)
-  const waitForProjection = (ms: number = 300) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projections to process events
+  const waitForProjectEvents = async () => {
+    await waitForProjectionsCatchUp(registry, eventstore, ['project_projection'], 2000);
+  };
+  
+  const waitForRoleEvents = async () => {
+    await waitForProjectionsCatchUp(registry, eventstore, ['project_role_projection'], 2000);
+  };
 
   describe('Project Events', () => {
     it('should process project.added event', async () => {
@@ -108,7 +117,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForProjectEvents();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
@@ -144,7 +153,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForProjectEvents();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
@@ -175,7 +184,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForProjectEvents();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
@@ -215,7 +224,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForProjectEvents();
       
       const project = await projectQueries.getProjectByID(projectID);
       expect(project).toBeDefined();
@@ -252,7 +261,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForRoleEvents();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(1);
@@ -300,7 +309,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForRoleEvents();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(1);
@@ -343,7 +352,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForRoleEvents();
       
       const roles = await projectQueries.getProjectRoles(projectID);
       expect(roles).toHaveLength(0);
@@ -381,11 +390,12 @@ describe('Project Projection Integration Tests', () => {
           creator: 'system',
           owner: 'org-123',
           instanceID: 'test-instance',
-        },
+        }
       ]);
-      
-      await waitForProjection();
-      
+
+      // Wait for role projection (it processes all events including project events)
+      await waitForRoleEvents();
+
       const result = await projectQueries.getProjectWithRoles(projectID);
       expect(result).toBeDefined();
       expect(result!.project.name).toBe('Test Project');
@@ -419,7 +429,7 @@ describe('Project Projection Integration Tests', () => {
         },
       ]);
       
-      await waitForProjection();
+      await waitForProjectEvents();
       
       const result = await projectQueries.searchProjects({ resourceOwner: 'org-123' });
       expect(result.projects.length).toBeGreaterThanOrEqual(2);
