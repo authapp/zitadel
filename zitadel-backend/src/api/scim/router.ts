@@ -19,6 +19,7 @@ import { Eventstore } from '../../lib/eventstore/types';
 import { createMemoryCache } from '../../lib/cache/factory';
 import { createLocalStorage } from '../../lib/static/factory';
 import { SnowflakeGenerator } from '../../lib/id';
+import { ProjectionWaitHelper } from '../helpers/projection-wait';
 
 export interface SCIMContext {
   queries: {
@@ -28,6 +29,7 @@ export interface SCIMContext {
   commands: Commands;
   instanceID: string;
   createContext: () => any;
+  projectionWait: ProjectionWaitHelper;
 }
 
 export function createSCIMRouter(pool: DatabasePool, eventstore: Eventstore): Router {
@@ -56,6 +58,9 @@ export function createSCIMRouter(pool: DatabasePool, eventstore: Eventstore): Ro
     undefined, // permissionChecker - uses default
     pool
   );
+
+  // Initialize projection wait helper
+  const projectionWait = new ProjectionWaitHelper(eventstore, pool);
 
   // ============================================================================
   // Middleware
@@ -93,6 +98,7 @@ export function createSCIMRouter(pool: DatabasePool, eventstore: Eventstore): Ro
       commands,
       instanceID,
       createContext,
+      projectionWait,
     } as SCIMContext;
     
     next();

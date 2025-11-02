@@ -207,10 +207,57 @@ export class CurrentStateTracker {
   ): Promise<number> {
     const state = await this.getCurrentState(projectionName);
     if (!state) {
-      return latestPosition;
+      return Number(latestPosition);
     }
 
-    return latestPosition - state.position;
+    return Number(latestPosition) - Number(state.position);
+  }
+
+  /**
+   * Wait for projection to reach a specific position
+   * Used for synchronization after command execution
+   * 
+   * @param projectionName - Name of the projection to wait for
+   * @param targetPosition - Target position to reach
+   * @param timeout - Maximum time to wait in milliseconds (default: 5000)
+   * @throws Error if timeout is reached before position is achieved
+   */
+  async waitForPosition(
+    projectionName: string,
+    targetPosition: number,
+    timeout = 5000
+  ): Promise<void> {
+    // If target position is 0, no need to wait (no events yet)
+    if (targetPosition === 0) {
+      return;
+    }
+
+    const startTime = Date.now();
+    
+    while (Date.now() - startTime < timeout) {
+      const state = await this.getCurrentState(projectionName);
+      
+      if (state) {
+        const currentPos = Number(state.position);
+        const targetPos = Number(targetPosition);
+        // Allow small tolerance for floating-point precision (0.01ms)
+        if (currentPos >= targetPos - 0.01) {
+          return; // Projection has caught up (within tolerance)
+        }
+      }
+      
+      // Wait 100ms before checking again (projections run on intervals)
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    // Timeout reached
+    const currentState = await this.getCurrentState(projectionName);
+    const currentPosition = Number(currentState?.position ?? 0);
+    
+    throw new Error(
+      `Timeout waiting for projection ${projectionName} to reach position ${targetPosition}. ` +
+      `Current position: ${currentPosition}, lag: ${targetPosition - currentPosition}ms`
+    );
   }
 
   /**

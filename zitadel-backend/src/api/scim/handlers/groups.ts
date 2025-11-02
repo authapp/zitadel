@@ -78,7 +78,7 @@ async function createGroup(req: Request, res: Response, next: NextFunction): Pro
     const zitadelGroup = scimGroupToZitadelCreate(scimGroup);
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
 
     // Execute addOrg command (SCIM groups map to Zitadel organizations)
@@ -108,8 +108,8 @@ async function createGroup(req: Request, res: Response, next: NextFunction): Pro
       }
     }
 
-    // Wait for projection processing
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for org projection to process the event
+    await projectionWait.waitForProjection('org_projection', 2000);
 
     // Query back created organization
     const createdOrg = await queries.org.getOrgByID(result.orgID, instanceID);
@@ -178,7 +178,7 @@ async function replaceGroup(req: Request, res: Response, next: NextFunction): Pr
     }
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
 
     // Check if organization exists
@@ -207,8 +207,8 @@ async function replaceGroup(req: Request, res: Response, next: NextFunction): Pr
       }
     }
 
-    // Wait for projection processing
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for org projection to process the event
+    await projectionWait.waitForProjection('org_projection', 2000);
 
     // Query the updated organization
     const updatedOrg = await queries.org.getOrgByID(id, instanceID);
@@ -247,7 +247,7 @@ async function patchGroup(req: Request, res: Response, next: NextFunction): Prom
     }
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
 
     // Check if organization exists
@@ -328,8 +328,8 @@ async function patchGroup(req: Request, res: Response, next: NextFunction): Prom
       }
     }
 
-    // Wait for projection processing
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for org projection to process the events
+    await projectionWait.waitForProjection('org_projection', 2000);
 
     // Query the updated organization
     const updatedOrg = await queries.org.getOrgByID(id, instanceID);

@@ -261,7 +261,7 @@ async function replaceUser(req: Request, res: Response, next: NextFunction): Pro
     }
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
     const orgID = ctx.orgID;
 
@@ -326,8 +326,8 @@ async function replaceUser(req: Request, res: Response, next: NextFunction): Pro
       throw mapZitadelErrorToSCIM(cmdError);
     }
 
-    // Wait for projections to process
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for user projection to process the events
+    await projectionWait.waitForProjection('user_projection', 2000);
 
     // Query updated user
     const updatedUser = await queries.user.getUserByID(id, instanceID);
@@ -337,10 +337,9 @@ async function replaceUser(req: Request, res: Response, next: NextFunction): Pro
     }
 
     // Convert back to SCIM format
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimResponse = zitadelUserToSCIM(updatedUser, baseUrl);
-
-    res.json(scimResponse);
+    const scimResult = zitadelUserToSCIM(updatedUser);
+    
+    res.status(200).json(scimResult);
   } catch (error) {
     next(error);
   }
@@ -366,7 +365,7 @@ async function patchUser(req: Request, res: Response, next: NextFunction): Promi
     }
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
     const orgID = ctx.orgID;
 
@@ -435,8 +434,8 @@ async function patchUser(req: Request, res: Response, next: NextFunction): Promi
       throw mapZitadelErrorToSCIM(cmdError);
     }
 
-    // Wait for projections to process
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for user projection to process the events
+    await projectionWait.waitForProjection('user_projection', 2000);
 
     // Query updated user
     const updatedUser = await queries.user.getUserByID(id, instanceID);
@@ -446,10 +445,9 @@ async function patchUser(req: Request, res: Response, next: NextFunction): Promi
     }
 
     // Convert back to SCIM format
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimResponse = zitadelUserToSCIM(updatedUser, baseUrl);
-
-    res.json(scimResponse);
+    const scimResult = zitadelUserToSCIM(updatedUser);
+    
+    res.status(200).json(scimResult);
   } catch (error) {
     next(error);
   }
@@ -464,7 +462,7 @@ async function deleteUser(req: Request, res: Response, next: NextFunction): Prom
     const { id } = req.params;
 
     // Get SCIM context
-    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const { commands, queries, instanceID, createContext, projectionWait } = (req as any).scimContext;
     const ctx = createContext();
     const orgID = ctx.orgID;
 
@@ -477,7 +475,7 @@ async function deleteUser(req: Request, res: Response, next: NextFunction): Prom
     }
 
     if (!existingUser) {
-      throw SCIMErrors.notFound(`User not found: ${id}`);
+      throw SCIMErrors.notFound(`User with id ${id} not found`);
     }
 
     // Execute soft delete command
@@ -487,8 +485,8 @@ async function deleteUser(req: Request, res: Response, next: NextFunction): Prom
       throw mapZitadelErrorToSCIM(cmdError);
     }
 
-    // Wait for projections to process
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Wait for user projection to process the event
+    await projectionWait.waitForProjection('user_projection', 2000);
 
     // Return 204 No Content (SCIM spec for successful delete)
     res.status(204).send();
