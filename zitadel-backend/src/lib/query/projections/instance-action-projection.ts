@@ -89,7 +89,7 @@ export class InstanceActionProjection extends Projection {
         payload.script,
         timeoutInterval,
         payload.allowedToFail || false,
-        1, // active state
+        2, // active state (ActionState.ACTIVE = 2)
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
@@ -146,7 +146,7 @@ export class InstanceActionProjection extends Projection {
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
       [
-        2, // inactive state
+        1, // inactive state (ActionState.INACTIVE = 1)
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,
@@ -160,7 +160,7 @@ export class InstanceActionProjection extends Projection {
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
       [
-        1, // active state
+        2, // active state (ActionState.ACTIVE = 2)
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,

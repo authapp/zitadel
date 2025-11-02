@@ -1,7 +1,7 @@
 /**
  * Login Name Projection Integration Tests - REFACTORED
  * 
- * All tests use processProjections() (200ms wait) instead of waitUntil polling
+ * All tests use waitForProjections() (200ms wait) instead of waitUntil polling
  * Projection intervals set to 50ms for fast detection
  * Each test uses unique domain names and usernames to prevent conflicts
  */
@@ -20,6 +20,7 @@ import { UserQueries } from '../../../../src/lib/query/user/user-queries';
 import { OrgQueries } from '../../../../src/lib/query/org/org-queries';
 import { LoginNameQueries } from '../../../../src/lib/query/login-name/login-name-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Login Name Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -50,7 +51,7 @@ describe('Login Name Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: false, // Polling pattern works better for multi-projection tests
     });
 
     registry = new ProjectionRegistry({
@@ -90,7 +91,7 @@ describe('Login Name Projection Integration Tests', () => {
     await registry.start('org_domain_projection');
     await registry.start('login_name_projection');
     
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await delay(300); // Allow projections to warm up
 
     orgQueries = new OrgQueries(pool);
     userQueries = new UserQueries(pool);
@@ -109,34 +110,34 @@ describe('Login Name Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper: Process projections with retry mechanism
-  async function processProjections(): Promise<void> {
-    // Wait 200ms for projections to process events (interval is 50ms)
-    await new Promise(resolve => setTimeout(resolve, 200));
+  // Helper: Wait for projections to process events (polling pattern)
+  // Note: Multi-projection tests with complex dependencies work better with fixed delays
+  async function waitForProjections(): Promise<void> {
+    await delay(200); // Polling interval for 4 dependent projections
   }
 
   // Helper: Wait for domain to exist in projections
-  async function waitForDomain(orgId: string, domainName: string, maxAttempts = 30): Promise<void> {
+  async function waitForDomain(orgId: string, domainName: string, maxAttempts = 15): Promise<void> {
     for (let i = 0; i < maxAttempts; i++) {
       const domains = await orgQueries.getOrgDomainsByID(orgId, 'test-instance');
       if (domains.some(d => d.domain === domainName)) {
         return; // Domain found
       }
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await delay(100);
     }
-    throw new Error(`Domain ${domainName} was not added after ${maxAttempts} attempts (${maxAttempts * 200}ms)`);
+    throw new Error(`Domain ${domainName} was not added after ${maxAttempts} attempts (${maxAttempts * 100}ms)`);
   }
 
   // Helper: Wait for user to exist in projections
-  async function waitForUser(userId: string, maxAttempts = 30): Promise<void> {
+  async function waitForUser(userId: string, maxAttempts = 15): Promise<void> {
     for (let i = 0; i < maxAttempts; i++) {
       const user = await userQueries.getUserByID(userId, 'test-instance');
       if (user) {
         return; // User found
       }
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await delay(100);
     }
-    throw new Error(`User ${userId} was not created after ${maxAttempts} attempts (${maxAttempts * 200}ms)`);
+    throw new Error(`User ${userId} was not created after ${maxAttempts} attempts (${maxAttempts * 100}ms)`);
   }
 
   // Helper: Create org with verified domain
@@ -151,7 +152,7 @@ describe('Login Name Projection Integration Tests', () => {
       instanceID: 'test-instance',
     });
     
-    await processProjections();
+    await waitForProjections();
     
     await eventstore.push({
       eventType: 'org.domain.added',
@@ -163,7 +164,7 @@ describe('Login Name Projection Integration Tests', () => {
       instanceID: 'test-instance',
     });
     
-    await processProjections();
+    await waitForProjections();
     
     // Wait for domain to appear in projections
     await waitForDomain(orgId, domainName);
@@ -178,7 +179,7 @@ describe('Login Name Projection Integration Tests', () => {
       instanceID: 'test-instance',
     });
     
-    await processProjections();
+    await waitForProjections();
     
     await eventstore.push({
       eventType: 'org.domain.primary.set',
@@ -190,7 +191,7 @@ describe('Login Name Projection Integration Tests', () => {
       instanceID: 'test-instance',
     });
     
-    await processProjections();
+    await waitForProjections();
   }
 
   // Helper: Create user
@@ -208,7 +209,7 @@ describe('Login Name Projection Integration Tests', () => {
       instanceID: 'test-instance',
     });
     
-    await processProjections();
+    await waitForProjections();
     
     // Wait for user to appear in projections
     await waitForUser(userId);
@@ -224,7 +225,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(userId, orgId, username, email);
-      await processProjections();
+      await waitForProjections();
       
       const loginName = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
       expect(loginName).toBeTruthy();
@@ -241,7 +242,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(userId, orgId, oldUsername);
-      await processProjections();
+      await waitForProjections();
       
       const oldLoginName = await loginNameQueries.getLoginName(`${oldUsername}@${domainName}`, 'test-instance');
       expect(oldLoginName).toBeTruthy();
@@ -256,7 +257,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const oldLoginNameAfter = await loginNameQueries.getLoginName(`${oldUsername}@${domainName}`, 'test-instance');
       expect(oldLoginNameAfter).toBeNull();
@@ -274,7 +275,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(userId, orgId, username);
-      await processProjections();
+      await waitForProjections();
       
       const loginNamesBefore = await loginNameQueries.getLoginNamesByUserID(userId, 'test-instance');
       expect(loginNamesBefore.length).toBeGreaterThanOrEqual(1);
@@ -289,7 +290,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const loginNameAfter = await loginNameQueries.getLoginName(`${username}@${domainName}`, 'test-instance');
       expect(loginNameAfter).toBeNull();
@@ -303,7 +304,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(userId, orgId, username);
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'user.removed',
@@ -315,7 +316,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const loginNamesAfter = await loginNameQueries.getLoginNamesByUserID(userId, 'test-instance');
       expect(loginNamesAfter.length).toBe(0);
@@ -330,7 +331,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domain1);
       await createUser(userId, orgId, username);
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'org.domain.added',
@@ -342,7 +343,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const allLoginNames = await loginNameQueries.getLoginNamesByUserID(userId, 'test-instance');
       expect(allLoginNames.length).toBeGreaterThanOrEqual(2);
@@ -372,7 +373,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       await createUser(userId, orgId, username);
 
       const loginNameVerified = await loginNameQueries.getLoginName(`${username}@${verifiedDomain}`, 'test-instance');
@@ -392,9 +393,9 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(user1Id, orgId, username1);
-      await processProjections();
+      await waitForProjections();
       await createUser(user2Id, orgId, username2);
-      await processProjections();
+      await waitForProjections();
 
       const user1LoginName = await loginNameQueries.getLoginName(`${username1}@${domainName}`, 'test-instance');
       const user2LoginName = await loginNameQueries.getLoginName(`${username2}@${domainName}`, 'test-instance');
@@ -416,7 +417,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domainName);
       await createUser(userId, orgId, username, oldEmail);
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'user.email.changed',
@@ -428,7 +429,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const user = await userQueries.getUserByID(userId, 'test-instance');
       expect(user!.email).toBe(newEmail);
@@ -446,7 +447,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, domain1);
       await createUser(userId, orgId, username);
-      await processProjections();
+      await waitForProjections();
       
       let loginName1 = await loginNameQueries.getLoginName(`${username}@${domain1}`, 'test-instance');
       expect(loginName1!.isPrimary).toBe(true);
@@ -461,7 +462,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'org.domain.primary.set',
@@ -473,7 +474,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       loginName1 = await loginNameQueries.getLoginName(`${username}@${domain1}`, 'test-instance');
       const loginName2 = await loginNameQueries.getLoginName(`${username}@${domain2}`, 'test-instance');
@@ -491,7 +492,7 @@ describe('Login Name Projection Integration Tests', () => {
 
       await createOrgWithDomain(orgId, orgDomain);
       await createUser(userId, orgId, username);
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'instance.domain.added',
@@ -503,7 +504,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       const instanceLoginName = await loginNameQueries.getLoginName(`${username}@${instanceDomain}`, 'test-instance');
       expect(instanceLoginName).toBeTruthy();
@@ -531,7 +532,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       await eventstore.push({
         eventType: 'instance.domain.added',
@@ -543,7 +544,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       let loginName1 = await loginNameQueries.getLoginName(`${username}@${instanceDomain1}`, 'test-instance');
       let loginName2 = await loginNameQueries.getLoginName(`${username}@${instanceDomain2}`, 'test-instance');
@@ -560,7 +561,7 @@ describe('Login Name Projection Integration Tests', () => {
         instanceID: 'test-instance',
       });
       
-      await processProjections();
+      await waitForProjections();
       
       loginName2 = await loginNameQueries.getLoginName(`${username}@${instanceDomain2}`, 'test-instance');
       expect(loginName2!.isPrimary).toBe(true);

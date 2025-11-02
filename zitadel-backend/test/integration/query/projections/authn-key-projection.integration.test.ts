@@ -14,6 +14,7 @@ import { AuthNKeyType } from '../../../../src/lib/query/authn-key/authn-key-type
 import { Command } from '../../../../src/lib/eventstore';
 import { generateId } from '../../../../src/lib/id';
 import { setupCommandTest, CommandTestContext } from '../../../helpers/command-test-helpers';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('AuthN Key Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -31,7 +32,7 @@ describe('AuthN Key Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: false, // Polling pattern works better
     });
 
     registry = new ProjectionRegistry({
@@ -49,6 +50,7 @@ describe('AuthN Key Projection Integration Tests', () => {
     
     // Start projection
     await registry.start('authn_key_projection');
+    await delay(200); // Allow projection to warm up
 
     authNKeyQueries = new AuthNKeyQueries(pool);
     commandCtx = await setupCommandTest(pool);
@@ -66,7 +68,7 @@ describe('AuthN Key Projection Integration Tests', () => {
       owner: TEST_INSTANCE_ID,
       instanceID: TEST_INSTANCE_ID,
     });
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -83,8 +85,8 @@ describe('AuthN Key Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 500) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  const waitForProjection = async () => 
+    await delay(100); // Polling delay
 
   // Cache for setup entities
   const setupOrgs = new Set<string>();
@@ -104,7 +106,7 @@ describe('AuthN Key Projection Integration Tests', () => {
       orgID: orgId,
       name: 'Test Org',
     });
-    await waitForProjection(200);
+    await delay(50);
     setupOrgs.add(orgId);
   }
 
@@ -125,7 +127,7 @@ describe('AuthN Key Projection Integration Tests', () => {
       creator: 'system',
       owner: orgId,
     });
-    await waitForProjection(200);
+    await delay(50);
     setupUsers.add(userId);
   }
 

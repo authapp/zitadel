@@ -2,7 +2,7 @@
  * Permission Queries Integration Tests - REFACTORED
  * 
  * Tests complete stack: Command → Event → Projection → Query
- * Uses processProjections() (200ms wait) instead of direct SQL inserts
+ * Uses waitForProjections() (200ms wait) instead of direct SQL inserts
  * Projection intervals set to 50ms for fast detection
  */
 
@@ -27,6 +27,7 @@ import {
 } from '../../../../src/lib/query/permission/permission-types';
 import { generateId } from '../../../../src/lib/id';
 import { setupCommandTest, CommandTestContext } from '../../../helpers/command-test-helpers';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Permission Queries Integration Tests', () => {
   let pool: DatabasePool;
@@ -45,7 +46,7 @@ describe('Permission Queries Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -83,7 +84,7 @@ describe('Permission Queries Integration Tests', () => {
     await registry.start('org_member_projection');
     await registry.start('project_member_projection');
     
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 2s warm-up
+    await delay(100); // Allow subscriptions to establish
 
     permissionQueries = new PermissionQueries(pool);
     systemQueries = new SystemPermissionQueries(pool);
@@ -102,7 +103,7 @@ describe('Permission Queries Integration Tests', () => {
       owner: TEST_INSTANCE_ID,
       instanceID: TEST_INSTANCE_ID,
     });
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await waitForProjections();
   }, 30000);
 
   afterAll(async () => {
@@ -121,9 +122,15 @@ describe('Permission Queries Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper: Process projections (200ms wait)
-  async function processProjections(): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 200));
+  // Helper: Wait for all projections to catch up
+  async function waitForProjections(): Promise<void> {
+    await Promise.all([
+      waitForProjectionCatchUp(registry, eventstore, 'user_grant_projection', 2000),
+      waitForProjectionCatchUp(registry, eventstore, 'project_grant_projection', 2000),
+      waitForProjectionCatchUp(registry, eventstore, 'instance_member_projection', 2000),
+      waitForProjectionCatchUp(registry, eventstore, 'org_member_projection', 2000),
+      waitForProjectionCatchUp(registry, eventstore, 'project_member_projection', 2000),
+    ]);
   }
 
   // Cache to track already setup entities (to avoid duplicate creation errors)
@@ -144,7 +151,7 @@ describe('Permission Queries Integration Tests', () => {
       orgID: orgId,
       name: 'Test Org',
     });
-    await processProjections();
+    await waitForProjections();
     setupOrgs.add(orgId);
   }
 
@@ -167,7 +174,7 @@ describe('Permission Queries Integration Tests', () => {
       hasProjectCheck: false,
       privateLabelingSetting: 0,
     });
-    await processProjections();
+    await waitForProjections();
     setupProjects.add(projectId);
   }
 
@@ -188,7 +195,7 @@ describe('Permission Queries Integration Tests', () => {
       roleKeys: roles,
     });
     
-    await processProjections();
+    await waitForProjections();
     return result.grantID;
   }
 
@@ -201,7 +208,7 @@ describe('Permission Queries Integration Tests', () => {
     });
     
     await commandCtx.commands.addInstanceMember(ctx, TEST_INSTANCE_ID, userId, roles);
-    await processProjections();
+    await waitForProjections();
   }
 
   // Helper: Add org member (using Command API)
@@ -218,7 +225,7 @@ describe('Permission Queries Integration Tests', () => {
       userID: userId,
       roles,
     });
-    await processProjections();
+    await waitForProjections();
   }
 
   // Helper: Add project member (using Command API)
@@ -237,7 +244,7 @@ describe('Permission Queries Integration Tests', () => {
       userID: userId,
       roles,
     });
-    await processProjections();
+    await waitForProjections();
   }
 
   // Helper: Add project grant (using Command API)
@@ -258,7 +265,7 @@ describe('Permission Queries Integration Tests', () => {
       roleKeys: roles,
     });
     
-    await processProjections();
+    await waitForProjections();
     return result.grantID;
   }
 

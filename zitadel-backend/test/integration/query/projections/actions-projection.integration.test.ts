@@ -102,7 +102,7 @@ describe('Actions Projection Integration Tests', () => {
       expect(result).toBeDefined();
       expect(result!.name).toBe('test-action');
       expect(result!.script).toBe('console.log("test")');
-      expect(result!.state).toBe(1); // active
+      expect(result!.state).toBe(2); // active (ActionState.ACTIVE = 2)
     });
 
     it('should process action.v2.added event', async () => {
@@ -212,7 +212,7 @@ describe('Actions Projection Integration Tests', () => {
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
       expect(result).toBeDefined();
-      expect(result!.state).toBe(2); // inactive
+      expect(result!.state).toBe(1); // inactive (ActionState.INACTIVE = 1)
     });
 
     it('should reactivate action', async () => {
@@ -257,7 +257,7 @@ describe('Actions Projection Integration Tests', () => {
       const result = await actionQueries.getActionByID(TEST_INSTANCE_ID, actionId);
 
       expect(result).toBeDefined();
-      expect(result!.state).toBe(1); // active
+      expect(result!.state).toBe(2); // active (ActionState.ACTIVE = 2)
     });
   });
 
