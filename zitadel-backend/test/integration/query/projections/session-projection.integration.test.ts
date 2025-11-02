@@ -8,6 +8,7 @@ import { SessionQueries } from '../../../../src/lib/query/session/session-querie
 import { SessionState } from '../../../../src/lib/query/session/session-types';
 import { Command } from '../../../../src/lib/eventstore';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Session Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -22,7 +23,7 @@ describe('Session Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -42,6 +43,9 @@ describe('Session Projection Integration Tests', () => {
     await registry.start('session_projection');
 
     sessionQueries = new SessionQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -58,9 +62,10 @@ describe('Session Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  // Helper to wait for projection to process (fast with 100ms polling)
-  const waitForProjection = (ms: number = 300) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'session_projection', 2000);
+  };
 
   describe('Session Events', () => {
     it('should process session.created event', async () => {
@@ -88,7 +93,7 @@ describe('Session Projection Integration Tests', () => {
 
       await eventstore.push(command);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -144,7 +149,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -188,7 +193,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -237,7 +242,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -289,7 +294,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -340,7 +345,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -389,7 +394,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const session = await sessionQueries.getSessionByID(sessionID, instanceID);
       
@@ -439,7 +444,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await sessionQueries.searchSessions({
         instanceID,
@@ -518,7 +523,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await sessionQueries.getActiveSessionsCount({
         instanceID,
@@ -567,7 +572,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const sessions = await sessionQueries.getUserActiveSessions(userID, instanceID);
       
@@ -599,7 +604,7 @@ describe('Session Projection Integration Tests', () => {
 
       await eventstore.push(command);
 
-      await waitForProjection();
+      await waitForEvents();
 
       const isActive = await sessionQueries.isSessionActive(sessionID, instanceID);
       
@@ -659,7 +664,7 @@ describe('Session Projection Integration Tests', () => {
         await eventstore.push(cmd);
       }
 
-      await waitForProjection();
+      await waitForEvents();
 
       const summary = await sessionQueries.getSessionSummary(sessionID, instanceID);
       

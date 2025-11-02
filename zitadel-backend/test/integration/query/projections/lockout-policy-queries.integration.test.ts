@@ -12,6 +12,7 @@ import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowfl
 import { PostgresEventstore } from '../../../../src/lib/eventstore';
 import { ProjectionRegistry } from '../../../../src/lib/query/projection/projection-registry';
 import { LockoutPolicyProjection } from '../../../../src/lib/query/projections/lockout-policy-projection';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Lockout Policy Queries Integration Tests', () => {
   let pool: DatabasePool;
@@ -62,8 +63,8 @@ describe('Lockout Policy Queries Integration Tests', () => {
     
     await registry.start('lockout_policy_projection');
     
-    // Wait for projections to be ready
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -84,9 +85,13 @@ describe('Lockout Policy Queries Integration Tests', () => {
   beforeEach(async () => {
     // Clean up test data between tests to prevent interference
     await pool.query('DELETE FROM projections.lockout_policies WHERE instance_id = $1', ['test-instance']);
-    // Wait a bit for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   });
+
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'lockout_policy_projection', 2000);
+  };
 
   describe('Policy Inheritance', () => {
     it('should return built-in default when no policy exists', async () => {
@@ -123,7 +128,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       const policy = await queries.getLockoutPolicy(instanceID);
       
@@ -173,7 +178,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       // Query without orgID should return instance policy
       const instancePolicy = await queries.getLockoutPolicy(instanceID);
@@ -209,7 +214,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       const policy = await queries.getLockoutPolicy(instanceID);
       
@@ -243,7 +248,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       const policy = await queries.getLockoutPolicy(instanceID);
       
@@ -277,7 +282,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       const policy = await queries.getLockoutPolicy(instanceID);
       
@@ -307,7 +312,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       let policy = await queries.getLockoutPolicy(instanceID);
       expect(policy.maxPasswordAttempts).toBe(5);
@@ -329,7 +334,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       policy = await queries.getLockoutPolicy(instanceID);
       expect(policy.maxPasswordAttempts).toBe(3);
@@ -357,7 +362,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       let policy = await queries.getLockoutPolicy(instanceID);
       expect(policy.id).toBe(policyID);
@@ -375,7 +380,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       // Should fall back to built-in default
       policy = await queries.getLockoutPolicy(instanceID);
@@ -406,7 +411,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID: instance1ID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       // Get policies for each instance
       const policy1 = await queries.getLockoutPolicy(instance1ID);
@@ -448,7 +453,7 @@ describe('Lockout Policy Queries Integration Tests', () => {
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await waitForEvents();
       
       const policy = await queries.getDefaultLockoutPolicy(instanceID);
       

@@ -12,6 +12,7 @@ import { AuthRequestProjection } from '../../../../src/lib/query/projections/aut
 import { AuthRequestQueries } from '../../../../src/lib/query/auth-request/auth-request-queries';
 import { Command } from '../../../../src/lib/eventstore';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Auth Request Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -26,7 +27,7 @@ describe('Auth Request Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -61,6 +62,9 @@ describe('Auth Request Projection Integration Tests', () => {
     await registry.start('auth_request_projection');
 
     authRequestQueries = new AuthRequestQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -77,8 +81,10 @@ describe('Auth Request Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => 
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'auth_request_projection', 2000);
+  };
 
   describe('Auth Request Events', () => {
     it('should process auth_request.added event', async () => {
@@ -118,7 +124,7 @@ describe('Auth Request Projection Integration Tests', () => {
       };
 
       await eventstore.push(command);
-      await waitForProjection();
+      await waitForEvents();
 
       const authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
       
@@ -154,7 +160,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add code
       await eventstore.push({
@@ -169,7 +175,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const authRequest = await authRequestQueries.getAuthRequestByCode(authCode, instanceID);
       
@@ -200,7 +206,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Link session
       await eventstore.push({
@@ -218,7 +224,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
       
@@ -248,7 +254,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Verify it exists
       let authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
@@ -265,7 +271,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Verify it's deleted
       authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
@@ -292,7 +298,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Mark as failed
       await eventstore.push({
@@ -307,7 +313,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Verify it's deleted
       const authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
@@ -345,7 +351,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
       expect(authRequest).toBeTruthy();
@@ -368,7 +374,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
       expect(authRequest!.sessionID).toBe(sessionID);
@@ -387,7 +393,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       authRequest = await authRequestQueries.getAuthRequestByCode(authCode, instanceID);
       expect(authRequest).toBeTruthy();
@@ -404,7 +410,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Verify cleanup
       authRequest = await authRequestQueries.getAuthRequestByID(authRequestID, instanceID);
@@ -450,7 +456,7 @@ describe('Auth Request Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await authRequestQueries.searchAuthRequests({
         clientID,

@@ -15,6 +15,7 @@ import { IDPLoginPolicyLinkProjection, createIDPLoginPolicyLinkProjectionConfig 
 import { IDPQueries } from '../../../../src/lib/query/idp/idp-queries';
 import { IDPType } from '../../../../src/lib/query/idp/idp-types';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionsCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('IDP Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -28,7 +29,7 @@ describe('IDP Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -62,6 +63,9 @@ describe('IDP Projection Integration Tests', () => {
     await registry.start('idp_login_policy_link_projection');
 
     idpQueries = new IDPQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -77,8 +81,11 @@ describe('IDP Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projections to process events
+  // Using delay approach since these 4 projections process independently
+  const waitForEvents = async () => {
+    await delay(300);
+  };
 
   describe('IDP Projection', () => {
     it('should process idp.oidc.added event', async () => {
@@ -102,7 +109,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const idp = await idpQueries.getIDPByID(idpID, instanceID);
       
@@ -130,7 +137,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const idp = await idpQueries.getIDPByID(idpID, instanceID);
       
@@ -158,7 +165,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change IDP
       await eventstore.push({
@@ -174,7 +181,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const idp = await idpQueries.getIDPByID(idpID, instanceID);
       
@@ -204,7 +211,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let idp = await idpQueries.getIDPByID(idpID, instanceID);
       expect(idp).toBeTruthy();
@@ -220,7 +227,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       idp = await idpQueries.getIDPByID(idpID, instanceID);
       // IDP should be deleted from the projection
@@ -248,7 +255,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await idpQueries.getIDPTemplate(idpID, instanceID);
       
@@ -275,7 +282,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await idpQueries.getIDPTemplate(idpID, instanceID);
       
@@ -305,7 +312,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const link = await idpQueries.getUserIDPLink(userID, idpID, instanceID);
       
@@ -336,7 +343,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let link = await idpQueries.getUserIDPLink(userID, idpID, instanceID);
       expect(link).toBeTruthy();
@@ -354,7 +361,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       link = await idpQueries.getUserIDPLink(userID, idpID, instanceID);
       expect(link).toBeNull();
@@ -397,7 +404,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const linksBefore = await idpQueries.searchUserIDPLinks({ userID, instanceID });
       expect(linksBefore.total).toBeGreaterThanOrEqual(2);
@@ -413,7 +420,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-123',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const linksAfter = await idpQueries.searchUserIDPLinks({ userID, instanceID });
       expect(linksAfter.total).toBe(0);
@@ -438,7 +445,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const link = await idpQueries.getLoginPolicyIDPLink(idpID, orgID, instanceID);
       
@@ -464,7 +471,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const link = await idpQueries.getLoginPolicyIDPLink(idpID, instanceID, instanceID);
       
@@ -490,7 +497,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let link = await idpQueries.getLoginPolicyIDPLink(idpID, orgID, instanceID);
       expect(link).toBeTruthy();
@@ -508,7 +515,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       link = await idpQueries.getLoginPolicyIDPLink(idpID, orgID, instanceID);
       expect(link).toBeNull();
@@ -548,7 +555,7 @@ describe('IDP Projection Integration Tests', () => {
         owner: 'org-search',
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const googleResults = await idpQueries.searchIDPs({
         type: IDPType.GOOGLE,

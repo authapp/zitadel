@@ -6,12 +6,13 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { PasswordComplexityQueries } from '../../../../src/lib/query/policy/password-complexity-queries';
 import { PasswordAgeQueries } from '../../../../src/lib/query/policy/password-age-queries';
+import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 import { createTestDatabase, closeTestDatabase } from '../../setup';
 import { DatabasePool } from '../../../../src/lib/database';
 import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/eventstore';
 import { ProjectionRegistry } from '../../../../src/lib/query/projection/projection-registry';
 import { PasswordPolicyProjection, createPasswordPolicyProjectionConfig } from '../../../../src/lib/query/projections/password-policy-projection';
-import { generateId } from '../../../../src/lib/id';
 
 describe('Password Policy Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -28,7 +29,7 @@ describe('Password Policy Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -38,18 +39,19 @@ describe('Password Policy Projection Integration Tests', () => {
     
     await registry.init();
     
-    // Register password policy projection
     const projection = new PasswordPolicyProjection(eventstore, pool);
     await projection.init();
     
     const config = createPasswordPolicyProjectionConfig();
     config.interval = 50; // Optimized: 50ms for faster projection detection
     registry.register(config, projection);
-    
     await registry.start('password_policy_projection');
 
     complexityQueries = new PasswordComplexityQueries(pool);
     ageQueries = new PasswordAgeQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -65,8 +67,10 @@ describe('Password Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'password_policy_projection', 2000);
+  };
 
   describe('Password Complexity Policy', () => {
     it('should return built-in default when no policies exist', async () => {
@@ -102,7 +106,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(instanceID);
 
@@ -133,7 +137,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add org-specific policy
       await eventstore.push({
@@ -152,7 +156,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await complexityQueries.getPasswordComplexityPolicy(instanceID, orgID);
 
@@ -181,7 +185,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(instanceID);
 
@@ -216,7 +220,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Update policy
       await eventstore.push({
@@ -232,7 +236,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await complexityQueries.getDefaultPasswordComplexityPolicy(instanceID);
 
@@ -269,7 +273,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await ageQueries.getDefaultPasswordAgePolicy(instanceID);
 
@@ -297,7 +301,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add org-specific policy
       await eventstore.push({
@@ -313,7 +317,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await ageQueries.getPasswordAgePolicy(instanceID, orgID);
 
@@ -339,7 +343,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await ageQueries.getDefaultPasswordAgePolicy(instanceID);
 
@@ -391,7 +395,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const instance = await complexityQueries.getPasswordComplexityPolicy(instanceID);
       expect(instance.minLength).toBe(10);
@@ -413,7 +417,7 @@ describe('Password Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const org = await complexityQueries.getPasswordComplexityPolicy(instanceID, orgID);
       expect(org.minLength).toBe(12);

@@ -13,6 +13,7 @@ import { ProjectionRegistry } from '../../../../src/lib/query/projection/project
 import { QuotaProjection } from '../../../../src/lib/query/projections/quota-projection';
 import { QuotaQueries } from '../../../../src/lib/query/quota/quota-queries';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => {
   let pool: DatabasePool;
@@ -64,7 +65,8 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
     
     await registry.start('quota_projection');
     
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -81,6 +83,11 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
     
     await closeTestDatabase();
   });
+
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'quota_projection', 2000);
+  };
 
   describe('Quota Events', () => {
     it('should process quota.added event', async () => {
@@ -104,7 +111,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Query by unit (new way)
       const quota = await queries.getQuotaByUnit(instanceID, unit);
@@ -137,7 +144,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       let quota = await queries.getQuotaByUnit(instanceID, unit);
       expect(quota!.amount).toBe(3600);
@@ -158,7 +165,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       quota = await queries.getQuotaByUnit(instanceID, unit);
       expect(quota!.amount).toBe(7200);
@@ -186,7 +193,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       let quota = await queries.getQuotaByUnit(instanceID, unit);
       expect(quota).toBeDefined();
@@ -204,7 +211,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       quota = await queries.getQuotaByUnit(instanceID, unit);
       expect(quota).toBeNull();
@@ -251,7 +258,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const quotas = await queries.getQuotasByInstance(instanceID);
       
@@ -285,7 +292,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const quota = await queries.getQuotaByUnit(instanceID, unit);
       
@@ -333,7 +340,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const activeQuotas = await queries.getActiveQuotas(instanceID);
       
@@ -365,7 +372,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const quota = await queries.getQuotaByUnit(instanceID, unit);
       
@@ -394,7 +401,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const quota = await queries.getQuotaByUnit(instanceID, unit);
       
@@ -423,7 +430,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const quota = await queries.getQuotaByUnit(instanceID, unit);
       
@@ -457,7 +464,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Add notification
       await eventstore.push({
@@ -476,7 +483,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const notifications = await queries.getQuotaNotifications(instanceID, unit);
       
@@ -508,7 +515,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Add notifications at different thresholds
       await eventstore.pushMany([
@@ -559,7 +566,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         },
       ]);
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Check at 60% usage
       const triggered60 = await queries.getTriggeredNotifications(instanceID, unit, 60);
@@ -598,7 +605,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Increment usage
       await eventstore.push({
@@ -615,7 +622,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const period = await queries.getPeriodUsage(instanceID, unit, periodStart);
       
@@ -646,7 +653,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       // Increment usage multiple times
       for (let i = 0; i < 5; i++) {
@@ -665,7 +672,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         });
       }
       
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await waitForEvents();
       
       const period = await queries.getPeriodUsage(instanceID, unit, periodStart);
       
@@ -711,7 +718,7 @@ describe('Quota Projection Integration Tests (Zitadel Go v2 Compatible)', () => 
         instanceID,
       });
       
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await waitForEvents();
       
       const remaining = await queries.getRemainingQuotaForPeriod(instanceID, unit, periodStart);
       

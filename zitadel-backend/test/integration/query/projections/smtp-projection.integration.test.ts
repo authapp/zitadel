@@ -12,6 +12,7 @@ import { SMTPProjection, createSMTPProjectionConfig } from '../../../../src/lib/
 import { SMTPQueries } from '../../../../src/lib/query/smtp/smtp-queries';
 import { SMTPConfigState } from '../../../../src/lib/query/smtp/smtp-types';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('SMTP Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -27,7 +28,7 @@ describe('SMTP Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -47,6 +48,9 @@ describe('SMTP Projection Integration Tests', () => {
     await registry.start('smtp_projection');
 
     smtpQueries = new SMTPQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -60,8 +64,10 @@ describe('SMTP Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'smtp_projection', 2000);
+  };
 
   describe('SMTP Config Lifecycle', () => {
     it('should process instance.smtp.config.added event', async () => {
@@ -88,7 +94,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       
@@ -122,7 +128,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smtpQueries.getActiveSMTPConfig(instanceID, orgID);
       
@@ -151,7 +157,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       await eventstore.push({
         instanceID,
@@ -169,7 +175,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       
@@ -198,7 +204,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMTPConfigState.INACTIVE);
@@ -213,7 +219,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMTPConfigState.ACTIVE);
@@ -228,7 +234,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       expect(config!.state).toBe(SMTPConfigState.INACTIVE);
@@ -255,7 +261,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       expect(config).toBeTruthy();
@@ -270,7 +276,7 @@ describe('SMTP Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       config = await smtpQueries.getSMTPConfigByID(instanceID, configID);
       expect(config).toBeNull();

@@ -12,6 +12,7 @@ import { LoginPolicyProjection, createLoginPolicyProjectionConfig } from '../../
 import { LoginPolicyQueries } from '../../../../src/lib/query/login-policy/login-policy-queries';
 import { SecondFactorType, MultiFactorType } from '../../../../src/lib/query/login-policy/login-policy-types';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Login Policy Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -43,6 +44,9 @@ describe('Login Policy Projection Integration Tests', () => {
     await registry.start('login_policy_projection');
 
     policyQueries = new LoginPolicyQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -58,8 +62,10 @@ describe('Login Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'login_policy_projection', 2000);
+  };
 
   describe('Login Policy Management', () => {
     it('should process org.login.policy.added event', async () => {
@@ -82,7 +88,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       
@@ -110,7 +116,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getDefaultLoginPolicy(instanceID);
       
@@ -138,7 +144,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change policy
       await eventstore.push({
@@ -154,7 +160,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       
@@ -180,7 +186,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       expect(policy).toBeTruthy();
@@ -196,7 +202,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       expect(policy).toBeNull();
@@ -221,7 +227,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add second factor
       await eventstore.push({
@@ -236,7 +242,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       
@@ -261,7 +267,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add OTP
       await eventstore.push({
@@ -289,7 +295,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       
@@ -316,7 +322,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add multi-factor
       await eventstore.push({
@@ -331,7 +337,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       
@@ -367,7 +373,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       expect(policy!.secondFactors).toContain(SecondFactorType.OTP);
@@ -385,7 +391,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       policy = await policyQueries.getLoginPolicy(orgID, instanceID);
       expect(policy!.secondFactors).not.toContain(SecondFactorType.OTP);
@@ -412,7 +418,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Get active policy for org (should fall back to instance)
       const policy = await policyQueries.getActiveLoginPolicy(orgID, instanceID);
@@ -453,7 +459,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Get active policy for org
       const policy = await policyQueries.getActiveLoginPolicy(orgID, instanceID);
@@ -491,7 +497,7 @@ describe('Login Policy Projection Integration Tests', () => {
         owner: org2,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const result = await policyQueries.searchLoginPolicies({
         instanceID,

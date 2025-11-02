@@ -13,6 +13,7 @@ import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/even
 import { ProjectionRegistry } from '../../../../src/lib/query/projection/projection-registry';
 import { DomainLabelPolicyProjection, createDomainLabelPolicyProjectionConfig } from '../../../../src/lib/query/projections/domain-label-policy-projection';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Domain and Label Policy Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -29,7 +30,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -51,6 +52,9 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
 
     domainQueries = new DomainPolicyQueries(pool);
     labelQueries = new LabelPolicyQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -66,8 +70,10 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'domain_label_policy_projection', 2000);
+  };
 
   describe('Domain Policy', () => {
     it('should return built-in default when no policies exist', async () => {
@@ -96,7 +102,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await domainQueries.getDefaultDomainPolicy(instanceID);
 
@@ -125,7 +131,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add org-specific policy
       await eventstore.push({
@@ -142,7 +148,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await domainQueries.getDomainPolicy(instanceID, orgID);
 
@@ -169,7 +175,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await domainQueries.getDomainPolicy(instanceID, 'non-existent-org');
 
@@ -220,7 +226,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await labelQueries.getDefaultLabelPolicy(instanceID);
 
@@ -259,7 +265,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Add org-specific policy
       await eventstore.push({
@@ -290,7 +296,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await labelQueries.getLabelPolicy(instanceID, orgID);
 
@@ -332,7 +338,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await labelQueries.getLabelPolicyByOrg(instanceID, orgID);
 
@@ -365,7 +371,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await labelQueries.getActiveLabelPolicy(instanceID);
 
@@ -402,7 +408,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
           owner: instanceID,
         });
 
-        await waitForProjection();
+        await waitForEvents();
 
         const policy = await labelQueries.getDefaultLabelPolicy(instanceID);
         expect(policy.themeMode).toBe(mode);
@@ -435,7 +441,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       domainPolicy = await domainQueries.getDomainPolicy(instanceID);
       expect(domainPolicy.userLoginMustBeDomain).toBe(true);
@@ -455,7 +461,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       domainPolicy = await domainQueries.getDomainPolicy(instanceID, orgID);
       expect(domainPolicy.validateOrgDomains).toBe(true);
@@ -489,7 +495,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       labelPolicy = await labelQueries.getLabelPolicy(instanceID);
       expect(labelPolicy.primaryColor).toBe('#instancecolor');
@@ -519,7 +525,7 @@ describe('Domain and Label Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       labelPolicy = await labelQueries.getLabelPolicy(instanceID, orgID);
       expect(labelPolicy.primaryColor).toBe('#orgcolor');
