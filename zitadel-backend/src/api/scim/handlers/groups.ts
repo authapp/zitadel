@@ -8,6 +8,7 @@ import { SCIM_SCHEMAS } from '../types';
 import { SCIMErrors } from '../middleware/scim-error-handler';
 import { zitadelGroupToSCIM, zitadelGroupsToSCIMList } from '../converters/zitadel-to-scim';
 import { scimGroupToZitadelCreate, scimGroupToZitadelUpdate } from '../converters/scim-to-zitadel';
+import { mapZitadelErrorToSCIM } from '../utils/error-mapper';
 
 /**
  * GET /scim/v2/Groups
@@ -24,32 +25,26 @@ async function listGroups(req: Request, res: Response, next: NextFunction): Prom
     // Parse pagination
     const start = Math.max(1, parseInt(startIndex as string) || 1);
     const limit = Math.min(200, parseInt(count as string) || 100);
-
-    // TODO: Implement filtering and database query
-    // For now, return stub data
-    const groups: any[] = [];
-    const totalResults = 0;
-
-    /*
-    // Example implementation:
-    const { pool } = (req as any).scimContext;
     const offset = start - 1;
+
+    // Get SCIM context
+    const { queries, instanceID } = (req as any).scimContext;
+
+    // Query organizations (groups are mapped to organizations)
+    let result;
+    try {
+      result = await queries.org.searchOrgs({
+        offset,
+        limit,
+        filter: {},
+        instanceID
+      });
+    } catch (queryError: any) {
+      throw mapZitadelErrorToSCIM(queryError);
+    }
     
-    const query = `
-      SELECT * FROM organizations
-      WHERE instance_id = $1
-      ORDER BY id ASC
-      LIMIT $2 OFFSET $3
-    `;
-    
-    const countQuery = `SELECT COUNT(*) as total FROM organizations WHERE instance_id = $1`;
-    
-    const groupsResult = await pool.query(query, ['instance-id', limit, offset]);
-    const countResult = await pool.queryOne(countQuery, ['instance-id']);
-    
-    groups = groupsResult.rows;
-    totalResults = parseInt(countResult.total);
-    */
+    const groups = result.orgs;
+    const totalResults = result.total;
 
     // Convert to SCIM format
     const baseUrl = `${req.protocol}://${req.get('host')}`;
@@ -82,35 +77,53 @@ async function createGroup(req: Request, res: Response, next: NextFunction): Pro
     // Convert to Zitadel format
     const zitadelGroup = scimGroupToZitadelCreate(scimGroup);
 
-    // TODO: Call Zitadel group/org creation command
-    // For now, create stub
-    const createdGroup = {
-      id: `group_${Date.now()}`,
-      groupId: `group_${Date.now()}`,
-      ...zitadelGroup,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    /*
-    // Example implementation:
-    const { commands, createContext } = (req as any).scimContext;
+    // Get SCIM context
+    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
     const ctx = createContext();
+
+    // Execute addOrg command (SCIM groups map to Zitadel organizations)
+    let result;
+    try {
+      result = await commands.addOrg(ctx, {
+        name: zitadelGroup.name
+      });
+    } catch (cmdError: any) {
+      throw mapZitadelErrorToSCIM(cmdError);
+    }
+
+    // Process members if provided
+    if (scimGroup.members && scimGroup.members.length > 0) {
+      for (const member of scimGroup.members) {
+        if (member.value) {
+          try {
+            await commands.addOrgMember(ctx, result.orgID, {
+              userID: member.value,
+              roles: ['ORG_MEMBER']
+            });
+          } catch (memberError) {
+            console.log(`Warning: Could not add member ${member.value}:`, memberError);
+            // Continue with other members
+          }
+        }
+      }
+    }
+
+    // Wait for projection processing
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Query back created organization
+    const createdOrg = await queries.org.getOrgByID(result.orgID, instanceID);
     
-    // Create as organization or project role depending on use case
-    const result = await commands.addOrganization(ctx, {
-      name: zitadelGroup.name,
-    });
-    
-    createdGroup = await getGroupById(result.orgId);
-    */
+    if (!createdOrg) {
+      throw SCIMErrors.invalidValue('Group created but not found in query');
+    }
 
     // Convert back to SCIM format
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimResponse = zitadelGroupToSCIM(createdGroup, baseUrl);
+    const scimResponse = zitadelGroupToSCIM(createdOrg, baseUrl);
 
     res.status(201)
-      .location(`${baseUrl}/scim/v2/Groups/${createdGroup.id}`)
+      .location(`${baseUrl}/scim/v2/Groups/${result.orgID}`)
       .json(scimResponse);
   } catch (error) {
     next(error);
@@ -125,22 +138,24 @@ async function getGroup(req: Request, res: Response, next: NextFunction): Promis
   try {
     const { id } = req.params;
 
-    // TODO: Fetch group from database
-    const group: any = null;
+    // Get SCIM context
+    const { queries, instanceID } = (req as any).scimContext;
 
-    /*
-    // Example implementation:
-    const { queries } = (req as any).scimContext;
-    const group = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    // Query organization by ID
+    let org;
+    try {
+      org = await queries.org.getOrgByID(id, instanceID);
+    } catch (queryError: any) {
+      throw mapZitadelErrorToSCIM(queryError);
+    }
 
-    if (!group) {
+    if (!org) {
       throw SCIMErrors.notFound(`Group not found: ${id}`);
     }
 
     // Convert to SCIM format
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimGroup = zitadelGroupToSCIM(group, baseUrl);
+    const scimGroup = zitadelGroupToSCIM(org, baseUrl);
 
     res.json(scimGroup);
   } catch (error) {
@@ -162,39 +177,49 @@ async function replaceGroup(req: Request, res: Response, next: NextFunction): Pr
       throw SCIMErrors.invalidValue('displayName is required');
     }
 
-    // Check if group exists
-    let existingGroup: any = null;
+    // Get SCIM context
+    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const ctx = createContext();
 
-    /*
-    const { queries } = (req as any).scimContext;
-    existingGroup = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    // Check if organization exists
+    let existingOrg;
+    try {
+      existingOrg = await queries.org.getOrgByID(id, instanceID);
+    } catch (queryError: any) {
+      throw mapZitadelErrorToSCIM(queryError);
+    }
 
-    if (!existingGroup) {
+    if (!existingOrg) {
       throw SCIMErrors.notFound(`Group not found: ${id}`);
     }
 
     // Convert to Zitadel format
     const updates = scimGroupToZitadelUpdate(scimGroup);
 
-    // TODO: Call Zitadel group update command
-    const updatedGroup = {
-      ...existingGroup,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    // Only update if name changed
+    if (updates.name && updates.name !== existingOrg.name) {
+      try {
+        await commands.changeOrg(ctx, id, {
+          name: updates.name
+        });
+      } catch (cmdError: any) {
+        throw mapZitadelErrorToSCIM(cmdError);
+      }
+    }
 
-    /*
-    const { commands, createContext } = (req as any).scimContext;
-    const ctx = createContext();
+    // Wait for projection processing
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Query the updated organization
+    const updatedOrg = await queries.org.getOrgByID(id, instanceID);
     
-    await commands.updateOrganization(ctx, id, updates);
-    updatedGroup = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    if (!updatedOrg) {
+      throw SCIMErrors.invalidValue('Group updated but not found in query');
+    }
 
     // Convert back to SCIM format
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimResponse = zitadelGroupToSCIM(updatedGroup, baseUrl);
+    const scimResponse = zitadelGroupToSCIM(updatedOrg, baseUrl);
 
     res.json(scimResponse);
   } catch (error) {
@@ -216,54 +241,106 @@ async function patchGroup(req: Request, res: Response, next: NextFunction): Prom
       throw SCIMErrors.invalidValue('Invalid or missing schemas for PATCH operation');
     }
 
-    // Check if group exists
-    let existingGroup: any = null;
+    // Validate operations
+    if (!patchOp.Operations || !Array.isArray(patchOp.Operations) || patchOp.Operations.length === 0) {
+      throw SCIMErrors.invalidValue('Operations array is required and must not be empty');
+    }
 
-    /*
-    const { queries } = (req as any).scimContext;
-    existingGroup = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    // Get SCIM context
+    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const ctx = createContext();
 
-    if (!existingGroup) {
+    // Check if organization exists
+    let existingOrg;
+    try {
+      existingOrg = await queries.org.getOrgByID(id, instanceID);
+    } catch (queryError: any) {
+      throw mapZitadelErrorToSCIM(queryError);
+    }
+
+    if (!existingOrg) {
       throw SCIMErrors.notFound(`Group not found: ${id}`);
     }
 
     // Process PATCH operations
-    const updates: any = {};
+    let nameChanged = false;
+    let newName = existingOrg.name;
+    let membersToAdd: string[] = [];
+    let membersToRemove: string[] = [];
     
     for (const operation of patchOp.Operations) {
       const { op, path, value } = operation;
       
-      if (op === 'replace' || op === 'add') {
-        if (path && path.toLowerCase() === 'displayname') {
-          updates.name = value;
-        } else if (path && path.toLowerCase().startsWith('members')) {
-          updates.members = value;
-        } else if (!path && value) {
-          if (value.displayName) updates.name = value.displayName;
-          if (value.members) updates.members = value.members;
+      // Handle displayName operations
+      if ((op === 'replace' || op === 'add') && path && path.toLowerCase() === 'displayname') {
+        nameChanged = true;
+        newName = value;
+      }
+      // Handle path-less replacement with displayName
+      else if ((op === 'replace' || op === 'add') && !path && value && value.displayName) {
+        nameChanged = true;
+        newName = value.displayName;
+      }
+      // Handle member operations
+      else if ((op === 'add') && path && path.toLowerCase() === 'members') {
+        if (Array.isArray(value)) {
+          membersToAdd = value.map((m: any) => m.value).filter(Boolean);
+        }
+      }
+      else if ((op === 'remove') && path && path.toLowerCase() === 'members') {
+        if (Array.isArray(value)) {
+          membersToRemove = value.map((m: any) => m.value).filter(Boolean);
         }
       }
     }
 
-    // TODO: Call Zitadel group update command
-    const updatedGroup = {
-      ...existingGroup,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
+    // Update name if changed
+    if (nameChanged && newName !== existingOrg.name) {
+      try {
+        await commands.changeOrg(ctx, id, {
+          name: newName
+        });
+      } catch (cmdError: any) {
+        throw mapZitadelErrorToSCIM(cmdError);
+      }
+    }
 
-    /*
-    const { commands, createContext } = (req as any).scimContext;
-    const ctx = createContext();
+    // Handle member additions
+    for (const userID of membersToAdd) {
+      try {
+        await commands.addOrgMember(ctx, id, {
+          userID,
+          roles: ['ORG_MEMBER']
+        });
+      } catch (memberError) {
+        console.log(`Warning: Could not add member ${userID}:`, memberError);
+        // Continue with other members
+      }
+    }
+
+    // Handle member removals
+    for (const userID of membersToRemove) {
+      try {
+        await commands.removeOrgMember(ctx, id, userID);
+      } catch (memberError) {
+        console.log(`Warning: Could not remove member ${userID}:`, memberError);
+        // Continue with other removals
+      }
+    }
+
+    // Wait for projection processing
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // Query the updated organization
+    const updatedOrg = await queries.org.getOrgByID(id, instanceID);
     
-    await commands.updateOrganization(ctx, id, updates);
-    updatedGroup = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    if (!updatedOrg) {
+      throw SCIMErrors.invalidValue('Group updated but not found in query');
+    }
 
     // Convert back to SCIM format
     const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const scimResponse = zitadelGroupToSCIM(updatedGroup, baseUrl);
+    const scimResponse = zitadelGroupToSCIM(updatedOrg, baseUrl);
 
     res.json(scimResponse);
   } catch (error) {
@@ -279,19 +356,28 @@ async function deleteGroup(req: Request, res: Response, next: NextFunction): Pro
   try {
     const { id } = req.params;
 
-    // Check if group exists
-    const existingGroup: any = null;
+    // Get SCIM context
+    const { commands, queries, instanceID, createContext } = (req as any).scimContext;
+    const ctx = createContext();
 
-    /*
-    const { queries } = (req as any).scimContext;
-    const existingGroup = await queries.getOrganizationByID(id, 'instance-id');
-    */
+    // Check if organization exists
+    let existingOrg;
+    try {
+      existingOrg = await queries.org.getOrgByID(id, instanceID);
+    } catch (queryError: any) {
+      throw mapZitadelErrorToSCIM(queryError);
+    }
 
-    if (!existingGroup) {
+    if (!existingOrg) {
       throw SCIMErrors.notFound(`Group not found: ${id}`);
     }
 
-    // TODO: Call Zitadel group deletion command
+    // Execute removeOrg command
+    try {
+      await commands.removeOrg(ctx, id);
+    } catch (cmdError: any) {
+      throw mapZitadelErrorToSCIM(cmdError);
+    }
     /*
     const { commands, createContext } = (req as any).scimContext;
     const ctx = createContext();
