@@ -34,6 +34,7 @@ import { UserGrantProjection } from '../../../../src/lib/query/projections/user-
 import { UserQueries } from '../../../../src/lib/query/user/user-queries';
 import { Context } from '../../../../src/lib/command/context';
 import { generateId as generateSnowflakeId } from '../../../../src/lib/id/snowflake';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 describe('User Service - COMPREHENSIVE Integration Tests (40+ Endpoints)', () => {
   let pool: DatabasePool;
@@ -96,7 +97,7 @@ describe('User Service - COMPREHENSIVE Integration Tests (40+ Endpoints)', () =>
       await userGrantProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

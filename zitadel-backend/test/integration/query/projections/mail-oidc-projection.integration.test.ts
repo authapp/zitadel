@@ -12,6 +12,7 @@ import { MailOIDCProjection, createMailOIDCProjectionConfig } from '../../../../
 import { MailTemplateQueries } from '../../../../src/lib/query/policy/mail-template-queries';
 import { OIDCSettingsQueries } from '../../../../src/lib/query/policy/oidc-settings-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Mail & OIDC Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -28,7 +29,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: true,
     });
 
     registry = new ProjectionRegistry({
@@ -51,6 +52,9 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     // Initialize query classes
     mailTemplateQueries = new MailTemplateQueries(pool);
     oidcSettingsQueries = new OIDCSettingsQueries(pool);
+    
+    // Give projection time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -66,8 +70,10 @@ describe('Mail & OIDC Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projection to process events
+  const waitForEvents = async () => {
+    await waitForProjectionCatchUp(registry, eventstore, 'mail_oidc_projection', 2000);
+  };
 
   describe('Mail Template', () => {
     it('should return built-in default when no templates exist', async () => {
@@ -96,7 +102,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await mailTemplateQueries.getDefaultMailTemplate(instanceID);
       
@@ -122,7 +128,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Org-specific template
       await eventstore.push({
@@ -137,7 +143,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await mailTemplateQueries.getMailTemplate(instanceID, orgID);
       
@@ -161,7 +167,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change template
       await eventstore.push({
@@ -176,7 +182,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await mailTemplateQueries.getDefaultMailTemplate(instanceID);
       
@@ -213,7 +219,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const settings = await oidcSettingsQueries.getOIDCSettings(instanceID);
       
@@ -241,7 +247,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change settings
       await eventstore.push({
@@ -257,7 +263,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const settings = await oidcSettingsQueries.getOIDCSettings(instanceID);
       
@@ -300,7 +306,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const template = await mailTemplateQueries.getDefaultMailTemplate(instanceID);
       const settings = await oidcSettingsQueries.getOIDCSettings(instanceID);
@@ -328,7 +334,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let template = await mailTemplateQueries.getMailTemplate(instanceID, orgID);
       expect(template.organizationID).toBe(orgID);
@@ -344,7 +350,7 @@ describe('Mail & OIDC Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Should fall back to built-in default
       template = await mailTemplateQueries.getMailTemplate(instanceID, orgID);

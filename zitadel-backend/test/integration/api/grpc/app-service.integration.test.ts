@@ -18,6 +18,7 @@ import { AppProjection } from '../../../../src/lib/query/projections/app-project
 import { ProjectProjection } from '../../../../src/lib/query/projections/project-projection';
 import { OrgProjection } from '../../../../src/lib/query/projections/org-projection';
 import { AppQueries } from '../../../../src/lib/query/app/app-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 describe('Application Service - COMPREHENSIVE Integration Tests (10 Endpoints)', () => {
   let pool: DatabasePool;
@@ -73,7 +74,7 @@ describe('Application Service - COMPREHENSIVE Integration Tests (10 Endpoints)',
       await orgProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

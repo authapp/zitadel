@@ -17,8 +17,10 @@ import { InstanceService } from '../../../../src/api/grpc/instance/v2/instance_s
 import { InstanceProjection } from '../../../../src/lib/query/projections/instance-projection';
 import { InstanceDomainProjection } from '../../../../src/lib/query/projections/instance-domain-projection';
 import { InstanceMemberProjection } from '../../../../src/lib/query/projections/instance-member-projection';
-import { InstanceQueries } from '../../../../src/lib/query/instance/instance-queries';
+import { UserQueries } from '../../../../src/lib/query/user/user-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 import { InstanceMemberQueries } from '../../../../src/lib/query/member/instance-member-queries';
+import { InstanceQueries } from '../../../../src/lib/query/instance/instance-queries';
 import { OrgProjection } from '../../../../src/lib/query/projections/org-projection';
 import { UserProjection } from '../../../../src/lib/query/projections/user-projection';
 
@@ -86,7 +88,7 @@ describe('Instance Service - COMPREHENSIVE Integration Tests (Full Stack)', () =
       await userProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

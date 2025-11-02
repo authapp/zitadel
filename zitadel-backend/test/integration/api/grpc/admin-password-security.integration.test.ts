@@ -16,6 +16,7 @@ import { setupCommandTest, CommandTestContext } from '../../../helpers/command-t
 import { AdminService } from '../../../../src/api/grpc/admin/v1/admin_service';
 import { ProjectionRegistry } from '../../../../src/lib/query/projection/projection-registry';
 import { PasswordPolicyProjection, createPasswordPolicyProjectionConfig } from '../../../../src/lib/query/projections/password-policy-projection';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 describe('Admin Password & Security Policies - Integration Tests', () => {
   let pool: DatabasePool;
@@ -63,8 +64,7 @@ describe('Admin Password & Security Policies - Integration Tests', () => {
   });
 
   // Helper to wait for projection processing
-  const waitForProjection = (ms: number = 500) =>
-    new Promise(resolve => setTimeout(resolve, ms));
+  const waitForProjection = delay;
 
   // Note: We don't clear events between tests to allow policies to persist
   // This matches the real-world scenario where policies remain active

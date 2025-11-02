@@ -10,6 +10,7 @@ import { setupCommandTest, CommandTestContext } from '../../../helpers/command-t
 import { ActionService } from '../../../../src/api/grpc/action/v3alpha/action_service';
 import { ActionsProjection } from '../../../../src/lib/query/projections/actions-projection';
 import { ActionQueries } from '../../../../src/lib/query/action/action-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 import { ActionState as QueryActionState } from '../../../../src/lib/query/action/action-types';
 
 describe('Action Service - Integration Tests (7 Endpoints)', () => {
@@ -56,7 +57,7 @@ describe('Action Service - Integration Tests (7 Endpoints)', () => {
       await projection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**
@@ -165,7 +166,8 @@ describe('Action Service - Integration Tests (7 Endpoints)', () => {
       expect(response).toBeDefined();
       expect(response.result).toBeDefined();
       expect(response.result.length).toBeGreaterThanOrEqual(3);
-      expect(response.details.totalResult).toBeGreaterThanOrEqual(3);
+      expect(response.details).toBeDefined();
+      expect(response.details!.totalResult).toBeGreaterThanOrEqual(3);
 
       // Verify structure
       const action = response.result[0];
@@ -186,7 +188,8 @@ describe('Action Service - Integration Tests (7 Endpoints)', () => {
       });
 
       expect(response.result.length).toBe(0);
-      expect(response.details.totalResult).toBe(0);
+      expect(response.details).toBeDefined();
+      expect(response.details!.totalResult).toBe(0);
     });
   });
 

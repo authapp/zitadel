@@ -6,6 +6,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { generateId } from '../../../../src/lib/id';
+import { delay } from '../../../helpers/projection-test-helpers';
 import { DatabasePool } from '../../../../src/lib/database';
 import { createTestDatabase, closeTestDatabase } from '../../setup';
 import { setupCommandTest, CommandTestContext } from '../../../helpers/command-test-helpers';
@@ -51,7 +53,7 @@ describe('Admin Milestones & Events Endpoints - Integration Tests', () => {
       await orgProjection.reduce(event);
       await userProjection.reduce(event);
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   // ============================================================================

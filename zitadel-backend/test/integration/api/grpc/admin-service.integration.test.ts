@@ -20,6 +20,7 @@ import { OrgProjection } from '../../../../src/lib/query/projections/org-project
 import { UserProjection } from '../../../../src/lib/query/projections/user-projection';
 import { InstanceQueries } from '../../../../src/lib/query/instance/instance-queries';
 import { OrgQueries } from '../../../../src/lib/query/org/org-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 describe('Admin Service - Integration Tests (System & Health)', () => {
   let pool: DatabasePool;
@@ -79,7 +80,7 @@ describe('Admin Service - Integration Tests (System & Health)', () => {
       } catch (err) {
         console.log(`    ✗ Instance projection error: ${err}`);
       }
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await delay(50);
       
       try {
         await orgProjection.reduce(event);
@@ -89,19 +90,19 @@ describe('Admin Service - Integration Tests (System & Health)', () => {
       } catch (err) {
         console.log(`    ✗ Org projection error: ${err}`);
       }
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await delay(50);
       
       try {
         await userProjection.reduce(event);
       } catch (err) {
         console.log(`    ✗ User projection error: ${err}`);
       }
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await delay(50);
     }
     
     // Final delay to ensure DB commit
     console.log(`  → Waiting 300ms for DB commit...`);
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await delay(300);
   }
 
   /**
@@ -123,7 +124,7 @@ describe('Admin Service - Integration Tests (System & Health)', () => {
       
       if (attempt < 3) {
         console.log(`  → Org not found, waiting 200ms and retrying (attempt ${attempt}/3)...`);
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await delay(200);
       }
     }
     

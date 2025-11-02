@@ -19,6 +19,7 @@ import { ProjectRoleProjection } from '../../../../src/lib/query/projections/pro
 import { ProjectMemberProjection } from '../../../../src/lib/query/projections/project-member-projection';
 import { ProjectGrantProjection } from '../../../../src/lib/query/projections/project-grant-projection';
 import { ProjectQueries } from '../../../../src/lib/query/project/project-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 import { OrgProjection } from '../../../../src/lib/query/projections/org-projection';
 
 describe('Project Service - COMPREHENSIVE Integration Tests (18 Endpoints)', () => {
@@ -85,7 +86,7 @@ describe('Project Service - COMPREHENSIVE Integration Tests (18 Endpoints)', () 
       await orgProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

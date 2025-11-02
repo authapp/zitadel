@@ -15,6 +15,7 @@ import { Context } from '../../../../src/lib/command/context';
 import { AdminService } from '../../../../src/api/grpc/admin/v1/admin_service';
 import { OrgProjection } from '../../../../src/lib/query/projections/org-projection';
 import { OrgQueries } from '../../../../src/lib/query/org/org-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 import { InstanceProjection } from '../../../../src/lib/query/projections/instance-projection';
 import { InstanceQueries } from '../../../../src/lib/query/instance/instance-queries';
 
@@ -75,7 +76,7 @@ describe('Admin Organization Endpoints - COMPREHENSIVE Integration Tests (Full S
       await instanceProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   beforeEach(async () => {

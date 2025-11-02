@@ -15,6 +15,7 @@ import { PrivacyPolicyQueries } from '../../../../src/lib/query/policy/privacy-p
 import { NotificationPolicyQueries } from '../../../../src/lib/query/policy/notification-policy-queries';
 import { SecurityPolicyQueries } from '../../../../src/lib/query/policy/security-policy-queries';
 import { generateId } from '../../../../src/lib/id';
+import { waitForProjectionsCatchUp, delay } from '../../../helpers/projection-test-helpers';
 
 describe('Security & Notification Policy Projection Integration Tests', () => {
   let pool: DatabasePool;
@@ -33,7 +34,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: TEST_INSTANCE_ID,
       maxPushBatchSize: 100,
-      enableSubscriptions: false,
+      enableSubscriptions: false,  // Keep disabled for multi-projection tests
     });
 
     registry = new ProjectionRegistry({
@@ -74,6 +75,9 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     privacyQueries = new PrivacyPolicyQueries(pool);
     notificationQueries = new NotificationPolicyQueries(pool);
     securityQueries = new SecurityPolicyQueries(pool);
+    
+    // Give projections time to start and establish subscriptions
+    await delay(100);
   });
 
   afterAll(async () => {
@@ -96,11 +100,15 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
     await pool.query('DELETE FROM projections.notification_policies WHERE instance_id = $1', [TEST_INSTANCE_ID]);
     await pool.query('DELETE FROM projections.security_policies WHERE instance_id = $1', [TEST_INSTANCE_ID]);
     // Wait a bit for cleanup to complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   });
 
-  const waitForProjection = (ms: number = 300) => // Optimized: 300ms sufficient for most projections
-    new Promise(resolve => setTimeout(resolve, ms));
+  // Helper to wait for projections to process events
+  // Note: Using polling delay instead of subscription-based waiting because this test
+  // uses multiple projections with complex event chains, which works better with fixed delays
+  const waitForEvents = async () => {
+    await delay(300);  // Original pattern - reliable for multi-projection tests
+  };
 
   describe('Lockout Policy', () => {
     it('should return built-in default when no policies exist', async () => {
@@ -132,7 +140,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await lockoutQueries.getDefaultLockoutPolicy(instanceID);
       
@@ -164,7 +172,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Org-specific policy
       const orgPolicyID = generateId();
@@ -183,7 +191,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await lockoutQueries.getLockoutPolicy(instanceID, orgID);
       
@@ -212,7 +220,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change policy
       await eventstore.push({
@@ -229,7 +237,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await lockoutQueries.getDefaultLockoutPolicy(instanceID);
       
@@ -268,7 +276,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await privacyQueries.getDefaultPrivacyPolicy(instanceID);
       
@@ -296,7 +304,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Org policy
       await eventstore.push({
@@ -315,7 +323,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await privacyQueries.getPrivacyPolicy(instanceID, orgID);
       
@@ -351,7 +359,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await notificationQueries.getDefaultNotificationPolicy(instanceID);
       
@@ -376,7 +384,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Org policy
       await eventstore.push({
@@ -391,7 +399,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await notificationQueries.getNotificationPolicy(instanceID, orgID);
       
@@ -428,7 +436,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await securityQueries.getSecurityPolicy(instanceID);
       
@@ -454,7 +462,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Change policy
       await eventstore.push({
@@ -470,7 +478,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       const policy = await securityQueries.getSecurityPolicy(instanceID);
       
@@ -514,7 +522,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: instanceID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       lockout = await lockoutQueries.getLockoutPolicy(instanceID);
       expect(lockout.maxPasswordAttempts).toBe(8);
@@ -544,7 +552,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       lockout = await lockoutQueries.getLockoutPolicy(instanceID, orgID);
       expect(lockout.maxPasswordAttempts).toBe(3); // Org policy overrides instance policy
@@ -573,7 +581,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       let policy = await lockoutQueries.getLockoutPolicy(instanceID, orgID);
       expect(policy.organizationID).toBe(orgID);
@@ -589,7 +597,7 @@ describe('Security & Notification Policy Projection Integration Tests', () => {
         owner: orgID,
       });
 
-      await waitForProjection();
+      await waitForEvents();
 
       // Should fall back to built-in default
       policy = await lockoutQueries.getLockoutPolicy(instanceID, orgID);

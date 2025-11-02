@@ -6,6 +6,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { generateId } from '../../../src/lib/id';
+import { delay } from '../../helpers/projection-test-helpers';
 import { DatabasePool } from '../../../src/lib/database';
 import { createTestDatabase } from '../setup';
 import { setupCommandTest, CommandTestContext } from '../../helpers/command-test-helpers';
@@ -50,10 +52,10 @@ describe('OIDC Session Commands - Complete Stack', () => {
     
     for (const event of events) {
       await sessionProjection.reduce(event);
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await delay(50);
     }
     
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

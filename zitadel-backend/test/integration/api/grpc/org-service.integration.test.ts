@@ -16,6 +16,7 @@ import { Context } from '../../../../src/lib/command/context';
 import { OrganizationService } from '../../../../src/api/grpc/org/v2/org_service';
 import { OrgProjection } from '../../../../src/lib/query/projections/org-projection';
 import { OrgQueries } from '../../../../src/lib/query/org/org-queries';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 describe('Organization Service - COMPREHENSIVE Integration Tests (Full Stack)', () => {
   let pool: DatabasePool;
@@ -59,7 +60,7 @@ describe('Organization Service - COMPREHENSIVE Integration Tests (Full Stack)', 
       await orgProjection.reduce(event);
     }
     // Delay to ensure DB commit
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delay(100);
   }
 
   /**

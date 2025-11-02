@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import { createTestDatabase, closeTestDatabase } from '../../setup';
 import { DatabasePool } from '../../../../src/lib/database/pool';
 import { PostgresEventstore } from '../../../../src/lib/eventstore/postgres/eventstore';
@@ -23,7 +23,7 @@ describe('Instance Projection Integration Tests', () => {
     eventstore = new PostgresEventstore(pool, {
       instanceID: 'test-instance',
       maxPushBatchSize: 100,
-      enableSubscriptions: true,
+      enableSubscriptions: false,  // Keep disabled for batch pushMany() tests
     });
 
     registry = new ProjectionRegistry({
@@ -71,9 +71,21 @@ describe('Instance Projection Integration Tests', () => {
     await closeTestDatabase();
   });
 
+  beforeEach(async () => {
+    // Clean up ALL projection data between tests to prevent event accumulation
+    // Note: Tests use generateId() so we need to delete all, not just 'test-instance'
+    await pool.query('TRUNCATE TABLE projections.instances CASCADE');
+    await pool.query('TRUNCATE TABLE projections.instance_domains CASCADE');
+    await pool.query('TRUNCATE TABLE projections.instance_trusted_domains CASCADE');
+    // Small delay to let cleanup complete
+    await delay(100);
+  });
+
   // Helper to wait for projections to process events
+  // Note: Using polling delay instead of subscription-based waiting because this test
+  // uses pushMany() for batch operations, which works better with fixed delays
   const waitForEvents = async () => {
-    await waitForProjectionsCatchUp(registry, eventstore, ['instance_projection', 'instance_domain_projection'], 8000);
+    await delay(300);  // Original pattern - reliable for batch operations
   };
 
   describe('Instance Events', () => {

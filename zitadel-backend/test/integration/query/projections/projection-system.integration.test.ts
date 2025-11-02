@@ -33,6 +33,7 @@ import { CurrentStateTracker } from '../../../../src/lib/query/projection/curren
 import { FailedEventHandler } from '../../../../src/lib/query/projection/failed-events';
 import { Event } from '../../../../src/lib/eventstore/types';
 import { applyProjectionDefaults } from '../../../../src/lib/query/projection/projection-config';
+import { delay } from '../../../helpers/projection-test-helpers';
 
 // Test projection for validation
 class TestProjection extends Projection {
@@ -163,7 +164,7 @@ describe('Projection Production-Readiness Tests', () => {
       projection.failOnEventNumber = 2;
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: Only event 1 should be in database (event 2 failed, rolled back)
@@ -212,7 +213,7 @@ describe('Projection Production-Readiness Tests', () => {
       projection.failOnEventNumber = 3;
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: Events 1, 2, 4, 5 processed (event 3 failed but didn't affect others)
@@ -259,7 +260,7 @@ describe('Projection Production-Readiness Tests', () => {
       // First handler processes all events
       const handler1 = new ProjectionHandler(projection, config, eventstore, pool);
       await handler1.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler1.stop();
 
       const firstCount = projection.reduceCallCount;
@@ -273,7 +274,7 @@ describe('Projection Production-Readiness Tests', () => {
       const projection2 = new TestProjection(eventstore, pool);
       const handler2 = new ProjectionHandler(projection2, config, eventstore, pool);
       await handler2.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler2.stop();
 
       const secondCount = projection2.reduceCallCount;
@@ -314,7 +315,7 @@ describe('Projection Production-Readiness Tests', () => {
       projection.failOnEventNumber = 3;
       const handler1 = new ProjectionHandler(projection, config, eventstore, pool);
       await handler1.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler1.stop();
 
       // Verify events 1, 2, 4, 5 processed (event 3 failed but processing continued)
@@ -368,7 +369,7 @@ describe('Projection Production-Readiness Tests', () => {
         handler2.start(),
       ]);
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
 
       await Promise.all([
         handler1.stop(),
@@ -418,7 +419,7 @@ describe('Projection Production-Readiness Tests', () => {
       const startTime = Date.now();
 
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Reduced: Test continuous processing (2 batches)
+      await delay(1000); // Reduced: Test continuous processing (2 batches)
       
       // Check state before stopping
       const stateBeforeStop = handler.getState();
@@ -478,7 +479,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: Both events processed
@@ -520,7 +521,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: All database fields correctly populated
@@ -567,7 +568,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: Processing works with undefined instanceID
@@ -601,7 +602,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: Timestamps are consistent
@@ -630,7 +631,7 @@ describe('Projection Production-Readiness Tests', () => {
       // No events pushed
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300)); // Wait for at least one interval cycle
+      await delay(300); // Wait for at least one interval cycle
       await handler.stop();
 
       // Should complete without error - state may be 'stopped' or 'live' depending on timing
@@ -668,7 +669,7 @@ describe('Projection Production-Readiness Tests', () => {
 
       const handler = new ProjectionHandler(projection, config, eventstore, pool);
       await handler.start();
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await delay(300);
       await handler.stop();
 
       // Verify: All events attempted but failed
