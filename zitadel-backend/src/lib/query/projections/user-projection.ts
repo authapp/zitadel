@@ -96,14 +96,20 @@ export class UserProjection extends Projection {
         break;
       
       case 'user.phone.changed':
+      case 'user.v2.phone.changed':
+      case 'user.human.phone.changed':
         await this.handlePhoneChanged(event);
         break;
       
       case 'user.phone.verified':
+      case 'user.v2.phone.verified':
+      case 'user.human.phone.verified':
         await this.handlePhoneVerified(event);
         break;
       
       case 'user.phone.removed':
+      case 'user.v2.phone.removed':
+      case 'user.human.phone.removed':
         await this.handlePhoneRemoved(event);
         break;
       

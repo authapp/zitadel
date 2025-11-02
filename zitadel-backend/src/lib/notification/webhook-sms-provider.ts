@@ -117,7 +117,10 @@ export class WebhookSMSProvider implements SMSProvider {
         // Exponential backoff
         const delayMs = Math.min(1000 * Math.pow(2, attempt), 10000);
         console.warn(`[Webhook SMS] Attempt ${attempt + 1} failed, retrying in ${delayMs}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await new Promise(resolve => {
+          const timer = setTimeout(resolve, delayMs);
+          timer.unref(); // Allow process to exit if this is the only thing keeping it alive
+        });
       }
     }
 

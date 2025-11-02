@@ -258,7 +258,7 @@ describe('ProjectionRegistry', () => {
       
       await registry.init();
       await registry.start('test_proj');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       
       const handler = registry.get('test_proj');
       expect(handler?.isRunning()).toBe(true);
@@ -283,7 +283,7 @@ describe('ProjectionRegistry', () => {
 
     it('should start a projection', async () => {
       await registry.start('test_proj');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       
       const handler = registry.get('test_proj');
       expect(handler?.isRunning()).toBe(true);
@@ -291,7 +291,7 @@ describe('ProjectionRegistry', () => {
 
     it('should stop a projection', async () => {
       await registry.start('test_proj');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       await registry.stop('test_proj');
       
       const handler = registry.get('test_proj');
@@ -322,7 +322,7 @@ describe('ProjectionRegistry', () => {
 
     it('should start all projections', async () => {
       await registry.startAll();
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for all to start
+      await new Promise(resolve => setTimeout(resolve, 100).unref()); // Wait for all to start
       
       expect(registry.get('proj1')?.isRunning()).toBe(true);
       expect(registry.get('proj2')?.isRunning()).toBe(true);
@@ -331,7 +331,7 @@ describe('ProjectionRegistry', () => {
 
     it('should stop all projections', async () => {
       await registry.startAll();
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for all to start
+      await new Promise(resolve => setTimeout(resolve, 100).unref()); // Wait for all to start
       await registry.stopAll();
       
       expect(registry.get('proj1')?.isRunning()).toBe(false);
@@ -341,13 +341,13 @@ describe('ProjectionRegistry', () => {
 
     it('should skip already running projections in startAll', async () => {
       await registry.start('proj1');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       
       const handler = registry.get('proj1');
       const startSpy = jest.spyOn(handler as any, 'start');
       
       await registry.startAll();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await new Promise(resolve => setTimeout(resolve, 50).unref());
       
       // proj1 was already running, should not call start again
       expect(startSpy).not.toHaveBeenCalled();
@@ -355,7 +355,7 @@ describe('ProjectionRegistry', () => {
 
     it('should skip already stopped projections in stopAll', async () => {
       await registry.startAll();
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for all to start
+      await new Promise(resolve => setTimeout(resolve, 100).unref()); // Wait for all to start
       await registry.stop('proj1');
       
       const handler = registry.get('proj1');
@@ -379,7 +379,7 @@ describe('ProjectionRegistry', () => {
       
       // Don't call init() - startAll() should do it
       await freshRegistry.startAll();
-      await new Promise(resolve => setTimeout(resolve, 100)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 100).unref()); // Wait for start
       
       expect(freshRegistry.get('proj')?.isRunning()).toBe(true);
       
@@ -501,7 +501,7 @@ describe('ProjectionRegistry', () => {
       });
       
       await registry.start('proj1');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       const health = await registry.getProjectionHealth('proj1');
       
       // Lag > 1000 should be unhealthy
@@ -511,7 +511,7 @@ describe('ProjectionRegistry', () => {
 
     it('should report unhealthy if error count high', async () => {
       await registry.start('proj1');
-      await new Promise(resolve => setTimeout(resolve, 50)); // Wait for start
+      await new Promise(resolve => setTimeout(resolve, 50).unref()); // Wait for start
       
       const handler = registry.get('proj1');
       if (handler) {

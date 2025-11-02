@@ -172,7 +172,7 @@ export class ProjectionHandler {
           }
           
           // Small delay between batches to prevent CPU spinning
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise(resolve => setTimeout(resolve, 10).unref());
         }
       } catch (error) {
         this.processingPromise = null;
@@ -185,7 +185,7 @@ export class ProjectionHandler {
           await this.stop();
         }
       }
-    }, this.config.interval);
+    }, this.config.interval).unref(); // Allow process to exit if this is the only thing keeping it alive
   }
 
   /**

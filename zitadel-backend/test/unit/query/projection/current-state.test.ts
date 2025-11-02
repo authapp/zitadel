@@ -246,7 +246,7 @@ describe('CurrentStateTracker', () => {
       await tracker.getCurrentState('test_projection');
       
       // Small delay to ensure different timestamp
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 10).unref());
       
       await tracker.updatePosition('test_projection', 200, 0, oldDate, 'instance-1', 'user', 'user-2', 2);
       const state2 = await tracker.getCurrentState('test_projection');

@@ -287,7 +287,7 @@ describe('TokenStore', () => {
       const initialLastUsed = created.last_used_at.getTime();
       
       // Wait a bit then verify
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         const retrieved = tokenStore.getSession(created.session_id);
         if (retrieved) {
           expect(retrieved.last_used_at.getTime()).toBeGreaterThanOrEqual(initialLastUsed);
@@ -296,6 +296,7 @@ describe('TokenStore', () => {
           done(new Error('Session not found'));
         }
       }, 10);
+      timer.unref(); // Allow process to exit
     });
 
     it('should return null for non-existent session', () => {
