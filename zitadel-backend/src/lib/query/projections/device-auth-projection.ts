@@ -60,6 +60,21 @@ export class DeviceAuthProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'device_auth.added',
+      'device_auth.approved',
+      'device_auth.cancelled',
+      'device_auth.denied',
+      'device_auth.expired',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

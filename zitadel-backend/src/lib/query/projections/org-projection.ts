@@ -26,6 +26,25 @@ export class OrgProjection extends Projection {
     // Table already exists from migrations
     // No additional setup needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'org.added',
+      'org.changed',
+      'org.created',
+      'org.deactivated',
+      'org.deleted',
+      'org.domain.primary.set',
+      'org.reactivated',
+      'org.removed',
+      'org.updated',
+    ];
+  }
+
 
   /**
    * Reduce a single event into the projection

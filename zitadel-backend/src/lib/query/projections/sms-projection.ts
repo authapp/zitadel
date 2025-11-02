@@ -57,6 +57,32 @@ export class SMSProjection extends Projection {
       ON projections.sms_configs (instance_id, resource_owner, state)
     `);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'instance.sms.config.activated',
+      'instance.sms.config.deactivated',
+      'instance.sms.config.http.added',
+      'instance.sms.config.http.changed',
+      'instance.sms.config.removed',
+      'instance.sms.config.twilio.added',
+      'instance.sms.config.twilio.changed',
+      'org.removed',
+      'org.sms.config.activated',
+      'org.sms.config.deactivated',
+      'org.sms.config.http.added',
+      'org.sms.config.http.changed',
+      'org.sms.config.removed',
+      'org.sms.config.twilio.added',
+      'org.sms.config.twilio.changed',
+    ];
+  }
+
 
   /**
    * Process events

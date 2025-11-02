@@ -13,6 +13,23 @@ export class LockoutPolicyProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration 002_46
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.lockout.policy.added',
+      'instance.lockout.policy.changed',
+      'instance.lockout.policy.removed',
+      'org.lockout.policy.added',
+      'org.lockout.policy.changed',
+      'org.lockout.policy.removed',
+      'org.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

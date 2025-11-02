@@ -24,6 +24,24 @@ export class ProjectGrantProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration, no initialization needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'org.removed',
+      'project.grant.added',
+      'project.grant.cascade.removed',
+      'project.grant.changed',
+      'project.grant.deactivated',
+      'project.grant.reactivated',
+      'project.grant.removed',
+      'project.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

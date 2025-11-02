@@ -23,6 +23,10 @@ class TestProjection extends Projection {
   reduceCalled = false;
   initCalled = false;
   
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+  
   async reduce(_event: Event): Promise<void> {
     this.reduceCalled = true;
   }
@@ -435,6 +439,9 @@ describe('Projection', () => {
     it('should truncate all projection tables', async () => {
       const multiTableProjection = new (class extends TestProjection {
         readonly tables = ['table1', 'table2', 'table3'];
+        getEventTypes(): string[] {
+          return ['test.event'];
+        }
       })(mockEventstore, mockDatabase as any);
       
       await multiTableProjection.reset();
@@ -564,6 +571,9 @@ describe('Projection', () => {
       let startCalled = false;
       
       const customProjection = new (class extends TestProjection {
+        getEventTypes(): string[] {
+          return ['test.event'];
+        }
         async start(): Promise<void> {
           startCalled = true;
         }
@@ -578,6 +588,9 @@ describe('Projection', () => {
       let stopCalled = false;
       
       const customProjection = new (class extends TestProjection {
+        getEventTypes(): string[] {
+          return ['test.event'];
+        }
         async stop(): Promise<void> {
           stopCalled = true;
         }
@@ -592,6 +605,9 @@ describe('Projection', () => {
       let cleanupCalled = false;
       
       const customProjection = new (class extends TestProjection {
+        getEventTypes(): string[] {
+          return ['test.event'];
+        }
         async cleanup(): Promise<void> {
           cleanupCalled = true;
         }

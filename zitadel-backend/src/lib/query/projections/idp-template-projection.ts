@@ -45,6 +45,26 @@ export class IDPTemplateProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'idp.template.added',
+      'idp.template.changed',
+      'idp.template.removed',
+      'instance.idp.added',
+      'instance.idp.changed',
+      'instance.idp.removed',
+      'instance.removed',
+      'org.idp.added',
+      'org.idp.changed',
+      'org.idp.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

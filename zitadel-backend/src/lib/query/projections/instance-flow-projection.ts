@@ -13,6 +13,19 @@ export class InstanceFlowProjection extends Projection {
   async init(): Promise<void> {
     // Table already created by migration
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.flow.cleared',
+      'instance.removed',
+      'instance.trigger.actions.set',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

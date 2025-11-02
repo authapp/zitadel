@@ -53,6 +53,77 @@ export class IDPProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'idp.added',
+      'idp.apple.added',
+      'idp.apple.changed',
+      'idp.azure.added',
+      'idp.azure.changed',
+      'idp.changed',
+      'idp.config.changed',
+      'idp.google.added',
+      'idp.google.changed',
+      'idp.jwt.added',
+      'idp.jwt.changed',
+      'idp.ldap.added',
+      'idp.ldap.changed',
+      'idp.oauth.added',
+      'idp.oauth.changed',
+      'idp.oidc.added',
+      'idp.oidc.changed',
+      'idp.removed',
+      'idp.saml.added',
+      'idp.saml.changed',
+      'instance.idp.added',
+      'instance.idp.apple.added',
+      'instance.idp.apple.changed',
+      'instance.idp.azure.added',
+      'instance.idp.azure.changed',
+      'instance.idp.changed',
+      'instance.idp.config.changed',
+      'instance.idp.google.added',
+      'instance.idp.google.changed',
+      'instance.idp.jwt.added',
+      'instance.idp.jwt.changed',
+      'instance.idp.ldap.added',
+      'instance.idp.ldap.changed',
+      'instance.idp.oauth.added',
+      'instance.idp.oauth.changed',
+      'instance.idp.oidc.added',
+      'instance.idp.oidc.changed',
+      'instance.idp.removed',
+      'instance.idp.saml.added',
+      'instance.idp.saml.changed',
+      'instance.removed',
+      'org.idp.added',
+      'org.idp.apple.added',
+      'org.idp.apple.changed',
+      'org.idp.azure.added',
+      'org.idp.azure.changed',
+      'org.idp.changed',
+      'org.idp.config.changed',
+      'org.idp.google.added',
+      'org.idp.google.changed',
+      'org.idp.jwt.added',
+      'org.idp.jwt.changed',
+      'org.idp.ldap.added',
+      'org.idp.ldap.changed',
+      'org.idp.oauth.added',
+      'org.idp.oauth.changed',
+      'org.idp.oidc.added',
+      'org.idp.oidc.changed',
+      'org.idp.removed',
+      'org.idp.saml.added',
+      'org.idp.saml.changed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

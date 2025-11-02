@@ -15,6 +15,24 @@ export class QuotaProjection extends Projection {
   async init(): Promise<void> {
     // Tables created by migration schema
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'quota.added',
+      'quota.changed',
+      'quota.notification.added',
+      'quota.notification.changed',
+      'quota.notification.removed',
+      'quota.removed',
+      'quota.usage.incremented',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

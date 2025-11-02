@@ -59,6 +59,44 @@ export class UserProjection extends Projection {
     // Table already exists from migrations
     // No additional setup needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'user.added',
+      'user.registered',
+      'user.created',
+      'user.human.added',
+      'user.machine.added',
+      'user.changed',
+      'user.updated',
+      'user.username.changed',
+      'user.profile.changed',
+      'user.email.changed',
+      'user.v2.email.changed',
+      'user.email.verified',
+      'user.v2.email.verified',
+      'user.phone.changed',
+      'user.human.phone.changed',
+      'user.v2.phone.changed',
+      'user.phone.verified',
+      'user.human.phone.verified',
+      'user.v2.phone.verified',
+      'user.phone.removed',
+      'user.human.phone.removed',
+      'user.v2.phone.removed',
+      'user.password.changed',
+      'user.deactivated',
+      'user.reactivated',
+      'user.locked',
+      'user.unlocked',
+      'user.removed',
+      'user.deleted',
+    ];
+  }
 
   /**
    * Reduce a single event into the projection

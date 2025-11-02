@@ -24,6 +24,29 @@ export class AppProjection extends Projection {
   async init(): Promise<void> {
     // Table already exists from migrations
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'application.added',
+      'application.api.added',
+      'application.api.changed',
+      'application.api.config.changed',
+      'application.changed',
+      'application.deactivated',
+      'application.oidc.added',
+      'application.oidc.changed',
+      'application.oidc.config.changed',
+      'application.reactivated',
+      'application.removed',
+      'application.saml.config.changed',
+      'application.secret.changed',
+    ];
+  }
+
 
   /**
    * Reduce a single event into the projection

@@ -24,6 +24,24 @@ export class UserGrantProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration, no initialization needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'project.removed',
+      'user.grant.added',
+      'user.grant.cascade.removed',
+      'user.grant.changed',
+      'user.grant.deactivated',
+      'user.grant.reactivated',
+      'user.grant.removed',
+      'user.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

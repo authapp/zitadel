@@ -74,6 +74,31 @@ export class LoginPolicyProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.login.policy.added',
+      'instance.login.policy.changed',
+      'instance.login.policy.multi.factor.added',
+      'instance.login.policy.multi.factor.removed',
+      'instance.login.policy.second.factor.added',
+      'instance.login.policy.second.factor.removed',
+      'instance.removed',
+      'org.login.policy.added',
+      'org.login.policy.changed',
+      'org.login.policy.multi.factor.added',
+      'org.login.policy.multi.factor.removed',
+      'org.login.policy.removed',
+      'org.login.policy.second.factor.added',
+      'org.login.policy.second.factor.removed',
+      'org.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

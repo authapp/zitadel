@@ -13,6 +13,22 @@ export class UserAuthMethodProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration 002_43
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'user.human.otp.added',
+      'user.human.otp.removed',
+      'user.human.passwordless.added',
+      'user.human.passwordless.removed',
+      'user.human.u2f.token.added',
+      'user.human.u2f.token.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

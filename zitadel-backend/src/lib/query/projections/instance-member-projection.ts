@@ -38,6 +38,21 @@ export class InstanceMemberProjection extends Projection {
         ON projections.instance_members (resource_owner);
     `, []);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.member.added',
+      'instance.member.cascade.removed',
+      'instance.member.changed',
+      'instance.member.removed',
+      'user.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

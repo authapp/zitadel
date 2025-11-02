@@ -13,6 +13,22 @@ export class InstanceActionProjection extends Projection {
   async init(): Promise<void> {
     // Table already created by migration
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.action.added',
+      'instance.action.changed',
+      'instance.action.deactivated',
+      'instance.action.reactivated',
+      'instance.action.removed',
+      'instance.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

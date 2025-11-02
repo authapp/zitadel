@@ -42,6 +42,22 @@ export class OrgMemberProjection extends Projection {
         ON projections.org_members (resource_owner, instance_id);
     `, []);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'org.member.added',
+      'org.member.cascade.removed',
+      'org.member.changed',
+      'org.member.removed',
+      'org.removed',
+      'user.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

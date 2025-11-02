@@ -27,6 +27,10 @@ class TestProjection extends Projection {
   
   readonly tables = ['test_table'];
   
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+  
   async reduce(_event: Event): Promise<void> {
     // No-op
   }

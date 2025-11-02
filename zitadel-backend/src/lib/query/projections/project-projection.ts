@@ -25,6 +25,24 @@ export class ProjectProjection extends Projection {
     // Table already exists from migrations
     // No additional setup needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'project.added',
+      'project.changed',
+      'project.created',
+      'project.deactivated',
+      'project.deleted',
+      'project.reactivated',
+      'project.removed',
+      'project.updated',
+    ];
+  }
+
 
   /**
    * Reduce a single event into the projection

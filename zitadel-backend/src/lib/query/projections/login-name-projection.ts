@@ -17,6 +17,27 @@ export class LoginNameProjection extends Projection {
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.domain.added',
+      'instance.domain.primary.set',
+      'org.domain.added',
+      'org.domain.primary.set',
+      'org.domain.removed',
+      'org.domain.verified',
+      'user.added',
+      'user.email.changed',
+      'user.registered',
+      'user.removed',
+      'user.username.changed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

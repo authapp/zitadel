@@ -50,6 +50,21 @@ export class AuthNKeyProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'user.deleted',
+      'user.machine.key.added',
+      'user.machine.key.removed',
+      'user.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

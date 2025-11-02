@@ -13,6 +13,39 @@ export class MilestonesProjection extends Projection {
   async init(): Promise<void> {
     // Table already created by migration
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance',
+      'instance.added',
+      'instance.domain.added',
+      'instance.removed',
+      'milestone.pushed',
+      'milestone.reached',
+      'org',
+      'org.added',
+      'org.domain.added',
+      'org.removed',
+      'organization',
+      'project',
+      'project.added',
+      'project.application.added',
+      'project.role.added',
+      'session.added',
+      'user',
+      'user.added',
+      'user.email.verified',
+      'user.mfa.otp.added',
+      'user.mfa.u2f.added',
+      'user.phone.verified',
+      'user.v1.added',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

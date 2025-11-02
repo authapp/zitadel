@@ -14,6 +14,26 @@ export class SessionProjection extends Projection {
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'oidc.session.backchannel.logout',
+      'org.sessions.terminated',
+      'session.created',
+      'session.factor.set',
+      'session.metadata.deleted',
+      'session.metadata.set',
+      'session.terminated',
+      'session.token.set',
+      'session.updated',
+      'user.sessions.terminated',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

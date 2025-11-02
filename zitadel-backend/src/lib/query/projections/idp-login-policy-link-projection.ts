@@ -39,6 +39,26 @@ export class IDPLoginPolicyLinkProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.idp.config.added',
+      'instance.idp.config.removed',
+      'instance.login.policy.idp.added',
+      'instance.login.policy.idp.removed',
+      'instance.removed',
+      'org.idp.config.added',
+      'org.idp.config.removed',
+      'org.login.policy.idp.added',
+      'org.login.policy.idp.removed',
+      'org.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

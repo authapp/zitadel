@@ -60,6 +60,19 @@ export class IDPIntentProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'idp.intent.failed',
+      'idp.intent.started',
+      'idp.intent.succeeded',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

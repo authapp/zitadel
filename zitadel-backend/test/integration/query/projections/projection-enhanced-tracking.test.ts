@@ -26,6 +26,10 @@ class EnhancedTrackingProjection extends Projection {
   readonly name = 'enhanced_tracking_test';
   readonly tables = ['enhanced_tracking_data'];
 
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+
   async init(): Promise<void> {
     await this.query(`
       CREATE TABLE IF NOT EXISTS enhanced_tracking_data (
@@ -450,6 +454,9 @@ describe('Enhanced Projection State Tracking', () => {
       class EnhancedTrackingProjection2 extends Projection {
         readonly name = 'enhanced_tracking_test_2';
         readonly tables = ['enhanced_tracking_data_2'];
+        getEventTypes(): string[] {
+          return ['test.event'];
+        }
         async init(): Promise<void> {
           await this.query(`
             CREATE TABLE IF NOT EXISTS enhanced_tracking_data_2 (id TEXT PRIMARY KEY, data TEXT)

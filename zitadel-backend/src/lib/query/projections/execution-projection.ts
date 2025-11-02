@@ -24,6 +24,19 @@ export class ExecutionProjection {
     // No-op: migrations handle table creation with proper constraints
     // Table: projections.executions with PRIMARY KEY (instance_id, id)
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'execution.removed',
+      'execution.set',
+      'org.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

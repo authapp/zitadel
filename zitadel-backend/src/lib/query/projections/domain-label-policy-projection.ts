@@ -89,6 +89,26 @@ export class DomainLabelPolicyProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.domain.policy.added',
+      'instance.domain.policy.changed',
+      'instance.label.policy.added',
+      'instance.label.policy.changed',
+      'instance.removed',
+      'org.domain.policy.added',
+      'org.domain.policy.changed',
+      'org.label.policy.added',
+      'org.label.policy.changed',
+      'org.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

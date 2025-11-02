@@ -25,6 +25,22 @@ export class ProjectRoleProjection extends Projection {
     // Table already exists from migrations
     // No additional setup needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'project.role.added',
+      'project.role.changed',
+      'project.role.created',
+      'project.role.deleted',
+      'project.role.removed',
+      'project.role.updated',
+    ];
+  }
+
 
   /**
    * Reduce a single event into the projection

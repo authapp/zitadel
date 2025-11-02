@@ -14,6 +14,10 @@ class SimpleProjection extends Projection {
   
   eventsProcessed: Event[] = [];
 
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+
   async reduce(event: Event): Promise<void> {
     this.eventsProcessed.push(event);
   }

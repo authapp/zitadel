@@ -43,6 +43,10 @@ class TestProjection extends Projection {
   public shouldFail: boolean = false;
   public failOnEventNumber: number = -1;
 
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+
   async init(): Promise<void> {
     await this.query(`
       CREATE TABLE IF NOT EXISTS test_data (

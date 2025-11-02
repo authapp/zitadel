@@ -72,6 +72,24 @@ export class MailOIDCProjection extends Projection {
       ON projections.oidc_settings (instance_id)
     `);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.mail.template.added',
+      'instance.mail.template.changed',
+      'instance.oidc.settings.added',
+      'instance.oidc.settings.changed',
+      'instance.removed',
+      'org.mail.template.added',
+      'org.mail.template.changed',
+      'org.removed',
+    ];
+  }
+
 
   /**
    * Process events

@@ -47,6 +47,25 @@ export class CustomTextProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.custom.message.text.reset',
+      'instance.custom.message.text.set',
+      'instance.init.message.text.set',
+      'instance.login.custom.text.reset',
+      'instance.login.custom.text.set',
+      'org.custom.message.text.reset',
+      'org.custom.message.text.set',
+      'org.custom.text.reset',
+      'org.custom.text.set',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

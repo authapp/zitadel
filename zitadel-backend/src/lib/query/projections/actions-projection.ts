@@ -13,6 +13,30 @@ export class ActionsProjection extends Projection {
   async init(): Promise<void> {
     // Tables already created by migration
   }
+  
+  getEventTypes(): string[] {
+    return [
+      // Action events
+      'action.added',
+      'action.v2.added',
+      'action.changed',
+      'action.v2.changed',
+      'action.deactivated',
+      'action.v2.deactivated',
+      'action.reactivated',
+      'action.v2.reactivated',
+      'action.removed',
+      'action.v2.removed',
+      // Execution/Flow events
+      'execution.set',
+      'execution.v2.set',
+      'execution.removed',
+      'execution.v2.removed',
+      // Cleanup events
+      'org.removed',
+      'instance.removed',
+    ];
+  }
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
@@ -94,7 +118,7 @@ export class ActionsProjection extends Projection {
         payload.script,
         timeoutInterval, // Convert to interval string
         payload.allowedToFail || false,
-        1, // active state
+        1, // active state (ActionState.ACTIVE = 1)
         event.createdAt,
         event.createdAt,
         event.aggregateVersion,
@@ -152,7 +176,7 @@ export class ActionsProjection extends Projection {
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
       [
-        2, // inactive state
+        2, // inactive state (ActionState.INACTIVE = 2)
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,
@@ -166,7 +190,7 @@ export class ActionsProjection extends Projection {
       `UPDATE projections.actions SET state = $1, change_date = $2, sequence = $3
        WHERE instance_id = $4 AND id = $5`,
       [
-        1, // active state
+        1, // active state (ActionState.ACTIVE = 1)
         event.createdAt,
         event.aggregateVersion,
         event.instanceID,

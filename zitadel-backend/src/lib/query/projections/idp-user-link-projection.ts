@@ -42,6 +42,24 @@ export class IDPUserLinkProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'user.deleted',
+      'user.idp.external.added',
+      'user.idp.external.removed',
+      'user.idp.link.added',
+      'user.idp.link.cascade.removed',
+      'user.idp.link.removed',
+      'user.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

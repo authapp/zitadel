@@ -13,6 +13,21 @@ export class PersonalAccessTokenProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration 002_44
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'user.personal.access.token.added',
+      'user.personal.access.token.removed',
+      'user.personal.access.token.used',
+      'user.token.added',
+      'user.token.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

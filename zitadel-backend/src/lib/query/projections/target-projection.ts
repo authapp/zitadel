@@ -24,6 +24,20 @@ export class TargetProjection {
     // No-op: migrations handle table creation with proper constraints
     // Table: projections.targets with PRIMARY KEY (instance_id, id)
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'org.removed',
+      'target.added',
+      'target.changed',
+      'target.removed',
+    ];
+  }
+
 
   /**
    * Reduce event into projection

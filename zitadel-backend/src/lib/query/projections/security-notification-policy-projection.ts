@@ -134,6 +134,32 @@ export class SecurityNotificationPolicyProjection extends Projection {
       ON projections.security_policies (instance_id)
     `);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.lockout.policy.added',
+      'instance.lockout.policy.changed',
+      'instance.notification.policy.added',
+      'instance.notification.policy.changed',
+      'instance.privacy.policy.added',
+      'instance.privacy.policy.changed',
+      'instance.removed',
+      'instance.security.policy.added',
+      'instance.security.policy.changed',
+      'org.lockout.policy.added',
+      'org.lockout.policy.changed',
+      'org.notification.policy.added',
+      'org.notification.policy.changed',
+      'org.privacy.policy.added',
+      'org.privacy.policy.changed',
+      'org.removed',
+    ];
+  }
+
 
   /**
    * Process events

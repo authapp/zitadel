@@ -14,6 +14,26 @@ export class UserMetadataProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration 002_15
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'org.removed',
+      'user.metadata.removed',
+      'user.metadata.removed.all',
+      'user.metadata.set',
+      'user.removed',
+      'user.v1.metadata.removed',
+      'user.v1.metadata.removed.all',
+      'user.v1.metadata.set',
+      'user.v1.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

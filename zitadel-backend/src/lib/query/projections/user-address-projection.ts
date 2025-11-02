@@ -14,6 +14,22 @@ export class UserAddressProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration 002_14
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'org.removed',
+      'user.human.address.changed',
+      'user.removed',
+      'user.v1.address.changed',
+      'user.v1.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

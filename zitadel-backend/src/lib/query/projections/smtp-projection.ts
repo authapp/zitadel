@@ -58,6 +58,28 @@ export class SMTPProjection extends Projection {
       ON projections.smtp_configs (instance_id, resource_owner, state)
     `);
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.removed',
+      'instance.smtp.config.activated',
+      'instance.smtp.config.added',
+      'instance.smtp.config.changed',
+      'instance.smtp.config.deactivated',
+      'instance.smtp.config.removed',
+      'org.removed',
+      'org.smtp.config.activated',
+      'org.smtp.config.added',
+      'org.smtp.config.changed',
+      'org.smtp.config.deactivated',
+      'org.smtp.config.removed',
+    ];
+  }
+
 
   /**
    * Process events

@@ -75,6 +75,30 @@ export class PasswordPolicyProjection extends Projection {
       []
     );
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.password.complexity.policy.added',
+      'instance.password.complexity.policy.changed',
+      'instance.password.complexity.policy.removed',
+      'instance.policy.password_age.added',
+      'instance.policy.password_age.changed',
+      'instance.policy.password_age.removed',
+      'instance.removed',
+      'org.password.complexity.policy.added',
+      'org.password.complexity.policy.changed',
+      'org.password.complexity.policy.removed',
+      'org.policy.password_age.added',
+      'org.policy.password_age.changed',
+      'org.policy.password_age.removed',
+      'org.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

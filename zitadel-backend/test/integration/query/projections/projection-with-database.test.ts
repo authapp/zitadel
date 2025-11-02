@@ -13,6 +13,10 @@ class UserCountProjection extends Projection {
   readonly name = 'user_count_projection';
   readonly tables = ['test_user_counts'];
 
+  getEventTypes(): string[] {
+    return ['user.human.added', 'user.removed'];
+  }
+
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {
       case 'user.human.added':

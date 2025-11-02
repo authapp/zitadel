@@ -14,6 +14,22 @@ export class InstanceDomainProjection extends Projection {
   async init(): Promise<void> {
     // Tables created by migration, nothing to do
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'instance.domain.added',
+      'instance.domain.default.set',
+      'instance.domain.primary.set',
+      'instance.domain.removed',
+      'instance.trusted_domain.added',
+      'instance.trusted_domain.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

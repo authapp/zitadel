@@ -16,6 +16,22 @@ export class AuthRequestProjection extends Projection {
   async init(): Promise<void> {
     // Table created by migration, no initialization needed
   }
+  
+  /**
+   * Get event types handled by this projection
+   * Required for real-time event subscription
+   */
+  getEventTypes(): string[] {
+    return [
+      'auth.request.added',
+      'auth.request.code.added',
+      'auth.request.failed',
+      'auth.request.session.linked',
+      'auth.request.succeeded',
+      'instance.removed',
+    ];
+  }
+
 
   async reduce(event: Event): Promise<void> {
     switch (event.eventType) {

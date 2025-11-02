@@ -11,6 +11,7 @@ import { Event } from '../../eventstore/types';
 import { Eventstore } from '../../eventstore/types';
 import { DatabasePool, QueryExecutor } from '../../database/pool';
 import { CurrentStateTracker } from './current-state';
+import { Subscription, globalSubscriptionManager } from '../../eventstore/subscription';
 
 /**
  * Abstract projection base class
@@ -33,6 +34,11 @@ export abstract class Projection {
   protected readonly database: DatabasePool;
   protected readonly stateTracker: CurrentStateTracker;
   protected currentTx?: QueryExecutor;
+  
+  // Subscription management for real-time event processing
+  private subscription?: Subscription;
+  private isRunning = false;
+  private catchUpInterval?: NodeJS.Timeout;
 
   constructor(eventstore: Eventstore, database: DatabasePool) {
     this.eventstore = eventstore;
@@ -66,6 +72,19 @@ export abstract class Projection {
    * Use it to create database tables, indexes, etc.
    */
   abstract init(): Promise<void>;
+  
+  /**
+   * Get event types this projection handles
+   * 
+   * Required for event subscription filtering.
+   * Return array of event type strings that this projection processes.
+   * 
+   * @example
+   * getEventTypes(): string[] {
+   *   return ['user.added', 'user.changed', 'user.removed'];
+   * }
+   */
+  abstract getEventTypes(): string[];
 
   /**
    * Cleanup the projection
@@ -79,23 +98,143 @@ export abstract class Projection {
   }
 
   /**
-   * Start the projection
+   * Start the projection with real-time event subscription
    * 
    * Called when the projection handler starts processing events.
+   * Subscribes to relevant events and processes them in real-time.
    */
   async start(): Promise<void> {
-    // Default implementation: no-op
-    // Subclasses can override for custom start logic
+    if (this.isRunning) {
+      return;
+    }
+    
+    this.isRunning = true;
+    
+    // Build aggregate type map for subscription
+    const aggregateTypes = new Map<string, string[]>();
+    for (const eventType of this.getEventTypes()) {
+      const [aggregateType] = eventType.split('.');
+      if (!aggregateTypes.has(aggregateType)) {
+        aggregateTypes.set(aggregateType, []);
+      }
+      aggregateTypes.get(aggregateType)!.push(eventType);
+    }
+    
+    // Subscribe to events
+    this.subscription = globalSubscriptionManager.subscribeEventTypes(aggregateTypes);
+    
+    // Process events in background
+    this.processSubscription();
+    
+    // Schedule periodic catch-up for reliability (every 30 seconds)
+    this.scheduleCatchUp();
   }
 
   /**
    * Stop the projection
    * 
    * Called when the projection handler stops processing events.
+   * Unsubscribes from events and stops background processing.
    */
   async stop(): Promise<void> {
-    // Default implementation: no-op
-    // Subclasses can override for custom stop logic
+    if (!this.isRunning) {
+      return;
+    }
+    
+    this.isRunning = false;
+    
+    // Unsubscribe from events
+    this.subscription?.unsubscribe();
+    this.subscription = undefined;
+    
+    // Clear catch-up interval
+    if (this.catchUpInterval) {
+      clearInterval(this.catchUpInterval);
+      this.catchUpInterval = undefined;
+    }
+  }
+  
+  /**
+   * Process subscription events in background
+   * Runs continuously while projection is running
+   */
+  private async processSubscription(): Promise<void> {
+    if (!this.subscription) {
+      return;
+    }
+    
+    try {
+      for await (const event of this.subscription) {
+        if (!this.isRunning) {
+          break;
+        }
+        
+        try {
+          await this.reduce(event);
+        } catch (error) {
+          console.error(`Projection ${this.name} error processing event ${event.eventType}:`, error);
+          // Continue processing other events
+        }
+      }
+    } catch (error) {
+      console.error(`Projection ${this.name} subscription error:`, error);
+      // Subscription ended, possibly restart it
+      if (this.isRunning) {
+        // Wait a bit and restart subscription
+        setTimeout(() => {
+          if (this.isRunning) {
+            this.start();
+          }
+        }, 5000);
+      }
+    }
+  }
+  
+  /**
+   * Schedule periodic catch-up processing
+   * Ensures projection doesn't fall behind even if subscriptions fail
+   */
+  private scheduleCatchUp(): void {
+    this.catchUpInterval = setInterval(async () => {
+      if (!this.isRunning) {
+        return;
+      }
+      
+      try {
+        // Check if we need to catch up on events
+        // This is a safety mechanism in case real-time subscription misses events
+        const currentPosition = await this.getCurrentPosition();
+        
+        // Query eventstore for events we might have missed
+        // Get aggregate types this projection handles
+        const aggregateTypes = new Set<string>();
+        for (const eventType of this.getEventTypes()) {
+          const [aggregateType] = eventType.split('.');
+          aggregateTypes.add(aggregateType);
+        }
+        
+        // Query for recent events after current position
+        // This catches any events missed by real-time subscription
+        const filter = {
+          aggregateTypes: Array.from(aggregateTypes),
+          eventTypes: this.getEventTypes(),
+          position: { position: currentPosition, inTxOrder: 0 },
+          limit: 1000, // Limit to 1000 events per catch-up cycle
+        };
+        
+        const missedEvents = await this.eventstore.query(filter);
+        
+        // Process any missed events
+        if (missedEvents.length > 0) {
+          console.log(`Projection ${this.name} catching up on ${missedEvents.length} missed events`);
+          for (const event of missedEvents) {
+            await this.reduce(event);
+          }
+        }
+      } catch (error) {
+        console.error(`Projection ${this.name} catch-up error:`, error);
+      }
+    }, 30000); // Every 30 seconds
   }
 
   /**

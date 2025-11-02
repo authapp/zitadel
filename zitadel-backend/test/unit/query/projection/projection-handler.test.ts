@@ -29,6 +29,10 @@ class TestProjection extends Projection {
   shouldThrow = false;
   throwError: Error | null = null;
   
+  getEventTypes(): string[] {
+    return ['test.event'];
+  }
+  
   async reduce(event: Event): Promise<void> {
     this.reduceCalled = true;
     this.reduceCallCount++;
