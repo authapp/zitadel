@@ -19,11 +19,6 @@ describe('Milestones Schema Integration Tests', () => {
   beforeAll(async () => {
     pool = await createTestDatabase();
     
-    // Reset and re-migrate to ensure views are created
-    const migrator = new DatabaseMigrator(pool);
-    await migrator.reset();
-    await migrator.migrate();
-    
     // Initialize query layer
     milestoneQueries = new MilestoneQueries(pool);
   });

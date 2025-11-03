@@ -285,24 +285,36 @@ export class ActionService {
    * List executions (action targets and includes)
    */
   async listExecutions(
-    _ctx: Context,
+    ctx: Context,
     _request: proto.ListExecutionsRequest
   ): Promise<proto.ListExecutionsResponse> {
     try {
-      // TODO: Implement execution listing
-      /*
-      const executions = await this.commands.listExecutions(ctx, {
-        target: request.query?.targetQuery?.target,
-      });
-      */
+      // Query executions from database
+      const executions = await this.queries.searchExecutions(
+        ctx.instanceID,
+        ctx.orgID
+      );
+
+      // Map to proto format
+      const result: proto.Execution[] = executions.map(execution => ({
+        id: execution.id,
+        details: {
+          sequence: execution.sequence,
+          creationDate: execution.creationDate.toISOString(),
+          changeDate: execution.changeDate.toISOString(),
+          resourceOwner: execution.resourceOwner,
+        },
+        targets: execution.targets || [],
+        includes: [],
+      }));
 
       return {
         details: {
-          totalResult: 0,
+          totalResult: executions.length,
           processedSequence: 0,
           viewTimestamp: new Date().toISOString(),
         },
-        result: [],
+        result,
       };
     } catch (error) {
       throw this.handleError(error);
@@ -313,7 +325,7 @@ export class ActionService {
    * Get a single execution by ID
    */
   async getExecution(
-    _ctx: Context,
+    ctx: Context,
     request: proto.GetExecutionRequest
   ): Promise<proto.GetExecutionResponse> {
     try {
@@ -321,26 +333,29 @@ export class ActionService {
         throw new Error('Execution ID is required');
       }
 
-      // TODO: Implement execution retrieval
-      /*
-      const execution = await this.commands.getExecution(ctx, request.id);
+      // Query execution from database
+      const execution = await this.queries.getExecutionByID(
+        ctx.instanceID,
+        request.id
+      );
+
+      if (!execution) {
+        throw new Error('Execution not found');
+      }
       
       return {
         execution: {
           id: execution.id,
           details: {
             sequence: execution.sequence,
-            creationDate: execution.createdAt,
-            changeDate: execution.updatedAt,
+            creationDate: execution.creationDate.toISOString(),
+            changeDate: execution.changeDate.toISOString(),
             resourceOwner: execution.resourceOwner,
           },
-          targets: execution.targets,
-          includes: execution.includes,
+          targets: execution.targets || [],
+          includes: [],
         },
       };
-      */
-
-      throw new Error('Execution not found');
     } catch (error) {
       throw this.handleError(error);
     }

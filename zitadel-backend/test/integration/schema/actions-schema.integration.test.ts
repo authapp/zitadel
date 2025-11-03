@@ -19,11 +19,6 @@ describe('Actions Schema Integration Tests', () => {
   beforeAll(async () => {
     pool = await createTestDatabase();
     
-    // Reset and re-migrate to ensure fresh schema
-    const migrator = new DatabaseMigrator(pool);
-    await migrator.reset();
-    await migrator.migrate();
-    
     // Initialize query layer
     actionQueries = new ActionQueries(pool);
   });

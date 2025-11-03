@@ -16,11 +16,6 @@ describe('Logstore Schema Integration Tests', () => {
 
   beforeAll(async () => {
     pool = await createTestDatabase();
-    
-    // Reset and re-migrate to ensure logstore schema is created
-    const migrator = new DatabaseMigrator(pool);
-    await migrator.reset();
-    await migrator.migrate();
   });
 
   afterAll(async () => {

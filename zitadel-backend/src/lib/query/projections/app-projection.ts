@@ -72,6 +72,10 @@ export class AppProjection extends Projection {
         await this.handleSAMLAppAdded(event);
         break;
       
+      case 'application.saml.config.added':
+        await this.handleSAMLConfigAdded(event);
+        break;
+      
       case 'application.saml.config.changed':
         await this.handleSAMLAppChanged(event);
         break;
@@ -266,10 +270,10 @@ export class AppProjection extends Projection {
         change_date = EXCLUDED.change_date,
         sequence = EXCLUDED.sequence`,
       [
-        payload.appId || event.aggregateID,
+        payload.appID || payload.appId || event.aggregateID,
         event.instanceID || 'default',
-        payload.projectId || event.aggregateID,
-        event.owner || payload.projectId || event.aggregateID,
+        payload.projectID || payload.projectId,
+        event.owner,
         payload.name,
         'active',
         'saml',
@@ -284,6 +288,41 @@ export class AppProjection extends Projection {
         event.createdAt,
         event.createdAt,
         Number(event.aggregateVersion || 1n),
+      ]
+    );
+  }
+
+  private async handleSAMLConfigAdded(event: Event): Promise<void> {
+    const payload = event.payload as any;
+    
+    // Extract entityID from SAML metadata XML
+    let entityId = null;
+    if (payload.metadata) {
+      const entityIdMatch = payload.metadata.match(/entityID="([^"]+)"/);
+      if (entityIdMatch) {
+        entityId = entityIdMatch[1];
+      }
+    }
+    
+    // Update the application with SAML config
+    await this.database.query(
+      `UPDATE projections.applications SET
+        entity_id = $1,
+        metadata_url = $2,
+        metadata = $3,
+        updated_at = $4,
+        change_date = $5,
+        sequence = $6
+      WHERE instance_id = $7 AND id = $8`,
+      [
+        entityId,
+        payload.metadataURL || null,
+        payload.metadata || null,
+        event.createdAt,
+        event.createdAt,
+        Number(event.aggregateVersion || 1n),
+        event.instanceID || 'default',
+        payload.appID || event.aggregateID,
       ]
     );
   }

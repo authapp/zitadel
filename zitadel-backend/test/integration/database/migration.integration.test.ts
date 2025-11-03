@@ -86,21 +86,23 @@ describe('Migration System Integration', () => {
         'SELECT version, name FROM schema_migrations ORDER BY version'
       );
 
-      expect(migrations.length).toBe(3); // Clean schema: 3 consolidated files
+      expect(migrations.length).toBe(4); // Clean schema: 4 consolidated files
       expect(migrations[0].name).toBe('infrastructure');
       expect(migrations[1].name).toBe('projections');
       expect(migrations[2].name).toBe('indexes');
+      expect(migrations[3].name).toBe('saml');
     });
 
     it('should set correct schema version', async () => {
       await migrator.migrate();
 
       const version = await migrator.currentVersion();
-      // Clean schema approach: 3 consolidated files instead of 68 individual migrations
+      // Clean schema approach: 4 consolidated files instead of 68 individual migrations
       // 1: Infrastructure (events, projection_states, unique_constraints, encryption_keys)
       // 2: Projection Tables (all 50 projection tables)
       // 3: Indexes and Constraints (all 362 indexes + 28 unique constraints)
-      expect(version).toBe(3); // Clean schema: 3 files
+      // 4: SAML Tables (saml_requests, saml_sessions)
+      expect(version).toBe(4); // Clean schema: 4 files
     });
   });
 
@@ -126,8 +128,8 @@ describe('Migration System Integration', () => {
         'SELECT * FROM schema_migrations'
       );
 
-      // Should have 3 records (one per clean schema file)
-      expect(migrations.length).toBe(3);
+      // Should have 4 records (one per clean schema file)
+      expect(migrations.length).toBe(4);
     });
   });
 
@@ -140,8 +142,8 @@ describe('Migration System Integration', () => {
         'SELECT version FROM schema_migrations ORDER BY version'
       );
       
-      // All migrations should be applied (3 clean schema files)
-      expect(migrations1.length).toBe(3);
+      // All migrations should be applied (4 clean schema files)
+      expect(migrations1.length).toBe(4);
     });
 
     it('should skip already applied migrations', async () => {
@@ -173,9 +175,9 @@ describe('Migration System Integration', () => {
         'SELECT version, name, applied_at FROM schema_migrations ORDER BY version'
       );
 
-      expect(applied.length).toBe(3); // Clean schema: 3 files
+      expect(applied.length).toBe(4); // Clean schema: 4 files
       expect(applied[0].version).toBe(1);
-      expect(applied[applied.length - 1].version).toBe(3);
+      expect(applied[applied.length - 1].version).toBe(4);
       expect(applied[0].applied_at).toBeInstanceOf(Date);
     });
   });

@@ -1043,3 +1043,4 @@ SELECT
     'user' AS aggregate_type,
     'User has enabled MFA' AS description;
 
+-- NOTE: SAML tables moved to 04_saml.sql migration file

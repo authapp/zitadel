@@ -129,6 +129,8 @@ export async function cleanDatabase(pool: DatabasePool): Promise<void> {
     'events', // Events table MUST be cleaned
     'projections.targets', // Sprint 4.2 tables
     'projections.executions', // Sprint 4.2 tables
+    'projections.saml_requests', // SAML tables
+    'projections.saml_sessions', // SAML tables
   ];
 
   for (const table of tables) {
