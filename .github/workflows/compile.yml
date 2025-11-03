@@ -32,7 +32,7 @@ jobs:
         goarch: [amd64, arm64]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/cache/restore@v4
         timeout-minutes: 1
         name: restore console
@@ -47,7 +47,7 @@ jobs:
           path: ${{ inputs.core_cache_path }}
           key: ${{ inputs.core_cache_key }}
           fail-on-cache-miss: true
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
       - name: compile
@@ -65,7 +65,7 @@ jobs:
           cp LICENSE zitadel-${{ matrix.goos }}-${{ matrix.goarch }}/
           cp README.md zitadel-${{ matrix.goos }}-${{ matrix.goarch }}/
           tar -czvf zitadel-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz zitadel-${{ matrix.goos }}-${{ matrix.goarch }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: zitadel-${{ matrix.goos }}-${{ matrix.goarch }}
           path: zitadel-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [executable]
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v6
         with:
           path: executables
           pattern: 'zitadel-*-*'
@@ -83,7 +83,7 @@ jobs:
         working-directory: executables
       - run: sha256sum * > checksums.txt
         working-directory: executables
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: checksums.txt
           path: executables/checksums.txt
