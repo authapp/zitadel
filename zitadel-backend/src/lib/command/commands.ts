@@ -1069,6 +1069,12 @@ export class Commands {
     require('./application/app-commands').reactivateApplication;
 
   /**
+   * Terminate SAML session (for Single Logout)
+   */
+  terminateSAMLSession: typeof import('./saml/saml-session-commands').terminateSAMLSession = 
+    require('./saml/saml-session-commands').terminateSAMLSession;
+
+  /**
    * Remove application
    */
   removeApplication: typeof import('./application/app-commands').removeApplication = 

@@ -263,3 +263,92 @@ export function parseSAMLAuthnRequest(xml: string): {
     acsURL: acsMatch[1]
   };
 }
+
+/**
+ * Generate SAML LogoutResponse XML
+ */
+export function generateSAMLLogoutResponse(config: {
+  inResponseTo: string;
+  destination: string;
+  success: boolean;
+  statusMessage?: string;
+  statusCode?: string;
+}): string {
+  const responseID = generateSAMLID();
+  const issueInstant = formatSAMLDate(new Date());
+  const statusCodeValue = config.success
+    ? 'urn:oasis:names:tc:SAML:2.0:status:Success'
+    : config.statusCode || 'urn:oasis:names:tc:SAML:2.0:status:Responder';
+
+  const statusMessage = config.statusMessage
+    ? `<samlp:StatusMessage>${escapeXML(config.statusMessage)}</samlp:StatusMessage>`
+    : '';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<samlp:LogoutResponse xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+                      xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+                      ID="${responseID}"
+                      Version="2.0"
+                      IssueInstant="${issueInstant}"
+                      InResponseTo="${escapeXML(config.inResponseTo)}"
+                      Destination="${escapeXML(config.destination)}">
+  <saml:Issuer>${escapeXML(config.destination)}</saml:Issuer>
+  <samlp:Status>
+    <samlp:StatusCode Value="${statusCodeValue}" />
+    ${statusMessage}
+  </samlp:Status>
+</samlp:LogoutResponse>`;
+}
+
+/**
+ * Generate SAML Error Response XML
+ */
+export function generateSAMLErrorResponse(config: {
+  statusCode: string;
+  statusMessage?: string;
+  statusDetail?: string;
+  reason?: string;
+  inResponseTo?: string;
+  destination?: string;
+}): string {
+  const responseID = generateSAMLID();
+  const issueInstant = formatSAMLDate(new Date());
+
+  const inResponseToAttr = config.inResponseTo
+    ? `InResponseTo="${escapeXML(config.inResponseTo)}"`
+    : '';
+    
+  const destinationAttr = config.destination
+    ? `Destination="${escapeXML(config.destination)}"`
+    : '';
+
+  const statusMessage = config.statusMessage
+    ? `<samlp:StatusMessage>${escapeXML(config.statusMessage)}</samlp:StatusMessage>`
+    : '';
+
+  const statusDetail = config.statusDetail
+    ? `<samlp:StatusDetail>${escapeXML(config.statusDetail)}</samlp:StatusDetail>`
+    : '';
+
+  const secondaryStatusCode = config.reason
+    ? `<samlp:StatusCode Value="${escapeXML(config.reason)}" />`
+    : '';
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol"
+                xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion"
+                ID="${responseID}"
+                Version="2.0"
+                IssueInstant="${issueInstant}"
+                ${inResponseToAttr}
+                ${destinationAttr}>
+  <saml:Issuer>IDP_ENTITY_ID</saml:Issuer>
+  <samlp:Status>
+    <samlp:StatusCode Value="${escapeXML(config.statusCode)}">
+      ${secondaryStatusCode}
+    </samlp:StatusCode>
+    ${statusMessage}
+    ${statusDetail}
+  </samlp:Status>
+</samlp:Response>`;
+}

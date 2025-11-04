@@ -10,6 +10,7 @@ import { DatabasePool } from '../../lib/database';
 import { Commands } from '../../lib/command/commands';
 import { getMetadata } from './handlers/metadata';
 import { handleSSO } from './handlers/sso';
+import { handleLogout } from './handlers/logout';
 
 /**
  * Create SAML IdP router
@@ -58,17 +59,11 @@ export function createSAMLRouter(pool: DatabasePool, commands: Commands): Router
    * POST /saml/logout
    * 
    * Handles SAML LogoutRequest from Service Providers
-   * TODO: Implement in future sprint
+   * Terminates active SAML sessions and returns LogoutResponse
    */
-  router.post('/logout', (req, res) => {
-    // Log the request for future implementation
-    console.log('SAML Logout request received from:', req.ip);
-    
-    res.status(501).json({
-      error: 'Not Implemented',
-      message: 'SAML Single Logout not yet implemented',
-      hint: 'This endpoint will be implemented in a future release'
-    });
+  router.post('/logout', async (req, res) => {
+    const handler = await handleLogout(pool, commands);
+    return handler(req, res);
   });
 
   return router;
