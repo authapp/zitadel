@@ -21,7 +21,7 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "console": "pnpm --filter console dev",
     "portal": "pnpm --filter portal dev",
-    "prepare": "husky install"
+    "prepare": "cd .. && husky install authapp-frontend/.husky || true"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",
